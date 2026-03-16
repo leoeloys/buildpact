@@ -562,3 +562,18 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `loadChiefAgent` uses `index.chiefFile` (quick reference set during buildAgentIndex) — avoids re-scanning agents array on every initial load
   - `loadAndRegisterAgent` wraps `loadSpecialistAgent` + `session.loadedAgents.set()` — convenience for the on-demand handoff pattern
 ---
+
+## 2026-03-16 - US-038
+- Updated all 5 Software Squad agent files in templates/squads/software/agents/ to pass validateSquadStructure:
+  - Added 2 more ✘ Anti-Pattern entries to each agent (from 3 → 5+) — pm, architect, developer, qa, tech-writer
+  - Added VETO condition as 4th heuristic rule to each agent
+- Updated templates/squads/software/squad.yaml: added `phases:` block mapping specify→pm, plan→architect, execute→developer, verify→qa, document→tech-writer
+- Created test/unit/engine/software-squad.test.ts with 41 tests covering: squad.yaml fields, phases mapping, 5 agents present, per-agent 6-layer + Voice DNA 5-section + Anti-Patterns min 5 + Heuristics min 3+VETO + Examples min 3 + Handoffs, validateSquadStructure pass, validateHandoffGraph pass
+- 923 total tests passing, zero typecheck errors
+- Files changed: templates/squads/software/agents/pm.md, architect.md, developer.md, qa.md, tech-writer.md, templates/squads/software/squad.yaml, test/unit/engine/software-squad.test.ts (new)
+- **Learnings for future iterations:**
+  - Software Squad lives in templates/squads/software/ and is copied to .buildpact/squads/software/ during init by installer.ts
+  - All template agents must satisfy the same validation rules as community squads: ≥5 ✘ Anti-Patterns, ≥3 IF/THEN heuristics + VETO, ≥3 examples, valid handoffs
+  - Test file for bundled squad references templates/ via relative path from __dirname (test/unit/engine → root is 3 levels up)
+  - phases: block in squad.yaml is documentation-only in Alpha — no code reads it yet, but it satisfies "appropriate agent per phase" AC
+---

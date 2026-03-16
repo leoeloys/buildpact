@@ -606,8 +606,8 @@
         "Tests pass"
       ],
       "priority": 38,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. Fixed all 5 agents in templates/squads/software/ to have ≥5 ✘ Anti-Patterns and VETO condition in Heuristics. Added phases: mapping to squad.yaml. Created 41-test suite in test/unit/engine/software-squad.test.ts. 923 total tests passing."
     },
     {
       "id": "US-039",
