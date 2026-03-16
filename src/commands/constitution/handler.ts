@@ -248,8 +248,18 @@ export const handler: CommandHandler = {
     }
 
     // ---------------------------------------------------------------
-    // EDIT MODE — show current content, allow targeted section edits
+    // EDIT MODE — require explicit consent before any modification (NFR-25)
     // ---------------------------------------------------------------
+    const consent = await clack.confirm({
+      message: i18n.t('cli.constitution.confirm_edit'),
+      initialValue: false,
+    })
+
+    if (clack.isCancel(consent) || !consent) {
+      clack.outro(i18n.t('cli.constitution.edit_consent_denied'))
+      return ok(undefined)
+    }
+
     const loadResult = await loadConstitution(projectDir)
     if (!loadResult.ok) {
       clack.log.error(i18n.t('error.file.read_failed'))

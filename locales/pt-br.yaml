@@ -22,6 +22,10 @@ cli:
     edit_prompt: "Qual seção você deseja editar?"
     saved: "Constituição salva em .buildpact/constitution.md"
     no_changes: "Nenhuma alteração feita"
+    confirm_edit: "Modificar a Constituição é permanente. Tem certeza que deseja continuar?"
+    edit_consent_denied: "Edição da Constituição cancelada — nenhuma alteração feita"
+    violation_warning: "Violação da Constituição [{principle}]: \"{rule}\""
+    violation_warning_beginner: "Atenção: A saída não segue a regra \"{rule}\" na seção \"{principle}\". Revise antes de aceitar."
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

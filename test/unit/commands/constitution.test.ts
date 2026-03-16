@@ -73,16 +73,19 @@ describe('constitution handler — mode detection', () => {
     expect(content).toContain('Use TypeScript strict mode')
   })
 
-  it('runs edit flow when constitution already exists', async () => {
+  it('runs edit flow when constitution already exists and user gives consent', async () => {
     // Create existing constitution
     const existing = '# Project Constitution\n\n## Coding Standards\n- Use TypeScript\n'
     await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), existing, 'utf-8')
 
     const clack = await import('@clack/prompts')
-    // Edit mode: user selects a section then types new content
+    // Edit mode: first confirm is consent (true), then section select, text edit,
+    // and second confirm is "continue editing?" (false)
+    vi.mocked(clack.confirm)
+      .mockResolvedValueOnce(true)  // consent granted
+      .mockResolvedValueOnce(false) // no more edits
     vi.mocked(clack.select).mockResolvedValueOnce('coding_standards')
     vi.mocked(clack.text).mockResolvedValueOnce('Use TypeScript strict mode with ESM')
-    vi.mocked(clack.confirm).mockResolvedValueOnce(false) // no more edits
 
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
@@ -91,12 +94,25 @@ describe('constitution handler — mode detection', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('returns ok(undefined) even when user cancels (no changes)', async () => {
+  it('returns ok without changes when user denies consent to edit', async () => {
+    await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), '# Existing\n', 'utf-8')
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm).mockResolvedValueOnce(false) // consent denied
+
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/constitution/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+  })
+
+  it('returns ok(undefined) even when user cancels consent prompt (no changes)', async () => {
     await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), '# Existing\n', 'utf-8')
 
     const clack = await import('@clack/prompts')
     vi.mocked(clack.isCancel).mockReturnValue(true)
-    vi.mocked(clack.select).mockResolvedValueOnce(Symbol('cancel'))
+    vi.mocked(clack.confirm).mockResolvedValueOnce(Symbol('cancel'))
 
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 

@@ -156,10 +156,12 @@ describe('AC-2: Constitution update', () => {
     await saveConstitution(tmpDir, initial)
 
     const clack = await import('@clack/prompts')
-    // Edit mode: user selects coding_standards section, updates, then declines more edits
+    // Edit mode: first confirm is consent (true), then selects section, edits, then declines more edits
+    vi.mocked(clack.confirm)
+      .mockResolvedValueOnce(true)  // consent granted
+      .mockResolvedValueOnce(false) // no more edits
     vi.mocked(clack.select).mockResolvedValueOnce('coding_standards')
     vi.mocked(clack.text).mockResolvedValueOnce('- New strict standard')
-    vi.mocked(clack.confirm).mockResolvedValueOnce(false)
 
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
