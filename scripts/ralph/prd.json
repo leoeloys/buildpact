@@ -383,8 +383,8 @@
         "Tests pass"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented in src/engine/recovery.ts: selectNextStrategy (3-strategy retry chain: retry→simplify→skip), isStuckLoop (detect identical errors repeating), buildFailureSummary (markdown escalation report), handleTaskFailure (immutable session updates with exhaustion detection), createRecoverySession (captures git HEAD), executeRollback (git reset --hard). 30 unit tests. 560 total tests passing."
     },
     {
       "id": "US-025",

@@ -319,3 +319,18 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `runAtomicCommit` uses `git add -A` (stages everything) — suitable for subagent completion; quick/handler uses specific path staging
   - Tests for git operations should NOT call runAtomicCommit directly (requires real git repo); test pure functions inferCommitType and formatCommitMessage instead
 ---
+
+## 2026-03-16 - US-024
+- Implemented src/engine/recovery.ts with: selectNextStrategy (3-strategy chain: retry→simplify→skip), isStuckLoop (detects same error repeating across consecutive attempts for same task), buildFailureSummary (markdown escalation report with task failures grouped by taskId), handleTaskFailure (immutable session state updates, escalation after 3 attempts or stuck loop), createRecoverySession (captures git HEAD as last good commit ref), executeRollback (git reset --hard to named commitRef)
+- Updated src/engine/index.ts to export all 6 new recovery functions (removed old stub recoverSession export)
+- Added i18n keys: error.recovery.session_create_failed, error.recovery.rollback_failed in both EN and PT-BR locales
+- Added 30 unit tests in test/unit/engine/recovery.test.ts covering all functions
+- 560 tests passing, zero typecheck errors
+- Files changed: src/engine/recovery.ts (rewritten), src/engine/index.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/recovery.test.ts (new)
+- **Learnings for future iterations:**
+  - `handleTaskFailure` is a pure function — rollback happens externally via `executeRollback`; the function only signals `rolledBack: true` in the result, caller performs actual git rollback
+  - Recovery strategies are ordered: 0→retry, 1→simplify, 2→skip; after 3 failures (taskAttempts >= 3) escalate unconditionally
+  - `isStuckLoop` compares only the last 2 failures by error string — simple substring match, not error code
+  - `createRecoverySession` uses `git rev-parse HEAD` which fails on repos with no commits — always call after at least one commit exists
+  - `executeRollback` uses `git reset --hard` which discards ALL uncommitted changes — document clearly that this is destructive by design (FR-703 requirement)
+---
