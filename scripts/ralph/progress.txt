@@ -427,3 +427,19 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `captureSessionFeedback` is safe to call on fresh projects — `loadFeedbackFile` silently returns empty on missing file
   - `formatFeedbackForContext` returns empty string for empty array — safe to call unconditionally before subagent dispatch
 ---
+
+## 2026-03-16 - US-030
+- Implemented src/engine/lessons-distiller.ts with: shouldDistill (threshold check, default 5 sessions), slugifyAc (stable ID from AC text), buildRecommendation (keyword-based actionable guidance), analyzePatterns (finds ACs failing in ≥2 sessions across feedback files), buildLessonEntry (maps PatternMatch to LessonEntry), countTotalSessions (sums entries across all feedback files), distillLessons (pure end-to-end distillation), formatLessonsForContext (Tier 2 markdown block for subagent injection), loadLessonsFile (reads lessons.json or returns empty), writeLessonsFile (mkdir+writeFile), captureDistilledLessons (end-to-end persist, skips when below threshold unless forceDistill=true)
+- Updated src/engine/index.ts to export all 11 new functions + 2 constants
+- Updated src/commands/verify/handler.ts: after captureSessionFeedback, loads recent feedbacks (limit 50) and calls captureDistilledLessons; shows cli.verify.lessons_distilled message when lessons are generated
+- Added 2 i18n keys in en.yaml and pt-br.yaml: cli.verify.lessons_distilled, error.lessons.write_failed
+- Created 43 unit tests in test/unit/engine/lessons-distiller.test.ts covering all functions including I/O with temp dirs
+- 725 tests passing, zero typecheck errors
+- Files changed: src/engine/lessons-distiller.ts (new), src/engine/index.ts, src/commands/verify/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/lessons-distiller.test.ts (new)
+- **Learnings for future iterations:**
+  - Lessons stored in .buildpact/memory/lessons/lessons.json (single file, unlike per-slug feedback files)
+  - analyzePatterns groups by exact AC text match — case-sensitive dedup; notes deduplicated by exact string match
+  - forceDistill=true parameter allows manual triggering below threshold (for manual /bp:lessons command in future)
+  - captureDistilledLessons loads feedbacks with limit=50 to analyze across all recent sessions, not just last 5
+  - loadLessonsFile silently returns empty on missing file — safe on fresh projects
+---
