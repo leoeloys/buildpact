@@ -3,6 +3,9 @@ Started: 2026-03-15
 ---
 
 ## Codebase Patterns
+- Wave executor: `executeWave(tasks)` dispatches all tasks in parallel (via stub in Alpha), `executeWaves(waves)` iterates waves sequentially with halt-on-failure; both exported from src/engine/wave-executor.ts
+- AuditOutcome type only allows 'success' | 'failure' | 'rollback' — no 'partial'; use 'failure' for partial failures
+- buildWaveTaskGroups should filter out empty wave groups (.filter(tasks => tasks.length > 0)) to avoid phantom empty waves
 - Active Squad loaded via readActiveSquad(projectDir): reads `active_squad` from config.yaml, then loads `.buildpact/squads/<name>/squad.yaml` for domain — returns undefined if 'none' or files missing
 - Web Bundle mode detected via readWebBundleMode(projectDir): looks for `mode: web-bundle` in config.yaml — changes clack.select → clack.text for conversational flows
 - ESM `.js` extension on ALL imports: `import { ok, err } from '../contracts/errors.js'`
@@ -267,3 +270,19 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - ResearchTopic union: 'tech_stack' | 'codebase' | 'squad_domain' — all 3 must be dispatched before consolidation
   - In Alpha, parallel dispatch is represented by building payloads + returning stub findings; real Task() dispatch replaces buildStubFindings() in production
 ---
+## 2026-03-16 - US-022
+- Implemented src/engine/wave-executor.ts: WaveTask/TaskExecutionResult/WaveExecutionResult interfaces, buildSubagentContext (builds isolated TaskDispatchPayload per task — only plan content + task context, no orchestrator state), executeTaskStub (Alpha stub per-task execution with payload size validation), executeWave (runs all tasks in parallel, returns WaveExecutionResult with allSucceeded flag), executeWaves (sequential wave iteration, halt-on-failure configurable), parseWaveTasksFromPlanFile (parses [AGENT]/[HUMAN] lines from plan-wave-N.md content)
+- Created src/commands/execute/handler.ts: PlanEntry/WaveFile interfaces, findLatestPlan (latest alphabetical slug from .buildpact/plans/), loadWaveFiles (reads plan-wave-N.md files sorted by filename), buildWaveTaskGroups (groups wave files by wave number, merges split parts, filters empty groups), formatExecutionSummary (markdown summary of results per wave), handler.run() (reads plan dir, loads waves, executes, audits)
+- Updated src/commands/execute/index.ts to re-export from handler.ts
+- Added 16 i18n keys in en.yaml and pt-br.yaml under cli.execute.* and error.execute.*
+- Added 42 unit tests: 27 in test/unit/engine/wave-executor.test.ts, 16 in test/unit/commands/execute.test.ts
+- Files changed: src/engine/wave-executor.ts (updated), src/commands/execute/handler.ts (new), src/commands/execute/index.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/wave-executor.test.ts (new), test/unit/commands/execute.test.ts (new)
+- 506 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - AuditOutcome only allows 'success' | 'failure' | 'rollback' — no 'partial'; use 'failure' for any non-total-success outcome
+  - buildWaveTaskGroups must filter empty wave groups — wave files with no [AGENT]/[HUMAN] lines should not produce empty slots
+  - parseWaveTasksFromPlanFile strips `_(after: T1, T2)_` dependency annotations from task titles
+  - executeWaves uses waveNumber from first task in group — wave files must consistently assign waveNumber from 0-indexed filename parsing
+  - Plan wave filenames: plan-wave-1.md = waveNumber 0, plan-wave-1b.md = waveNumber 0 (split part)
+---
+
