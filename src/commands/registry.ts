@@ -14,6 +14,7 @@ export type CommandId =
   | 'memory'
   | 'optimize'
   | 'export-web'
+  | 'migrate-to-agent'
 
 /** A command handler that processes CLI arguments */
 export interface CommandHandler {
@@ -37,6 +38,7 @@ const REGISTRY: Record<CommandId, CommandFactory> = {
   memory:       () => import('./memory/index.js').then(m => m.handler),
   optimize:     () => import('./optimize/index.js').then(m => m.handler),
   'export-web': () => import('./export-web/index.js').then(m => m.handler),
+  'migrate-to-agent': () => import('./migrate-to-agent/index.js').then(m => m.handler),
 }
 
 /**

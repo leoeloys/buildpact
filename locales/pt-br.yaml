@@ -270,6 +270,16 @@ cli:
     no_suggestions: "Nenhuma mudança de nível sugerida — todos os agentes estão dentro dos limites normais"
     check_welcome: "BuildPact Autonomy — Verificação de Nível dos Agentes"
 
+  migrate_to_agent:
+    welcome: "BuildPact — Migração do Modo Prompt para Modo Agente"
+    validating: "Validando artefatos BuildPact existentes…"
+    validated: "Validação concluída"
+    missing: "ausente"
+    warn_missing_files: "Alguns arquivos obrigatórios estão ausentes — revise o relatório de compatibilidade e aplique as correções antes de ativar o Modo Agente"
+    config_written: "Configuração do Modo Agente salva em {path}"
+    report_written: "Relatório de compatibilidade salvo em {path}"
+    outro: "Revise .buildpact/agent-mode.yaml e altere mode: prompt → agent quando estiver pronto para ativar"
+
   export_web:
     welcome: "BuildPact — Exportação de Bundle Web"
     loading: "Carregando Squad, Constituição e Contexto do Projeto…"

@@ -270,6 +270,16 @@ cli:
     no_suggestions: "No level changes suggested — all agents are performing within normal thresholds"
     check_welcome: "BuildPact Autonomy — Agent Level Check"
 
+  migrate_to_agent:
+    welcome: "BuildPact — Prompt-to-Agent Mode Migration"
+    validating: "Validating existing BuildPact artifacts…"
+    validated: "Validation complete"
+    missing: "missing"
+    warn_missing_files: "Some required files are missing — review the compatibility report and apply fixes before activating Agent Mode"
+    config_written: "Agent Mode config written to {path}"
+    report_written: "Compatibility report written to {path}"
+    outro: "Review .buildpact/agent-mode.yaml and change mode: prompt → agent when ready to activate"
+
   export_web:
     welcome: "BuildPact — Web Bundle Export"
     loading: "Loading Squad, Constitution, and Project Context…"
