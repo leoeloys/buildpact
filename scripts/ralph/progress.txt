@@ -138,6 +138,26 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `clack.select` must be in the vi.mock factory for specify tests — was already there from US-013 setup
 ---
 
+## 2026-03-16 - US-016
+- Added automation maturity assessment to specify/handler.ts:
+  - `MaturityStage` type (1-5), `MaturityAssessmentInput` / `MaturityAssessmentResult` interfaces
+  - `scoreMaturity(input)` pure function: sums frequency(0-3) + predictability(0-3) + humanDecisions(0-3) → score 0-9 → stage 1-5
+  - `assessAutomationMaturity(i18n)` interactive: 3 clack.select calls + override prompt (keep/change) + optional stage override select
+  - Updated `SpecInput` to include optional `maturityAssessment?: MaturityAssessmentResult`
+  - Updated `buildSpecContent` to render `## Automation Maturity Assessment` with stage, justification, and override notice
+  - Updated `handler.run()`: calls assessAutomationMaturity() after squad flow, merges result into specInput
+- Added 15 i18n keys in en.yaml and pt-br.yaml under cli.specify.maturity_*
+- Updated 9 existing handler integration tests to mock 4 new maturity select calls; updated 2 tests that asserted `not.toHaveBeenCalled()` on select to account for maturity calls
+- Added 14 new tests: 6 scoreMaturity (all 5 stages + justification text), 4 assessAutomationMaturity (keep/override/cancel-freq/cancel-override), 3 buildSpecContent, 1 handler integration
+- Files changed: src/commands/specify/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/specify.test.ts
+- 319 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Adding interactive prompts to an existing handler flow ALWAYS breaks tests that assert `not.toHaveBeenCalled()` on the prompt mock — check all such assertions when adding new prompts
+  - Maturity assessment uses 4 clack.select calls in sequence; all existing specify handler tests need these mocked or they get undefined values
+  - scoreMaturity score thresholds: 0-1→Stage1, 2-3→Stage2, 4-5→Stage3, 6-7→Stage4, 8-9→Stage5; total range 0-9
+  - Override flow: 'change' requires a 5th select for the stage number; 'keep' returns original scored result unchanged
+---
+
 ## 2026-03-16 - US-015
 - Added Squad domain-aware question flow to specify/handler.ts:
   - `SquadQuestion` / `SquadConstraintAnswer` / `ActiveSquad` interfaces

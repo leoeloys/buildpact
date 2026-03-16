@@ -255,8 +255,8 @@
         "Tests pass"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. scoreMaturity() scores frequency+predictability+humanDecisions (0-9) → 5 stages. assessAutomationMaturity() uses 3 clack.select calls + override prompt. Recommendation and optional override written to spec.md under ## Automation Maturity Assessment. 14 new tests. 319 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-017",
