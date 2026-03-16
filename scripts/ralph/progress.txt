@@ -1,0 +1,25 @@
+# Ralph Progress Log
+Started: 2026-03-15
+---
+
+## Codebase Patterns
+- ESM `.js` extension on ALL imports: `import { ok, err } from '../contracts/errors.js'`
+- `Result<T, CliError>` for all fallible functions — never `throw`
+- `ERROR_CODES.*` constants in `src/contracts/errors.ts` — add new codes here, never inline strings
+- `ok()` / `err()` helpers — never raw `{ ok: true, value }` objects
+- Named exports only — no `export default`
+- Audit logging FIRST — log intent before writing files
+- All user strings via `I18nResolver.t()` — never hardcoded text
+- Factory function pattern for test setup — `const opts = () => ({...})`
+- Test imports from implementation files — not from barrel `index.ts`
+- @clack/prompts API: `spinner.stop()` takes 1 argument; use `log.success()` / `log.warn()` for display
+- Layer dependency order: contracts <- foundation <- engine <- commands <- cli
+- Vitest 4.x for testing, mkdtemp for temp dirs, afterEach cleanup
+- TypeScript strict mode, tsdown for build
+- Node.js minimum 20.x, 22.x LTS recommended
+---
+
+## Pre-existing completed stories (Epic 1 + Story 2.1)
+
+Stories US-001 through US-007 were completed before Ralph loop started.
+All 157 tests passing. TypeScript compiles with zero errors.

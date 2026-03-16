@@ -1,0 +1,25 @@
+# Software Squad — Reference Implementation
+# Source of truth: github.com/buildpact/buildpact-squads
+# This bundled copy ships with the npm package for offline/zero-config use.
+
+name: software
+version: "0.1.0"
+domain: software
+description: "Full-stack software development squad — PM, Architect, Developer, QA, Tech Writer"
+initial_level: L2
+
+bundle_disclaimers:
+  pt-br: "Este conteúdo foi gerado por IA e deve ser revisado antes do uso em produção."
+  en: "This content was AI-generated and should be reviewed before production use."
+
+agents:
+  pm:
+    file: agents/pm.md
+  architect:
+    file: agents/architect.md
+  developer:
+    file: agents/developer.md
+  qa:
+    file: agents/qa.md
+  tech-writer:
+    file: agents/tech-writer.md

@@ -1,0 +1,888 @@
+{
+  "project": "BuildPact",
+  "branchName": "ralph/buildpact-alpha",
+  "description": "BuildPact — Universal Spec-Driven Development Framework. Full pipeline from Foundation through AutoResearch.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Epic 1.1: Project Initialization via CLI",
+      "description": "As a framework user, I want to run `npx buildpact init <project-name>` and complete a guided TUI setup so that I have a complete IDE-specific project structure ready in under 2 minutes.",
+      "acceptanceCriteria": [
+        "npx buildpact init <name> launches bilingual TUI with language, domain, IDE, experience, and Squad selection",
+        "All selected IDE config files generated (.claude/commands/, .cursor/rules/, .gemini/, .codex/)",
+        ".buildpact/ directory created with constitution.md scaffold, config.yaml, project-context.md, audit/",
+        "Installation completes within 60 seconds",
+        "Offline fallback uses bundled Software Squad when remote fetch fails",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed in Epic 1. All 6 stories done."
+    },
+    {
+      "id": "US-002",
+      "title": "Epic 1.2: Diagnostic Health Check",
+      "description": "As a developer, I want to run `buildpact doctor` to check Node.js, Git, IDE configs, Squad integrity, and .buildpact/ consistency with bilingual output.",
+      "acceptanceCriteria": [
+        "buildpact doctor checks Node.js ≥20.x, Git availability, IDE config validity, Squad integrity, .buildpact/ consistency",
+        "Output in configured language (PT-BR or EN) with PASS/WARN/FAIL per check",
+        "Actionable remediation steps for each failure",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed in Epic 1."
+    },
+    {
+      "id": "US-003",
+      "title": "Epic 1.3: Subagent Isolation Architecture",
+      "description": "As a developer, I want all heavy computation delegated to isolated subagents via Task() dispatch with clean context windows and ≤20KB payloads.",
+      "acceptanceCriteria": [
+        "buildTaskPayload() assembles minimal TaskDispatchPayload with unique taskId",
+        "Subagents receive only task-specific payload, not accumulated orchestrator context",
+        "validatePayloadSize() enforces ≤20KB payload limit (NFR-02)",
+        "All orchestrator commands ≤300 lines and ≤15% of model context window",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed in Epic 1."
+    },
+    {
+      "id": "US-004",
+      "title": "Epic 1.4: Real-Time Context & Cost Monitoring",
+      "description": "As a developer, I want a real-time status bar showing context usage with WARNING (>50%) and CRITICAL (>75%) alerts plus estimated cost per phase.",
+      "acceptanceCriteria": [
+        "getContextUsage() returns current context percentage",
+        "checkContextAlert() returns WARNING at >50%, CRITICAL at >75%",
+        "getCostState() returns estimated cost for current phase and accumulated milestone cost",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed in Epic 1."
+    },
+    {
+      "id": "US-005",
+      "title": "Epic 1.5: Automatic Document Sharding",
+      "description": "As a developer, I want documents exceeding 500 lines auto-split into atomic files with an index.md, achieving ≥70% token savings.",
+      "acceptanceCriteria": [
+        "shouldShard() triggers at 500-line threshold",
+        "splitIntoSections() splits by level-2 headings into atomic shards",
+        "buildShardManifest() generates index.md with navigation links",
+        "Token savings ≥70% when loading individual shards vs monolithic file",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed in Epic 1."
+    },
+    {
+      "id": "US-006",
+      "title": "Epic 1.6: Project Decision Log",
+      "description": "As a developer, I want DECISIONS.md (append-only) and STATUS.md (living state) maintained in project root for AI session continuity.",
+      "acceptanceCriteria": [
+        "appendDecision() appends entries with date, decision, rationale, affected artifacts",
+        "DECISIONS.md is append-only — never overwrites previous entries",
+        "STATUS.md template created during init",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Completed in Epic 1."
+    },
+    {
+      "id": "US-007",
+      "title": "Epic 2.1: Create and Edit Project Constitution",
+      "description": "As a tech lead, I want to run /bp:constitution to create or update immutable project rules (coding standards, compliance, architecture, quality gates, domain rules) saved to .buildpact/constitution.md.",
+      "acceptanceCriteria": [
+        "Guided TUI flow collects 5 sections: coding standards, compliance, architecture, quality gates, domain rules",
+        "Result saved to .buildpact/constitution.md",
+        "Edit mode loads existing constitution and allows targeted section edits",
+        "Constitution path injected into TaskDispatchPayload for subagent context",
+        "Bilingual support (EN + PT-BR) via i18n keys",
+        "Audit logging on create/update",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Completed and code-reviewed. 3 MEDIUM issues fixed."
+    },
+    {
+      "id": "US-008",
+      "title": "Epic 2.2: Automatic Constitution Enforcement",
+      "description": "As a developer, I want every specify/plan/execute action to automatically validate output against the Constitution, generating warnings for violations.",
+      "acceptanceCriteria": [
+        "Constitution auto-injected into subagent context on specify, plan, execute commands",
+        "Output validated against Constitution rules before acceptance",
+        "Violations generate warnings referencing specific violated principle by name",
+        "Constitution modification always requires explicit user consent (NFR-25)",
+        "Beginner mode shows plain-language warnings with no jargon",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Epic 2.3: Constitution Versioning & Change Tracking",
+      "description": "As a tech lead, I want every Constitution change to generate an update checklist tracking what changed, why, and which downstream artifacts need review.",
+      "acceptanceCriteria": [
+        "constitution_update_checklist.md generated on Constitution modification",
+        "Checklist tracks: what changed, stated reason, downstream artifacts needing review",
+        "Lists all existing specs and plans referencing changed principles with recommended review action",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Epic 3.1: Quick Command — Zero-Ceremony Execution",
+      "description": "As a developer, I want /bp:quick <description> to go from natural language to atomic commit in under 5 minutes, skipping all planning ceremony.",
+      "acceptanceCriteria": [
+        "/bp:quick generates minimal spec, executes change, produces one atomic Git commit",
+        "Flow completes in under 5 minutes",
+        "Constitution validated even in quick mode",
+        "Commit message format: type(quick): description",
+        "Exactly one commit in Git history per quick execution",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Epic 3.2: Quick Flow with Lightweight Context Gathering",
+      "description": "As a developer, I want /bp:quick --discuss to ask 3-5 targeted questions before execution without entering the full planning pipeline.",
+      "acceptanceCriteria": [
+        "/bp:quick --discuss asks 3-5 focused clarifying questions",
+        "Each question presents numbered options with 'Other (free text)' as final choice",
+        "After answers, proceeds directly to execution (no full plan/specify pipeline)",
+        "Output reflects specific user answers, not generic assumptions",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Epic 3.3: Quick Flow with Plan Verification",
+      "description": "As a developer, I want /bp:quick --full to add plan-checking and verification for higher-risk small changes.",
+      "acceptanceCriteria": [
+        "/bp:quick --full generates plan, validates with 2-perspective check, executes, and verifies",
+        "If verification fails, fix plan auto-generated and offered",
+        "User notified of risks before execution with abort/continue option",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Epic 4.1: Natural Language Specification Capture",
+      "description": "As a developer, I want /bp:specify to accept plain natural language input and produce a structured spec.md with user stories and acceptance criteria.",
+      "acceptanceCriteria": [
+        "/bp:specify accepts natural language input, rejects implementation details at this stage",
+        "Beginner mode uses guided sequential wizard questions",
+        "Generated spec.md contains: user stories, ACs in Given/When/Then, FRs, NFRs, assumptions, Constitution self-assessment",
+        "Spec saved to .buildpact/specs/",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Epic 4.2: Ambiguity Detection and Clarification Flow",
+      "description": "As a developer, I want the specify phase to detect ambiguities and offer structured choices with ≥3 numbered options plus free text.",
+      "acceptanceCriteria": [
+        "Ambiguity detection triggers clarification flow",
+        "Each ambiguity presents ≥3 numbered options with 'Other (free text)' as final choice",
+        "Selections incorporated into generated spec.md",
+        "Skips clarification if no ambiguities detected",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Epic 4.3: Domain-Aware Specification with Squad Integration",
+      "description": "As a developer with an active Squad, I want /bp:specify to inject domain-specific question templates into the specify flow.",
+      "acceptanceCriteria": [
+        "Active Squad injects domain-specific question templates into specify flow",
+        "Generated spec.md includes domain-specific constraints from Squad answers",
+        "Web Bundle mode uses Squad-defined conversational question flows instead of standard questions",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Epic 4.4: Automation Maturity Assessment",
+      "description": "As a developer, I want the specify phase to evaluate my task against a 5-stage automation maturity model and recommend the right level.",
+      "acceptanceCriteria": [
+        "Advisor evaluates against 5 stages: Manual, Documented Skill, Alias, Heartbeat Check, Full Automation",
+        "Recommendation based on frequency, predictability, human decision requirements, cost-benefit",
+        "Recommendation included as section in spec.md with justification",
+        "User can override with override noted in spec",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Epic 5.1: Automated Parallel Research Before Planning",
+      "description": "As a developer, I want /bp:plan to spawn parallel research agents investigating domain, tech stack, and codebase before generating the plan.",
+      "acceptanceCriteria": [
+        "Parallel research agents spawned for: tech stack, existing codebase, domain constraints from active Squad",
+        "Each research agent runs in isolated subagent context",
+        "Research results consolidated and used as plan generation input",
+        "Generated plan references specific findings from research",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Epic 5.2: Wave-Based Plan Generation",
+      "description": "As a developer, I want /bp:plan to analyze task dependencies and group them into sequential execution waves with parallel tasks within each wave.",
+      "acceptanceCriteria": [
+        "Planner groups independent tasks into same wave, dependent tasks into subsequent waves",
+        "Vertical slices preferred over horizontal layers",
+        "Each plan file contains max 2-3 tasks; auto-splits if exceeded",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Epic 5.3: Model Profile Configuration",
+      "description": "As a tech lead, I want to configure quality/balanced/budget model profiles with failover chains for cost optimization.",
+      "acceptanceCriteria": [
+        "Model profiles configurable in config.yaml (quality/balanced/budget)",
+        "Pipeline commands use model specified for that phase in active profile",
+        "Automatic failover to next model in chain with retry delay and max wait",
+        "Operation-level routing within phases (e.g., research vs plan writing)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Epic 5.4: Nyquist Multi-Perspective Plan Validation",
+      "description": "As a developer, I want plans validated by 3-4 independent analysis perspectives before execution begins.",
+      "acceptanceCriteria": [
+        "3-4 independent perspectives evaluate: completeness vs spec, internal consistency, dependency correctness, feasibility",
+        "Validation report lists issues per perspective",
+        "Critical issues block execution until resolved or overridden",
+        "User can request automatic plan revision for flagged issues",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Epic 5.5: Non-Software Domain Planning",
+      "description": "As a domain expert, I want /bp:plan to clearly distinguish between [HUMAN] manual actions and [AGENT] automated actions.",
+      "acceptanceCriteria": [
+        "Each task tagged as [HUMAN] or [AGENT]",
+        "Human steps include checklist format for manual tracking",
+        "System pauses at human steps and prompts user before proceeding",
+        "Progress persisted for session resume",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Epic 6.1: Wave-Parallel Execution with Subagent Isolation",
+      "description": "As a developer, I want /bp:execute to run each wave's tasks in parallel using isolated subagents with clean context windows.",
+      "acceptanceCriteria": [
+        "Tasks within same wave dispatched to independent subagents simultaneously",
+        "Each subagent receives clean context: relevant plan file + task context + codebase context only",
+        "Subagents do NOT share state or inherit orchestrator context",
+        "Next wave begins only after all current wave tasks complete",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Epic 6.2: Atomic Git Commits per Task",
+      "description": "As a developer, I want every completed task to produce exactly one Git commit with standardized format type(phase-plan): description.",
+      "acceptanceCriteria": [
+        "Each successful task produces exactly one Git commit",
+        "Commit message format: type(phase-plan): description",
+        "No task produces zero or multiple commits",
+        "Number of commits equals number of executed tasks",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Epic 6.3: Crash Recovery with Automatic Retry",
+      "description": "As a developer, I want up to 3 automatic recovery strategies before escalation, with rollback to last good state.",
+      "acceptanceCriteria": [
+        "Framework tracks failures and attempts up to 3 different recovery approaches",
+        "Stuck loops detected and broken with different strategy tried",
+        "After 3 failures: rollback to last good state and escalate to user with failure summary",
+        "No partial or broken changes remain in codebase after rollback",
+        "Git history reflects only successful commits",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Epic 6.4: Goal-Backward Wave Verification",
+      "description": "As a developer, I want each wave's output verified against relevant spec ACs before proceeding to the next wave.",
+      "acceptanceCriteria": [
+        "Pass/fail report generated per AC relevant to completed wave",
+        "100% pass rate required before next wave begins",
+        "Failed criteria block progression",
+        "Targeted fix plan auto-generated for failed criteria",
+        "Fix plan executable via /bp:execute without full pipeline re-run",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Epic 6.5: Budget Guards",
+      "description": "As a tech lead, I want hard spending limits at session/phase/day levels that pause execution immediately when reached.",
+      "acceptanceCriteria": [
+        "Budget limits configurable in config.yaml: per_session_usd, per_phase_usd, per_day_usd",
+        "Execution pauses immediately when limit reached with cost summary",
+        "User offered: increase limit, switch to cheaper profile, or stop and preserve results",
+        "No further AI calls until user makes a choice",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Epic 7.1: Guided Acceptance Test (UAT)",
+      "description": "As a developer, I want /bp:verify to walk me through each AC from the spec with structured pass/fail test.",
+      "acceptanceCriteria": [
+        "/bp:verify loads active spec.md and presents each AC one at a time",
+        "Guides what to check, expected outcome, prompts PASS/FAIL",
+        "Structured verification report generated with all criteria PASS/FAIL status",
+        "Verified spec marked and session logged to .buildpact/audit/",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "Epic 7.2: Automatic Fix Plan Generation",
+      "description": "As a developer, I want failed verification items to auto-generate targeted fix plans executable without re-running the full pipeline.",
+      "acceptanceCriteria": [
+        "Fix plan auto-generated targeting only failed ACs",
+        "Fix plan does not re-plan entire feature",
+        "/bp:execute on fix plan re-executes only failing items",
+        "/bp:verify can re-run after fixes to confirm",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Epic 7.3: Memory Layer Tier 1 — Session Feedback",
+      "description": "As a developer, I want verification sessions to auto-capture structured feedback files in .buildpact/memory/feedback/ with FIFO cap of 30 entries.",
+      "acceptanceCriteria": [
+        "Feedback files created in .buildpact/memory/feedback/ after verification",
+        "Captures: what worked, what failed, session outcome",
+        "FIFO cap of 30 entries per feedback file enforced",
+        "5 most recent feedback files auto-loaded into new session subagent context",
+        "Memory Layer free in open-source core (FR-804)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "Epic 7.4: Memory Layer Tier 2 — Lessons & Patterns (Beta)",
+      "description": "As a developer, I want recurring successful patterns distilled into lessons files for systematic reuse across sessions.",
+      "acceptanceCriteria": [
+        "Lessons files created in .buildpact/memory/lessons/ from recurring feedback patterns",
+        "Processing triggered manually or after 5 sessions",
+        "Relevant lessons loaded alongside feedback during planning",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": "Beta milestone scope"
+    },
+    {
+      "id": "US-031",
+      "title": "Epic 7.5: Memory Layer Tier 3 — Decisions Log (v1.0)",
+      "description": "As a tech lead, I want key architectural decisions saved to .buildpact/memory/decisions/ for permanent reference by future agent sessions.",
+      "acceptanceCriteria": [
+        "Decisions files created with: decision, rationale, alternatives considered, date",
+        "Decisions log available as reference context for planning agents",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": "v1.0 milestone scope"
+    },
+    {
+      "id": "US-032",
+      "title": "Epic 8.1: Squad Scaffolding & Installation",
+      "description": "As a domain expert, I want to scaffold a new Squad or install an existing one with a single command.",
+      "acceptanceCriteria": [
+        "npx buildpact squad create <name> generates 4-tier hierarchy template with all 6 layers, squad.yaml, benchmark/",
+        "Scaffold includes inline documentation explaining each layer",
+        "npx buildpact squad add <name> downloads, validates (structural + security), and installs to .buildpact/squads/",
+        "Warning displayed for unreviewed community Squads",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-033",
+      "title": "Epic 8.2: 6-Layer Agent Definition",
+      "description": "As a Squad creator, I want an enforced 6-layer anatomy template (identity, persona, voice_dna, heuristics, examples×3, handoffs) for each agent.",
+      "acceptanceCriteria": [
+        "Agent template contains all 6 layers with inline documentation and examples",
+        "Missing layers reported as errors during Squad validation with specific agent/layer reference",
+        "Heuristics include IF/THEN rules with veto conditions",
+        "Examples require minimum 3 concrete input/output pairs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-034",
+      "title": "Epic 8.3: Voice DNA Creation with 5-Section Template",
+      "description": "As a Squad creator, I want a mandatory 5-section Voice DNA template with a step-by-step creation guide.",
+      "acceptanceCriteria": [
+        "Voice DNA requires 5 sections: Personality Anchors, Opinion Stance, Anti-Patterns (min 5 pairs), Never-Do Rules, Inspirational Anchors",
+        "Omitting any section causes Squad validation to fail",
+        "Step-by-step Voice DNA creation guide available in documentation",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-035",
+      "title": "Epic 8.4: Squad Structural Validation",
+      "description": "As a Squad creator, I want /bp:squad validate to run comprehensive structural and security checks.",
+      "acceptanceCriteria": [
+        "/bp:squad validate checks: 6-layer completeness, Voice DNA 5-section, heuristic coverage, example quality (min 3), handoff graph validity",
+        "Community Squads also get security checks: no external URLs, no executable code, no path violations, no prompt injection",
+        "Detailed PASS/FAIL report with specific references",
+        "Community Squads blocked until all security checks pass",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-036",
+      "title": "Epic 8.5: Agent Autonomy Leveling System (L1-L4)",
+      "description": "As a Squad creator, I want agents with autonomy levels L1-L4 that evolve based on approval/rejection track record.",
+      "acceptanceCriteria": [
+        "New agents default to L1 (Observer) or L2 (Contributor)",
+        "System suggests promotion after 7 days with >85% approval rate",
+        "System suggests demotion if >30% rejection in rolling 7-day window",
+        "Promotion/demotion requires explicit user confirmation",
+        "L1 agents always require user confirmation for write operations",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "Epic 8.6: Lazy Agent Loading (v2.0)",
+      "description": "As a developer in Agent Mode, I want Squad agents loaded on-demand rather than all at once to stay within context budget.",
+      "acceptanceCriteria": [
+        "Only Chief agent + lightweight index (≤1KB) loaded initially in Agent Mode",
+        "Specialists loaded on-demand during handoffs, unloaded after completion",
+        "Prompt Mode includes documented guide for manual agent loading best practices",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": "v2.0 milestone scope"
+    },
+    {
+      "id": "US-038",
+      "title": "Epic 9.1: Software Squad — Reference Implementation",
+      "description": "As a developer, I want the Software Squad pre-installed with PM, Architect, Developer, QA, and Tech Writer agents following 6-layer anatomy.",
+      "acceptanceCriteria": [
+        "Software Squad in .buildpact/squads/software/ with all 5 agents fully defined",
+        "Each agent follows 6-layer anatomy and Voice DNA 5-section template",
+        "Squad passes all structural validation checks out of the box",
+        "Appropriate agent engaged for each pipeline phase (specify, plan, execute)",
+        "Serves as reference implementation for community Squad creators",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-039",
+      "title": "Epic 9.2: Medical Marketing Squad — CFM-Compliant (Private)",
+      "description": "As a medical marketing professional, I want a pre-built Squad with Strategist, Copywriter, Designer, Analytics agents enforcing CFM compliance.",
+      "acceptanceCriteria": [
+        "Strategist, Copywriter, Designer, Analytics agents available",
+        "Copywriter Voice DNA enforces CFM nº 1.974/2011 — refuses prohibited claims, flags violations",
+        "Built-in CFM/ANVISA checklists, WhatsApp CTA templates, Schema JSON-LD medical templates",
+        "Compliance gate identifies CFM/ANVISA violations with specific rule references",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": "Private, internal use only"
+    },
+    {
+      "id": "US-040",
+      "title": "Epic 9.3: Scientific Research Squad (Private, Beta)",
+      "description": "As a researcher, I want a pre-built Squad with Research Lead, Literature Reviewer, Data Analyst, Peer Reviewer, and LaTeX Writer agents.",
+      "acceptanceCriteria": [
+        "All 5 agents available with systematic review protocols",
+        "PRISMA checklist templates and statistical analysis plan templates pre-loaded",
+        "Domain-aware questions address: research question, study design, inclusion/exclusion criteria, statistical approach",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": "Beta milestone, private"
+    },
+    {
+      "id": "US-041",
+      "title": "Epic 9.4: Clinic Management Squad (Private, Beta)",
+      "description": "As a clinic manager, I want a pre-built Squad with Operations Manager, Finance Analyst, Compliance Checker, and Patient Flow Optimizer.",
+      "acceptanceCriteria": [
+        "All 4 agents available",
+        "Compliance Checker validates outputs against Brazilian healthcare regulations",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": "Beta milestone, private"
+    },
+    {
+      "id": "US-042",
+      "title": "Epic 9.5: Agent Builder Squad — Meta Creation Tool (Public)",
+      "description": "As a domain expert, I want an Agent Builder Squad that guides me through creating a production-quality custom Squad.",
+      "acceptanceCriteria": [
+        "Agent Designer, Workflow Architect, Tester agents guide through: roles, Voice DNA, heuristics, examples, handoffs",
+        "Tester validates each agent against 6-layer and Voice DNA requirements during build",
+        "Completed Squad ready for /bp:squad validate",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": "Beta milestone, public"
+    },
+    {
+      "id": "US-043",
+      "title": "Epic 10.1: Web Bundle Export Command",
+      "description": "As a Squad creator, I want /bp:export-web <platform> to generate a single copiable prompt for Claude.ai/ChatGPT/Gemini.",
+      "acceptanceCriteria": [
+        "/bp:export-web generates .txt bundle with: compressed Squad agents, Constitution essentials, project context, workflow instructions",
+        "Token count estimate included; warning at 80% of platform limit (180K Claude, 128K ChatGPT, 1M Gemini)",
+        "Non-technical user can paste into Claude.ai and activate Squad workflow in configured language",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-044",
+      "title": "Epic 10.2: Progressive Bundle Compression",
+      "description": "As a Squad creator, I want deterministic compression to stay within platform token limits with tiered degradation.",
+      "acceptanceCriteria": [
+        "Compression sequence: inline active agents → compress Constitution → exclude optimization/memory → current context only",
+        "If still over limit: tiered degradation (remove examples → remove heuristic detail → Chief-only → minimal quick-session)",
+        "Each degradation tier documented inside bundle",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-045",
+      "title": "Epic 10.3: Conversational Interface Adaptation",
+      "description": "As a non-technical end-user, I want Web Bundle interactions to be natural language conversations with no commands or jargon.",
+      "acceptanceCriteria": [
+        "All slash commands replaced with natural language conversation flows in Web Bundle",
+        "Options presented as numbered choices in natural language",
+        "No technical terms (repository, branch, commit, YAML, pipeline, subagent) in user-facing conversation",
+        "PT-BR bundle uses Portuguese with no English fallback",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-046",
+      "title": "Epic 10.4: Bundle Versioning & Staleness Detection",
+      "description": "As a non-technical user, I want bundles to warn me if outdated (>7 days or source files changed).",
+      "acceptanceCriteria": [
+        "Bundle includes generation timestamp and source file hash",
+        "Bundle older than 7 days triggers warning suggesting fresh export",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-047",
+      "title": "Epic 10.5: Prompt-to-Agent Mode Migration Path (v2.0)",
+      "description": "As a developer transitioning to Agent Mode, I want a migration command that validates and upgrades all existing artifacts.",
+      "acceptanceCriteria": [
+        "npx buildpact migrate-to-agent validates existing files, generates Agent Mode config, preserves Git history",
+        "Compatibility report with specific file references and remediation steps",
+        "Project continues working in Prompt Mode until Agent Mode explicitly activated",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 47,
+      "passes": false,
+      "notes": "v2.0 milestone scope"
+    },
+    {
+      "id": "US-048",
+      "title": "Epic 11.1: Public Community Hub Repository",
+      "description": "As a user, I want a buildpact-squads GitHub repo to discover and install community Squads with a single command.",
+      "acceptanceCriteria": [
+        "buildpact-squads repo organized by domain with README, validation badges, MIT license per Squad",
+        "npx buildpact squad add <name> downloads, validates (structural + security), and installs",
+        "Warning for unreviewed Squads",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 48,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-049",
+      "title": "Epic 11.2: Squad Contribution Flow with Automated CI",
+      "description": "As a Squad creator, I want a clear fork-create-validate-PR contribution flow with automated CI checks.",
+      "acceptanceCriteria": [
+        "CI runs structural validation and security checks on PR",
+        "CI results posted as PR check summaries with specific pass/fail details",
+        "Merged Squads immediately available via npx buildpact squad add",
+        "Failed CI includes specific messages and suggested fixes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 49,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-050",
+      "title": "Epic 11.3: Community Health & Governance Infrastructure",
+      "description": "As a maintainer, I want CONTRIBUTING.md (bilingual), good-first-issue labels, and ADRs for community sustainability.",
+      "acceptanceCriteria": [
+        "CONTRIBUTING.md in PT-BR and EN with step-by-step instructions",
+        "≥5 good-first-issue labels with clear scope, <2hr effort, assigned mentor",
+        "ADRs in docs/decisions/ following MADR template for significant decisions",
+        "PR template enforces bilingual i18n strings for user-facing text",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 50,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-051",
+      "title": "Epic 12.0: AutoResearch Architecture Decision Record (ADR-001)",
+      "description": "As a developer, I want ADR-001 documenting AutoResearch isolation architecture before any code is written.",
+      "acceptanceCriteria": [
+        "ADR-001 created at docs/decisions/ADR-001-autoResearch-isolation.md",
+        "Documents: problem, alternatives, chosen approach (isolated Git branch), consequences, open questions",
+        "ADR approved before any Story 12.1+ implementation begins",
+        "Deviations require ADR update and re-approval"
+      ],
+      "priority": 51,
+      "passes": false,
+      "notes": "Pre-requisite for all other Epic 12 stories"
+    },
+    {
+      "id": "US-052",
+      "title": "Epic 12.1: AutoResearch Command & Program File",
+      "description": "As an expert developer, I want /bp:optimize <target> with a program.md defining goal, constraints, and acceptance criteria.",
+      "acceptanceCriteria": [
+        "/bp:optimize launches autonomous experimentation loop on target file",
+        "program.md defines: optimization goal, constraints, experiment directions, acceptance criteria",
+        "Command available only at Expert experience level",
+        "Target files >600 lines blocked with shard-first instruction",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 52,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-053",
+      "title": "Epic 12.2: Fixed-Budget Experiment Loop",
+      "description": "As an expert user, I want each experiment on a 5-minute budget and total session configurable up to 24 hours.",
+      "acceptanceCriteria": [
+        "Individual experiment: 5-minute default time budget (configurable)",
+        "Total session: 30-minute default (configurable up to 24 hours)",
+        "Budget exhaustion stops loop cleanly, preserves all results",
+        "Budget Guard integration: loop pauses at cost limit with continue/stop options",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 53,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-054",
+      "title": "Epic 12.3: Git Ratchet — Commit Only Proven Improvements",
+      "description": "As an expert user, I want the framework to auto-commit only when metrics improve and revert everything else.",
+      "acceptanceCriteria": [
+        "Improved: commit with format optimize(N): description | metric: X.XX → Y.YY",
+        "Equal or worse: git-revert to last successful state automatically",
+        "Independent TypeScript module at src/optimize/ratchet.ts with ≥80% Vitest coverage",
+        "All operations on isolated branch: optimize/{target-type}/{session-name}/{timestamp}",
+        "Human review required before merge to main — no auto-merge",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 54,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-055",
+      "title": "Epic 12.4: Domain-Specific Metrics",
+      "description": "As an expert user, I want built-in metrics for code/marketing/agents plus custom metric support via executable scripts.",
+      "acceptanceCriteria": [
+        "Software metrics: test pass rate, bundle size, Lighthouse score, build time, coverage, type-check",
+        "Marketing metrics: readability score, compliance pass rate, keyword density, CTA clarity (evaluator ≠ generator model)",
+        "Custom metrics: any executable returning numeric score to stdout",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 55,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-056",
+      "title": "Epic 12.5: Optimization Report",
+      "description": "As an expert user, I want an auto-generated optimization-report.md summarizing experiments, improvements, and diffs.",
+      "acceptanceCriteria": [
+        "optimization-report.md contains: experiments run, improvements found, changes made, before/after metrics, diff of kept modifications",
+        "Report indicates which branch to merge and expected metric impact",
+        "results.tsv append-only log contains full experiment history",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 56,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

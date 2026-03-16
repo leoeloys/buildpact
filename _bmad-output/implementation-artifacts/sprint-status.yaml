@@ -1,0 +1,147 @@
+# generated: 2026-03-15
+# last_updated: 2026-03-15
+# project: BuildPact
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: "2026-03-15"
+last_updated: "2026-03-15"
+project: BuildPact
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # Epic 1: Project Foundation & Setup
+  epic-1: done
+  1-1-project-initialization-via-cli: done
+  1-2-diagnostic-health-check: done
+  1-3-subagent-isolation-architecture: done
+  1-4-real-time-context-and-cost-monitoring: done
+  1-5-automatic-document-sharding: done
+  1-6-project-decision-log: done
+  epic-1-retrospective: done
+
+  # Epic 2: Project Governance via Constitution
+  epic-2: in-progress
+  2-1-create-and-edit-project-constitution: done
+  2-2-automatic-constitution-enforcement: backlog
+  2-3-constitution-versioning-and-change-tracking: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Quick Flow — Instant Task Execution
+  epic-3: backlog
+  3-1-quick-command-zero-ceremony-execution: backlog
+  3-2-quick-flow-with-lightweight-context-gathering: backlog
+  3-3-quick-flow-with-plan-verification: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Specification Pipeline (/bp:specify)
+  epic-4: backlog
+  4-1-natural-language-specification-capture: backlog
+  4-2-ambiguity-detection-and-clarification-flow: backlog
+  4-3-domain-aware-specification-with-squad-integration: backlog
+  4-4-automation-maturity-assessment: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Planning Pipeline (/bp:plan)
+  epic-5: backlog
+  5-1-automated-parallel-research-before-planning: backlog
+  5-2-wave-based-plan-generation: backlog
+  5-3-model-profile-configuration: backlog
+  5-4-nyquist-multi-perspective-plan-validation: backlog
+  5-5-non-software-domain-planning: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Execution Pipeline (/bp:execute)
+  epic-6: backlog
+  6-1-wave-parallel-execution-with-subagent-isolation: backlog
+  6-2-atomic-git-commits-per-task: backlog
+  6-3-crash-recovery-with-automatic-retry: backlog
+  6-4-goal-backward-wave-verification: backlog
+  6-5-budget-guards: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Verification & Memory Layer (/bp:verify)
+  epic-7: backlog
+  7-1-guided-acceptance-test: backlog
+  7-2-automatic-fix-plan-generation: backlog
+  7-3-memory-layer-tier-1-session-feedback: backlog
+  7-4-memory-layer-tier-2-lessons-and-patterns: backlog
+  7-5-memory-layer-tier-3-decisions-log: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Squad Architecture — Build Domain AI Teams
+  epic-8: backlog
+  8-1-squad-scaffolding-and-installation: backlog
+  8-2-6-layer-agent-definition: backlog
+  8-3-voice-dna-creation-with-5-section-template: backlog
+  8-4-squad-structural-validation: backlog
+  8-5-agent-autonomy-leveling-system: backlog
+  8-6-lazy-agent-loading: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: Pre-Built Squads — Immediate Domain Value
+  epic-9: backlog
+  9-1-software-squad-reference-implementation: backlog
+  9-2-medical-marketing-squad-cfm-compliant: backlog
+  9-3-scientific-research-squad: backlog
+  9-4-clinic-management-squad: backlog
+  9-5-agent-builder-squad-meta-squad-creation-tool: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Web Bundle — Non-Technical User Enablement
+  epic-10: backlog
+  10-1-web-bundle-export-command: backlog
+  10-2-progressive-bundle-compression: backlog
+  10-3-conversational-interface-adaptation: backlog
+  10-4-bundle-versioning-and-staleness-detection: backlog
+  10-5-prompt-to-agent-mode-migration-path: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11: Community Hub — Squad Ecosystem
+  epic-11: backlog
+  11-1-public-community-hub-repository: backlog
+  11-2-squad-contribution-flow-with-automated-ci: backlog
+  11-3-community-health-and-governance-infrastructure: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: AutoResearch — Autonomous Optimization Engine
+  epic-12: backlog
+  12-0-autoresearch-architecture-decision-record: backlog
+  12-1-autoresearch-command-and-program-file: backlog
+  12-2-fixed-budget-experiment-loop: backlog
+  12-3-git-ratchet-commit-only-proven-improvements: backlog
+  12-4-domain-specific-metrics: backlog
+  12-5-optimization-report: backlog
+  epic-12-retrospective: optional

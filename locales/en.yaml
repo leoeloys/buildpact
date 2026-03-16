@@ -1,0 +1,71 @@
+# BuildPact — English UI strings
+# Dot-notation hierarchy, max 3 levels
+
+cli:
+  install:
+    welcome: "Welcome to BuildPact {version}"
+    select_language: "Select your language"
+    select_domain: "Select your project domain"
+    select_ides: "Select your IDE(s) — use space to multi-select"
+    select_experience: "Select your experience level"
+    install_squad: "Install a Squad? (recommended: Software Squad)"
+    success: "BuildPact initialized successfully in {project_name}/"
+    fallback_squad: "Using bundled Software Squad (offline mode)"
+    unavailable_resources: "Resources unavailable: {resources}"
+  constitution:
+    welcome: "BuildPact Constitution — Project Rules"
+    section_coding: "Coding Standards (e.g. TypeScript strict, ESM modules)"
+    section_compliance: "Compliance Requirements (CFM, ANVISA, LGPD, HIPAA — or 'None')"
+    section_architecture: "Architectural Constraints (e.g. layered arch, no circular deps)"
+    section_quality: "Quality Gates (e.g. 80% coverage, all tests must pass)"
+    section_domain: "Domain-Specific Rules (e.g. Squad-specific rules — or 'N/A')"
+    edit_prompt: "Which section would you like to edit?"
+    saved: "Constitution saved to .buildpact/constitution.md"
+    no_changes: "No changes made"
+  doctor:
+    title: "BuildPact Doctor — Health Check"
+    node_pass: "Node.js {version} (meets minimum ≥20.x)"
+    node_warn: "Node.js {version} — upgrade to 22.x LTS recommended"
+    node_fail: "Node.js {version} is below minimum 20.x"
+    node_fix: "Install Node.js 20+ from https://nodejs.org"
+    git_pass: "Git available ({version})"
+    git_fail: "Git not found"
+    git_fix: "Install Git from https://git-scm.com"
+    dir_pass: "Project structure complete"
+    dir_fail: "Missing: {files}"
+    dir_fix: "Run 'buildpact init' to regenerate project structure"
+    ide_pass: "IDE configs valid for: {ides}"
+    ide_warn: "Missing IDE configs: {ides}"
+    ide_fix: "Run 'buildpact init' to regenerate IDE configurations"
+    squad_pass: "Squad valid: {name} v{version}"
+    squad_warn: "No squads installed"
+    squad_fail: "Squad validation failed: {errors}"
+    squad_fix: "Check squad.yaml structure — required fields: name, version, domain, description, initial_level"
+    summary_healthy: "All checks passed — project is healthy"
+    summary_issues: "{fail_count} issue(s) found — see above for remediation"
+
+domain:
+  software: "Software"
+  marketing: "Marketing"
+  health: "Health"
+  research: "Research"
+  management: "Management"
+  custom: "Custom"
+
+experience:
+  beginner: "Beginner"
+  intermediate: "Intermediate"
+  expert: "Expert"
+
+error:
+  squad:
+    not_found: "Squad '{name}' not found in .buildpact/squads/"
+    validation_failed: "Validation failed: {count} error(s) found"
+  ide:
+    config_failed: "Failed to generate IDE config for {ide}: {reason}"
+  file:
+    write_failed: "Failed to write file '{path}': {reason}"
+    read_failed: "Failed to read file '{path}': {reason}"
+  network:
+    remote_fetch_failed: "Failed to fetch remote resource '{url}': {reason}"
+  not_implemented: "'{feature}' is not yet implemented. Available in {phase}."

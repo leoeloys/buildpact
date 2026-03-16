@@ -1,0 +1,13 @@
+// Foundation module — public API (named exports only)
+export { AuditLogger } from './audit.js'
+export type { AuditEntry, AuditLogPayload, AuditOutcome } from './audit.js'
+export { createI18n } from './i18n.js'
+export { install } from './installer.js'
+export type { InstallOptions, InstallResult, IdeId } from './installer.js'
+export { checkContextAlert, getContextUsage, getCostState, CONTEXT_WARNING_THRESHOLD, CONTEXT_CRITICAL_THRESHOLD } from './monitor.js'
+export type { AlertLevel, MonitorState, CostState } from './monitor.js'
+export { countLines, shouldShard, slugify, splitIntoSections, buildShardManifest, writeShards, SHARD_LINE_THRESHOLD } from './sharding.js'
+export type { ShardSection, ShardManifest } from './sharding.js'
+export { appendDecision } from './decisions.js'
+export type { DecisionEntry } from './decisions.js'
+export { loadConstitution, saveConstitution, constitutionExists } from './constitution.js'
