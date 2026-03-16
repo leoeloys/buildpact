@@ -13,6 +13,7 @@ export type CommandId =
   | 'doctor'
   | 'memory'
   | 'optimize'
+  | 'export-web'
 
 /** A command handler that processes CLI arguments */
 export interface CommandHandler {
@@ -35,6 +36,7 @@ const REGISTRY: Record<CommandId, CommandFactory> = {
   // Stub commands — available in future phases
   memory:       () => import('./memory/index.js').then(m => m.handler),
   optimize:     () => import('./optimize/index.js').then(m => m.handler),
+  'export-web': () => import('./export-web/index.js').then(m => m.handler),
 }
 
 /**

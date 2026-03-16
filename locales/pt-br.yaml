@@ -270,6 +270,15 @@ cli:
     no_suggestions: "Nenhuma mudança de nível sugerida — todos os agentes estão dentro dos limites normais"
     check_welcome: "BuildPact Autonomy — Verificação de Nível dos Agentes"
 
+  export_web:
+    welcome: "BuildPact — Exportação de Bundle Web"
+    loading: "Carregando Squad, Constituição e Contexto do Projeto…"
+    loaded: "Componentes do bundle carregados"
+    done: "Bundle web salvo em {path} (~{tokens} tokens, plataforma: {platform})"
+    token_warn: "Estimativa de {tokens} tokens ultrapassa {pct}% do limite do {platform} ({limit} tokens)"
+    token_over_limit: "Estimativa de {tokens} tokens ultrapassa o limite do {platform} de {limit} tokens — o bundle pode ser truncado"
+    outro: "Cole o arquivo .txt no {platform} para ativar seu fluxo de trabalho do Squad"
+
 domain:
   software: "Software"
   marketing: "Marketing"
