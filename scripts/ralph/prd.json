@@ -318,8 +318,8 @@
         "Tests pass"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. validateCompleteness (AC keyword coverage), validateConsistency (dup titles, short titles), validateDependencies (unknown/self deps), validateFeasibility (task count, vague language). validatePlan() aggregate. autoRevisePlan() heuristic fixer. formatValidationReport() markdown formatter. Integrated into plan handler: runs after research, writes validation-report.md, prompts user on critical issues (revise/override/cancel). 44 new tests. 447 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-021",
@@ -334,8 +334,8 @@
         "Tests pass"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. classifyTask() keyword heuristic, [HUMAN]/[AGENT] tagging in plan files, clack.confirm pause for human steps, progress.json for session resume."
     },
     {
       "id": "US-022",

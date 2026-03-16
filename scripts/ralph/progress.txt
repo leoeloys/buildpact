@@ -219,6 +219,40 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - OperationType union uses underscore notation (plan_writing not planWriting) for flat key compatibility: `model_profile_quality_plan_writing: claude-sonnet-4-6`
 ---
 
+## 2026-03-16 - US-020
+- Implemented src/engine/plan-validator.ts with: extractSpecAcs (parse AC bullets from spec), validateCompleteness (P1: AC keyword coverage vs task titles), validateConsistency (P2: duplicate titles, <5-char titles), validateDependencies (P3: unknown/self deps), validateFeasibility (P4: >20 tasks warning, vague language patterns), validatePlan (aggregate all 4 perspectives), autoRevisePlan (heuristic fixer: removes self/unknown deps, deduplicates titles, adds placeholders for uncovered ACs), formatValidationReport (markdown report with per-perspective issues)
+- Integrated into plan/handler.ts: runs after research, shows spinner, displays issues per perspective, prompts user (revise/override/cancel) when hasCritical=true, writes validation-report.md alongside plan.md
+- Added 12 i18n keys (cli.plan.validation_*) in locales/en.yaml and locales/pt-br.yaml
+- Added 38 unit tests in test/unit/engine/plan-validator.test.ts covering all 8 pure functions
+- Added 6 handler integration tests in test/unit/commands/plan.test.ts (validation report written, no-critical-no-select, select-3-options, cancel/override/revise flows)
+- Files changed: src/engine/plan-validator.ts (new), src/commands/plan/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/plan-validator.test.ts (new), test/unit/commands/plan.test.ts
+- 447 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - validateCompleteness uses keyword overlap between AC text and task titles — tasks extracted FROM spec ACs will always cover those ACs (no false positives in normal flow)
+  - The only way to trigger critical issues via spec parsing: AC bullet with 4-char title (>3 passes extraction, <5 fails consistency) — e.g. "- Fix!"
+  - autoRevisePlan cleans deps in a single pass (removes self-refs + unknown refs simultaneously), then deduplicates, then adds AC placeholders
+  - Handler adds a second spinner for validation — ensure vi.mock factory returns `spinner: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() }))` in all plan tests
+  - When testing handler flows that call clack.select, use mockResolvedValueOnce before calling handler.run() AND set isCancel to return false
+---
+
+## 2026-03-16 - US-021
+- Added `ExecutionType`, `TaskProgressEntry`, `PlanProgress` interfaces to plan/handler.ts
+- Added `HUMAN_KEYWORDS` array (25 manual-action keywords) and `classifyTask(title): ExecutionType` pure function — keyword heuristic, case-insensitive substring match
+- Added `buildProgressContent(slug, tasks, generatedAt): PlanProgress` pure function — builds initial progress state with all tasks incomplete
+- Updated `buildWaveFileContent`: tasks with HUMAN classification render `[HUMAN] title\n  - [ ] Confirm step completed manually` instead of `[AGENT] title`
+- Updated `buildPlanContent`: wave plan section similarly uses [HUMAN] vs [AGENT] per classification
+- Updated `handler.run()`: after plan files are written, iterates HUMAN tasks in wave order, calls `clack.confirm` (pause for user), marks completed in progress state; writes `progress.json` to plan dir
+- Added 4 i18n keys in en.yaml and pt-br.yaml: `human_pause`, `human_confirm`, `human_skipped`, `progress_saved`
+- Added 15 new tests: 6 classifyTask, 3 buildProgressContent, 2 buildWaveFileContent tagging, 4 handler integration (progress.json written, confirm called, task marked completed, agent-only plan all incomplete)
+- Files changed: src/commands/plan/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/plan.test.ts
+- 462 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Human task detection uses HUMAN_KEYWORDS list — trailing space matters on words like "call " to avoid false positives on e.g. "callback"
+  - `clack.confirm` is already in the vi.mock factory (added in US-020) — no factory change needed
+  - progress.json is written even when there are no HUMAN tasks — all tasks will have completed=false in that case
+  - buildProgressContent and classifyTask are pure functions, exportable for direct unit testing
+---
+
 ## 2026-03-16 - US-017
 - Implemented src/commands/plan/handler.ts with: buildResearchPayload(topic, specContent, constitutionPath?) — builds isolated TaskDispatchPayload per research topic (tech_stack/codebase/squad_domain), buildStubFindings(topic, specSnippet) — Alpha stub findings with structured keywords, consolidateResearch(ts, cb, sd) — merges 3 ResearchResult into ResearchSummary with consolidatedAt, buildPlanContent(spec, research, slug, generatedAt) — generates plan.md with Research Findings / Key References / Wave Plan sections
 - Updated src/commands/plan/index.ts to re-export from handler.ts
