@@ -868,3 +868,22 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - ExecFn type alias `(command: string) => string` enables clean injection; tests pass `() => '42.5\n'` without any vi.mock setup
   - Stub values are synthetic but realistic (test pass rate 95%, coverage 78.5%, etc.) — tests assert value > 0, not exact values, to stay stub-agnostic
 ---
+
+## 2026-03-16 - US-056
+- Implemented src/optimize/optimization-report.ts with:
+  - OptimizationReportInput / KeptImprovement / ResultsTsvRow interfaces
+  - buildOptimizationReport: 6-section markdown — header (session/target/branch/timestamp), summary table (experiments/improvements/metrics), experiments table (✅/❌ committed per row), improvements kept (description + metrics + diff block), before/after metrics table, branch to merge + expected impact (improvements + regressions + last-good-commit)
+  - writeOptimizationReport(path, content, writeFn): injectable write wrapper returning Result<void>
+  - RESULTS_TSV_HEADER: canonical TSV header string with 7 columns
+  - formatResultsTsvRow(row): tab-joins 7 fields, sanitizes tabs+newlines within field values
+  - buildResultsTsvRow(exp, branchName, keptNums, metricSummary): maps ExperimentResult to ResultsTsvRow with Y/N committed field
+  - appendResultsTsv(path, rows, existsFn, appendFn): writes header when file is new; appends rows on subsequent calls; no-op when rows empty
+- Files changed: src/optimize/optimization-report.ts (new), test/unit/optimize/optimization-report.test.ts (new)
+- 31 new tests, 1548 total passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - TSV sanitization: replace tabs with spaces first, then newlines — both cause corrupt TSV if not removed from field values
+  - appendResultsTsv uses existsFn injection instead of fs.existsSync to remain testable without real filesystem
+  - Empty rows array with existing file: no appendFn call at all (lines array stays empty after filtering out header) — correct behavior
+  - buildOptimizationReport renders per-improvement metric list as bullet points (not a table) to keep it readable inline with diff blocks
+  - 'can be discarded' message appears when keptImprovements.length === 0 — tested separately from the empty experiments case
+---
