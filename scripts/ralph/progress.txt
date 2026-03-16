@@ -761,3 +761,16 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Mock community-hub at module level in handler tests using `vi.mock(..., async (importOriginal) => ({ ...original, downloadSquadFromHub: vi.fn() }))` to preserve pure functions while mocking I/O
   - `formatRegistryIndex` generates a complete README with installation block and MIT license section — follows GitHub community health file conventions
 ---
+
+## 2026-03-16 - US-049
+- Created `src/engine/ci-reporter.ts` with: `mapErrorToSuggestion` (maps 25 known error patterns to actionable fix hints, generic fallback to CONTRIBUTING.md), `buildCheckResult` (wraps errors + suggestions into CiCheckResult), `buildCiAnnotations` (converts checks to GitHub Actions annotation objects), `formatStepSummary` (generates GITHUB_STEP_SUMMARY markdown with status table, error sections, next-steps), `formatAnnotationsOutput` (serializes annotations as `::error title=...::` lines with %0A-encoded newlines), `buildCiSummaryReport` (top-level aggregator: structural + security checks → full CiSummaryReport)
+- Created `docs/community/hub-ci-workflow.yml` — GitHub Actions workflow template for the buildpact-squads registry: triggers on PR file changes, detects changed squads via git diff, calls `buildpact validate-squad --ci`, posts PR comments on pass/fail, reports step summaries
+- Added 40 unit tests in `test/unit/engine/ci-reporter.test.ts` covering all 6 exported functions
+- 1344 total tests passing, zero typecheck errors
+- Files changed: `src/engine/ci-reporter.ts` (new), `test/unit/engine/ci-reporter.test.ts` (new), `docs/community/hub-ci-workflow.yml` (new)
+- **Learnings for future iterations:**
+  - GitHub Actions annotations use `::error title=<check-name>::<message>` format with newlines encoded as `%0A` — use `String.replaceAll('\n', '%0A')` not regex
+  - `formatAnnotationsOutput` returns `''` (not `'\n'`) for empty array — `.join('\n')` on empty array naturally handles this
+  - Step summary includes squad name in the install command so contributors can copy-paste it exactly
+  - CiSummaryReport.checks[0] is always structural-validation and checks[1] is always security-validation — consumers can rely on this order
+---
