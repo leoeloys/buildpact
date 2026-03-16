@@ -443,3 +443,17 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - captureDistilledLessons loads feedbacks with limit=50 to analyze across all recent sessions, not just last 5
   - loadLessonsFile silently returns empty on missing file — safe on fresh projects
 ---
+## 2026-03-16 - US-031
+- Implemented src/engine/decisions-log.ts with: slugifyTitle (stable ID from decision title), buildDecisionEntry (maps DecisionInput to DecisionEntry with ISO date), formatDecisionsForContext (Tier 3 markdown block for subagent injection), writeDecisionFile (persists per-decision JSON to decisions dir), loadAllDecisions (loads all decisions sorted by date ascending), captureDecision (end-to-end persist to .buildpact/memory/decisions/)
+- Added exports for all 6 functions to src/engine/index.ts
+- Added 2 i18n keys in en.yaml and pt-br.yaml: error.decisions.write_failed
+- Created 30 unit tests in test/unit/engine/decisions-log.test.ts covering all functions including I/O with temp dirs
+- 749 tests passing, zero typecheck errors
+- Files changed: src/engine/decisions-log.ts (new), src/engine/index.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/decisions-log.test.ts (new)
+- **Learnings for future iterations:**
+  - Decisions stored as per-decision JSON files: .buildpact/memory/decisions/<id>.json (unlike lessons which use a single file)
+  - DecisionEntry fields match ACs: decision, rationale, alternatives (string[]), date (YYYY-MM-DD)
+  - loadAllDecisions silently returns [] for missing dir — safe on fresh projects; skips unparseable files gracefully
+  - formatDecisionsForContext omits alternatives line when alternatives array is empty
+  - writeDecisionFile overwrites existing file if same id slug — decisions are stable by title slug
+---
