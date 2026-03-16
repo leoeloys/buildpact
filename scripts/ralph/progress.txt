@@ -3,6 +3,7 @@ Started: 2026-03-15
 ---
 
 ## Codebase Patterns
+- Budget guard: `readBudgetConfig(projectDir)` reads `budget:` section from config.yaml (per_session_usd/per_phase_usd/per_day_usd); `checkBudget(input)` returns `ok({allowed, limitType, ...})`; daily spend persisted to `.buildpact/budget-usage.json`
 - Wave executor: `executeWave(tasks)` dispatches all tasks in parallel (via stub in Alpha), `executeWaves(waves)` iterates waves sequentially with halt-on-failure; both exported from src/engine/wave-executor.ts
 - AuditOutcome type only allows 'success' | 'failure' | 'rollback' — no 'partial'; use 'failure' for partial failures
 - buildWaveTaskGroups should filter out empty wave groups (.filter(tasks => tasks.length > 0)) to avoid phantom empty waves
@@ -335,6 +336,25 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Fix plan written to `<planDir>/fix/plan-wave-1.md` — user runs `/bp:execute <planDir>/fix` to resolve
   - mapAcsToWave returns empty when spec has no AC section or no keyword overlap — verReport.allPassed=true in that case (non-blocking)
   - When no spec found, handler falls back to task-only failure checking (no verification, no fix plan)
+---
+
+## 2026-03-16 - US-026
+- Implemented src/engine/budget-guard.ts with: readBudgetConfig (parses budget: section from config.yaml with per_session_usd/per_phase_usd/per_day_usd), checkBudget (checks phase→session→daily limits in priority order), formatCostSummary (human-readable spend vs limit for all 3 dimensions), readDailySpend/updateDailySpend (persists today's spend to .buildpact/budget-usage.json), writeBudgetLimit (updates specific limit key in config.yaml), STUB_COST_PER_TASK_USD=0.001
+- Updated src/contracts/budget.ts: added BudgetCheckInput interface (config + 3 spend dimensions)
+- Updated src/contracts/errors.ts: added BUDGET_EXCEEDED error code
+- Updated src/engine/index.ts: exported all 6 new budget-guard functions
+- Integrated into src/commands/execute/handler.ts: reads budget config + daily spend before wave loop; before each wave checks budget; if exceeded shows cost summary + clack.select with 3 options (increase limit, switch profile, stop); tracks session/phase spend after each wave; persists daily spend
+- Added 11 i18n keys under cli.execute.budget_* in locales/en.yaml and locales/pt-br.yaml
+- Created test/unit/engine/budget-guard.test.ts with 27 unit tests covering all functions
+- 611 tests passing, zero typecheck errors
+- Files changed: src/engine/budget-guard.ts (rewritten), src/contracts/budget.ts, src/contracts/errors.ts, src/engine/index.ts, src/commands/execute/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/budget-guard.test.ts (new)
+- **Learnings for future iterations:**
+  - Budget config uses `budget:` YAML block with indented keys — block detection uses `line.startsWith(' ')` check to detect end of block
+  - checkBudget: limit of 0 means unlimited — never blocks; check order is phase→session→daily (most granular first)
+  - Daily spend tracked in `.buildpact/budget-usage.json` with `{date, spendUsd}` — stale file (different date) returns 0
+  - writeBudgetLimit uses regex replace on config.yaml content — only updates if key already exists in file
+  - Execute handler: budget checked BEFORE dispatching wave; spend accumulated AFTER wave completes; `dailySpendUsd = dailySpendBaseline + sessionSpendUsd` (session adds on top of pre-existing daily spend)
+  - Profile switching in Alpha: doubles effective limits in-memory (no actual model switch) — full impl deferred to model-profile-manager
 ---
 
 ## 2026-03-16 - US-024
