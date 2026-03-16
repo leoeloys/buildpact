@@ -1,0 +1,47 @@
+# Scientific Research Squad — Private Beta
+# Internal use only — systematic review and empirical research workflows.
+
+name: scientific-research
+version: "0.1.0"
+domain: research
+description: "Scientific research squad — Research Lead, Literature Reviewer, Data Analyst, Peer Reviewer, LaTeX Writer"
+initial_level: L2
+
+bundle_disclaimers:
+  pt-br: "Este conteúdo foi gerado por IA e deve ser revisado por pesquisador qualificado antes do uso."
+  en: "This content was AI-generated and must be reviewed by a qualified researcher before use."
+
+agents:
+  research-lead:
+    file: agents/research-lead.md
+  literature-reviewer:
+    file: agents/literature-reviewer.md
+  data-analyst:
+    file: agents/data-analyst.md
+  peer-reviewer:
+    file: agents/peer-reviewer.md
+  latex-writer:
+    file: agents/latex-writer.md
+
+# Pipeline phase routing — which agent leads each phase
+phases:
+  specify: research-lead
+  plan: research-lead
+  execute: data-analyst
+  verify: peer-reviewer
+  document: latex-writer
+
+# Domain-aware questions for research specification
+domain_questions:
+  - id: research_question
+    prompt: "What is the primary research question or hypothesis?"
+    required: true
+  - id: study_design
+    prompt: "What study design are you using? (RCT, cohort, case-control, systematic review, meta-analysis, etc.)"
+    required: true
+  - id: inclusion_exclusion
+    prompt: "What are the inclusion and exclusion criteria for your study population or literature search?"
+    required: true
+  - id: statistical_approach
+    prompt: "What statistical methods or analysis approach will you use?"
+    required: true
