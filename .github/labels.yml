@@ -1,0 +1,79 @@
+# BuildPact GitHub Labels
+# Apply via: gh label create --force ... or use a labels sync action
+
+# ─── Good First Issues ─────────────────────────────────────────────────────────
+# Each label: clear scope + <2hr effort + assigned mentor in issue body
+
+- name: "good-first-issue: add-i18n-key"
+  color: "7057ff"
+  description: "Add a missing i18n key to en.yaml and pt-br.yaml. Scope: locales/. Effort: <30min. Mentor: @maintainer"
+
+- name: "good-first-issue: fix-error-message"
+  color: "7057ff"
+  description: "Improve an error message for clarity. Scope: locales/ + contracts/errors.ts. Effort: <1hr. Mentor: @maintainer"
+
+- name: "good-first-issue: add-unit-test"
+  color: "7057ff"
+  description: "Add unit tests for an existing pure function with no coverage. Scope: test/unit/. Effort: <2hr. Mentor: @maintainer"
+
+- name: "good-first-issue: fix-typo-docs"
+  color: "7057ff"
+  description: "Fix a typo or improve wording in README or docs/. Scope: docs/ or README.md. Effort: <15min. Mentor: @maintainer"
+
+- name: "good-first-issue: add-heuristic-rule"
+  color: "7057ff"
+  description: "Add an IF/THEN heuristic rule to a Squad agent template. Scope: templates/squads/. Effort: <1hr. Mentor: @maintainer"
+
+- name: "good-first-issue: squad-anti-pattern"
+  color: "7057ff"
+  description: "Add a missing ✘/✔ Anti-Pattern pair to a Squad agent. Scope: templates/squads/. Effort: <1hr. Mentor: @maintainer"
+
+- name: "good-first-issue: improve-contributing"
+  color: "7057ff"
+  description: "Improve CONTRIBUTING.md with a clearer step or FAQ entry. Scope: CONTRIBUTING.md. Effort: <30min. Mentor: @maintainer"
+
+# ─── Bug Labels ────────────────────────────────────────────────────────────────
+
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working as expected"
+
+- name: "bug: typecheck"
+  color: "d73a4a"
+  description: "TypeScript compilation error in the codebase"
+
+- name: "bug: test-failure"
+  color: "d73a4a"
+  description: "A test is failing in CI"
+
+# ─── Feature Labels ────────────────────────────────────────────────────────────
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or improvement to existing functionality"
+
+- name: "squad: new-squad"
+  color: "0075ca"
+  description: "Proposal or implementation of a new Squad template"
+
+# ─── Process Labels ────────────────────────────────────────────────────────────
+
+- name: "needs-triage"
+  color: "e4e669"
+  description: "Needs review and prioritisation by a maintainer"
+
+- name: "needs-i18n"
+  color: "fbca04"
+  description: "PR is missing bilingual i18n strings (en.yaml + pt-br.yaml)"
+
+- name: "blocked"
+  color: "b60205"
+  description: "Blocked by another issue or external dependency"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or PR already exists"
