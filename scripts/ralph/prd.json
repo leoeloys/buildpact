@@ -622,8 +622,8 @@
         "Tests pass"
       ],
       "priority": 39,
-      "passes": false,
-      "notes": "Private, internal use only"
+      "passes": true,
+      "notes": "Completed. templates/squads/medical-marketing/ with 4 agents (Strategist T1, Copywriter T2, Designer T2, Analytics T3). src/engine/cfm-compliance-gate.ts with checkCfmCompliance/formatComplianceReport/listTrackedRules — 6 rule sets covering CFM 1.974/2011 Arts. 6/7§1/7§2/7§3/9/14 + ANVISA RDC 96/2008. Built-in templates: cfm-checklist.md, whatsapp-cta.md (5 templates), schema-jsonld.json (MedicalOrganization+Physician+MedicalWebPage). 75 new tests (29 compliance gate + 46 squad structure). 998 total tests passing."
     },
     {
       "id": "US-040",

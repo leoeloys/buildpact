@@ -577,3 +577,17 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Test file for bundled squad references templates/ via relative path from __dirname (test/unit/engine → root is 3 levels up)
   - phases: block in squad.yaml is documentation-only in Alpha — no code reads it yet, but it satisfies "appropriate agent per phase" AC
 ---
+
+## 2026-03-16 - US-039
+- Created templates/squads/medical-marketing/ with squad.yaml, 4 agents (strategist T1, copywriter T2, designer T2, analytics T3), README.md, hooks/README.md
+- Created src/engine/cfm-compliance-gate.ts with checkCfmCompliance/formatComplianceReport/listTrackedRules — 6 CFM/ANVISA rule sets (Art. 6, Art. 7§1, Art. 7§2, Art. 7§3, Art. 9, Art. 14, ANVISA RDC 96/2008)
+- Created built-in templates: cfm-checklist.md (all major CFM articles), whatsapp-cta.md (5 approved templates), schema-jsonld.json (MedicalOrganization + Physician + MedicalWebPage + FAQ JSON-LD)
+- Created test/unit/engine/cfm-compliance-gate.test.ts with 29 tests covering compliant text, each rule set, multiple violations, formatComplianceReport, listTrackedRules
+- Created test/unit/engine/medical-marketing-squad.test.ts with 46 tests covering squad.yaml fields, 4 agents 6-layer + Voice DNA + Anti-Patterns + Heuristics + VETO + Examples + Handoffs, CFM references in Copywriter, built-in templates, validateSquadStructure pass, validateHandoffGraph pass
+- 998 total tests passing, zero typecheck errors
+- Files changed: src/engine/cfm-compliance-gate.ts (new), templates/squads/medical-marketing/ (all new), test/unit/engine/cfm-compliance-gate.test.ts (new), test/unit/engine/medical-marketing-squad.test.ts (new)
+- **Learnings for future iterations:**
+  - JavaScript regex \b does NOT work with accented characters (ú, ã, etc.) — remove leading \b from patterns where the first char is accented (e.g., `único`, `é`)
+  - CFM/ANVISA compliance patterns use Portuguese language markers; English text passes as compliant (by design — this squad is for Brazilian market)
+  - Squad templates in templates/squads/<name>/ follow the same structure and validation as software squad — reuse software-squad.test.ts as the canonical test pattern for new squads
+---
