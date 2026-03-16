@@ -60,3 +60,11 @@ export {
   LESSONS_DISTILL_THRESHOLD,
   LESSONS_MIN_FAIL_COUNT,
 } from './lessons-distiller.js'
+export {
+  slugifyTitle,
+  buildDecisionEntry,
+  formatDecisionsForContext,
+  writeDecisionFile,
+  loadAllDecisions,
+  captureDecision,
+} from './decisions-log.js'

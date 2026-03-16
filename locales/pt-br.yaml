@@ -250,3 +250,5 @@ error:
     write_failed: "Falha ao gravar feedback da sessão para o spec '{slug}'"
   lessons:
     write_failed: "Falha ao gravar arquivo de lições em .buildpact/memory/lessons/"
+  decisions:
+    write_failed: "Falha ao gravar decisão '{id}' em .buildpact/memory/decisions/"

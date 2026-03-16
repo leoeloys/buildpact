@@ -250,3 +250,5 @@ error:
     write_failed: "Failed to write session feedback for spec '{slug}'"
   lessons:
     write_failed: "Failed to write lessons file to .buildpact/memory/lessons/"
+  decisions:
+    write_failed: "Failed to write decision '{id}' to .buildpact/memory/decisions/"
