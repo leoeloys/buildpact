@@ -271,8 +271,8 @@
         "Tests pass"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. buildResearchPayload() builds isolated TaskDispatchPayload per topic. buildStubFindings() returns structured stub findings (Alpha). consolidateResearch() merges 3 results into ResearchSummary. buildPlanContent() generates plan.md with ## Research Findings, ## Key References from Research, ## Wave Plan. Handler writes to .buildpact/plans/<slug>/plan.md. 20 new tests. 339 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-018",
@@ -286,8 +286,8 @@
         "Tests pass"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. extractTasksFromSpec() parses AC/FR bullets into PlanTask[]. inferDependencies() detects keyword-based deps. assignWaves() uses topological sort. groupIntoWaves() groups for parallel execution. splitWavesIfNeeded() auto-splits waves >2 tasks (plan-wave-1.md, plan-wave-1b.md, etc.). buildWaveFileContent() generates per-wave files. buildPlanContent() updated to show actual extracted waves. Handler writes multi-file output when needed. 25 new tests. 364 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-019",

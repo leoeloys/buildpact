@@ -179,3 +179,40 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Test for "skips squad questions when no active squad": verify clack.select not called — covers both ambiguity flow AND squad flow since no ambiguities in test args AND no squad
   - readActiveSquad silently returns undefined on any file read error — safe to call on fresh projects
 ---
+
+## 2026-03-16 - US-018
+- Added wave planning types: PlanTask, WaveGroup, PlanFileSpec to plan/handler.ts
+- Added extractTasksFromSpec: parses ## Acceptance Criteria / ## Functional Requirements bullets into PlanTask[]; fallback to 3 generic tasks when no AC section found
+- Added inferDependencies: detects "after T1", "requires T1", "following T1", etc. to add task dependencies
+- Added assignWaves: topological sort (recursive computeWave with cycle guard) assigns wave numbers
+- Added groupIntoWaves: groups tasks by wave number, returns WaveGroup[] sorted ascending
+- Added splitWavesIfNeeded: splits waves exceeding MAX_TASKS_PER_PLAN_FILE (2) into plan-wave-1.md, plan-wave-1b.md, plan-wave-1c.md, etc.
+- Added buildWaveFileContent: generates per-wave markdown with Tasks and Key References sections
+- Updated buildPlanContent: Wave Plan section now uses actual extracted/wave-grouped tasks instead of generic placeholder
+- Updated handler.run(): writes per-wave files when planFiles.length > 1, logs wave_split message
+- Added 1 i18n key: cli.plan.wave_split in en.yaml and pt-br.yaml
+- Added 25 new tests covering all 6 new pure functions + handler integration for wave file writing
+- Files changed: src/commands/plan/handler.ts, test/unit/commands/plan.test.ts, locales/en.yaml, locales/pt-br.yaml
+- 364 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - extractTasksFromSpec stops at the next ## section — only the first matching AC/FR section is parsed
+  - inferDependencies only detects explicit task ID references (T1, T2...) after keyword phrases — not semantic deps
+  - assignWaves uses recursive approach with visiting set for cycle detection; safe for any dependency graph
+  - splitWavesIfNeeded uses PART_SUFFIXES = ['', 'b', 'c', ...] so first part has no suffix (plan-wave-1.md), subsequent parts get letter suffix (plan-wave-1b.md)
+  - Integration test for wave splitting needs a spec with ≥ MAX_TASKS_PER_PLAN_FILE+1 independent tasks (no deps → all in wave 0)
+---
+
+## 2026-03-16 - US-017
+- Implemented src/commands/plan/handler.ts with: buildResearchPayload(topic, specContent, constitutionPath?) — builds isolated TaskDispatchPayload per research topic (tech_stack/codebase/squad_domain), buildStubFindings(topic, specSnippet) — Alpha stub findings with structured keywords, consolidateResearch(ts, cb, sd) — merges 3 ResearchResult into ResearchSummary with consolidatedAt, buildPlanContent(spec, research, slug, generatedAt) — generates plan.md with Research Findings / Key References / Wave Plan sections
+- Updated src/commands/plan/index.ts to re-export from handler.ts
+- Added 11 i18n keys in en.yaml and pt-br.yaml under cli.plan.*
+- Added 20 unit tests in test/unit/commands/plan.test.ts (6 buildResearchPayload, 4 buildStubFindings, 2 consolidateResearch, 5 buildPlanContent, 3 handler integration)
+- Files changed: src/commands/plan/handler.ts (new), src/commands/plan/index.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/plan.test.ts (new)
+- 339 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - clack.spinner() must be in the vi.mock factory as `spinner: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() }))` — unlike text/select, it returns an object with methods
+  - entries[entries.length - 1] is `string | undefined` in strict TS even after `if (entries.length === 0) return` — use `?? ''` + empty check to satisfy strict mode
+  - Plan command reads specs from .buildpact/specs/ — entries sorted alphabetically, last entry used as most recent
+  - ResearchTopic union: 'tech_stack' | 'codebase' | 'squad_domain' — all 3 must be dispatched before consolidation
+  - In Alpha, parallel dispatch is represented by building payloads + returning stub findings; real Task() dispatch replaces buildStubFindings() in production
+---
