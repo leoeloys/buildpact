@@ -360,6 +360,23 @@ export async function validateSquadStructure(squadDir: string): Promise<Result<V
     if (exampleMatches.length < 3) {
       errors.push(`agents/${agentFile}: Examples requires minimum 3 concrete input/output pairs (found ${exampleMatches.length})`)
     }
+
+    // Heuristics: min 3 IF/THEN rules + at least one VETO condition
+    const heuristicsStart = agentContent.indexOf('## Heuristics')
+    if (heuristicsStart !== -1) {
+      const afterHeuristics = agentContent.slice(heuristicsStart + '## Heuristics'.length)
+      const nextSectionIdx = afterHeuristics.search(/^##\s/m)
+      const heuristicsContent = nextSectionIdx === -1 ? afterHeuristics : afterHeuristics.slice(0, nextSectionIdx)
+
+      const ifThenRules = heuristicsContent.match(/^\d+\.\s+(When|If)\b/gm) ?? []
+      if (ifThenRules.length < 3) {
+        errors.push(`agents/${agentFile}: Heuristics requires minimum 3 IF/THEN rules (found ${ifThenRules.length})`)
+      }
+
+      if (!heuristicsContent.includes('VETO:')) {
+        errors.push(`agents/${agentFile}: Heuristics requires at least one veto condition (use VETO: keyword)`)
+      }
+    }
   }
 
   return ok({ errors })

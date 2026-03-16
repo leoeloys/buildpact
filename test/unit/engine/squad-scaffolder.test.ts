@@ -234,6 +234,83 @@ describe('validateSquadStructure', () => {
     if (!result.ok) return
     expect(result.value.errors.some(e => e.includes('Examples'))).toBe(true)
   })
+
+  /** Minimal valid agent content (all layers, 3+ examples, 3 IF/THEN + VETO) */
+  const validAgentContent = [
+    '## Identity\nYou are the Chief.',
+    '## Persona\nPrecise and structured.',
+    '## Voice DNA',
+    '### Personality Anchors\n- Precise\n- Concise\n- Systematic',
+    '### Opinion Stance\n- Quality over speed',
+    '### Anti-Patterns\n- ✘ Never skip\n- ✔ Always verify\n- ✘ Never assume\n- ✔ Always clarify\n- ✘ Never ignore\n- ✔ Always check',
+    '### Never-Do Rules\n- Never ship unreviewed output',
+    '### Inspirational Anchors\n- Inspired by: The Checklist Manifesto',
+    '## Heuristics',
+    '1. When [situation], [action]',
+    '2. If [ambiguous], clarify before proceeding VETO: never assume',
+    '3. When [quality fails], [remediation]',
+    '## Examples',
+    '1. **Input A:** x → **Output:** y',
+    '2. **Input B:** x → **Output:** y',
+    '3. **Input C:** x → **Output:** y',
+    '## Handoffs',
+    '- ← Chief: when triggered',
+    '- → Specialist: when complete',
+  ].join('\n')
+
+  it('reports error when heuristics has fewer than 3 IF/THEN rules', async () => {
+    const squadDir = join(tmpDir, 'few-heuristics')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    // Replace 3 heuristics with only 2
+    const content = validAgentContent
+      .replace('1. When [situation], [action]\n2. If [ambiguous], clarify before proceeding VETO: never assume\n3. When [quality fails], [remediation]', '1. When [situation], [action]\n2. If [ambiguous], clarify VETO: never assume')
+    await writeFile(join(squadDir, 'agents', 'agent.md'), content, 'utf-8')
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors.some(e => e.includes('IF/THEN'))).toBe(true)
+  })
+
+  it('reports error when heuristics has no VETO condition', async () => {
+    const squadDir = join(tmpDir, 'no-veto')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    // Remove VETO keyword
+    const content = validAgentContent.replace('VETO: never assume', '')
+    await writeFile(join(squadDir, 'agents', 'agent.md'), content, 'utf-8')
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors.some(e => e.includes('veto condition'))).toBe(true)
+  })
+
+  it('passes heuristics validation for valid 3+ IF/THEN rules with VETO', async () => {
+    const squadDir = join(tmpDir, 'valid-heuristics')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    await writeFile(join(squadDir, 'agents', 'agent.md'), validAgentContent, 'utf-8')
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors).toHaveLength(0)
+  })
+
+  it('scaffolded agent templates pass heuristics validation', async () => {
+    const scaffoldResult = await scaffoldSquad('heuristics-squad', tmpDir)
+    expect(scaffoldResult.ok).toBe(true)
+    if (!scaffoldResult.ok) return
+
+    const result = await validateSquadStructure(scaffoldResult.value.squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    // No heuristics errors in scaffolded templates
+    const heuristicsErrors = result.value.errors.filter(e => e.includes('Heuristics') || e.includes('IF/THEN') || e.includes('veto'))
+    expect(heuristicsErrors).toHaveLength(0)
+  })
 })
 
 // ---------------------------------------------------------------------------
