@@ -1,7 +1,7 @@
 {
   "project": "BuildPact",
   "branchName": "ralph/buildpact-alpha",
-  "description": "BuildPact \u2014 Universal Spec-Driven Development Framework. Full pipeline from Foundation through AutoResearch.",
+  "description": "BuildPact — Universal Spec-Driven Development Framework. Full pipeline from Foundation through AutoResearch.",
   "userStories": [
     {
       "id": "US-001",
@@ -25,7 +25,7 @@
       "title": "Epic 1.2: Diagnostic Health Check",
       "description": "As a developer, I want to run `buildpact doctor` to check Node.js, Git, IDE configs, Squad integrity, and .buildpact/ consistency with bilingual output.",
       "acceptanceCriteria": [
-        "buildpact doctor checks Node.js \u226520.x, Git availability, IDE config validity, Squad integrity, .buildpact/ consistency",
+        "buildpact doctor checks Node.js ≥20.x, Git availability, IDE config validity, Squad integrity, .buildpact/ consistency",
         "Output in configured language (PT-BR or EN) with PASS/WARN/FAIL per check",
         "Actionable remediation steps for each failure",
         "Typecheck passes",
@@ -38,12 +38,12 @@
     {
       "id": "US-003",
       "title": "Epic 1.3: Subagent Isolation Architecture",
-      "description": "As a developer, I want all heavy computation delegated to isolated subagents via Task() dispatch with clean context windows and \u226420KB payloads.",
+      "description": "As a developer, I want all heavy computation delegated to isolated subagents via Task() dispatch with clean context windows and ≤20KB payloads.",
       "acceptanceCriteria": [
         "buildTaskPayload() assembles minimal TaskDispatchPayload with unique taskId",
         "Subagents receive only task-specific payload, not accumulated orchestrator context",
-        "validatePayloadSize() enforces \u226420KB payload limit (NFR-02)",
-        "All orchestrator commands \u2264300 lines and \u226415% of model context window",
+        "validatePayloadSize() enforces ≤20KB payload limit (NFR-02)",
+        "All orchestrator commands ≤300 lines and ≤15% of model context window",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -69,12 +69,12 @@
     {
       "id": "US-005",
       "title": "Epic 1.5: Automatic Document Sharding",
-      "description": "As a developer, I want documents exceeding 500 lines auto-split into atomic files with an index.md, achieving \u226570% token savings.",
+      "description": "As a developer, I want documents exceeding 500 lines auto-split into atomic files with an index.md, achieving ≥70% token savings.",
       "acceptanceCriteria": [
         "shouldShard() triggers at 500-line threshold",
         "splitIntoSections() splits by level-2 headings into atomic shards",
         "buildShardManifest() generates index.md with navigation links",
-        "Token savings \u226570% when loading individual shards vs monolithic file",
+        "Token savings ≥70% when loading individual shards vs monolithic file",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -88,7 +88,7 @@
       "description": "As a developer, I want DECISIONS.md (append-only) and STATUS.md (living state) maintained in project root for AI session continuity.",
       "acceptanceCriteria": [
         "appendDecision() appends entries with date, decision, rationale, affected artifacts",
-        "DECISIONS.md is append-only \u2014 never overwrites previous entries",
+        "DECISIONS.md is append-only — never overwrites previous entries",
         "STATUS.md template created during init",
         "Typecheck passes",
         "Tests pass"
@@ -149,7 +149,7 @@
     },
     {
       "id": "US-010",
-      "title": "Epic 3.1: Quick Command \u2014 Zero-Ceremony Execution",
+      "title": "Epic 3.1: Quick Command — Zero-Ceremony Execution",
       "description": "As a developer, I want /bp:quick <description> to go from natural language to atomic commit in under 5 minutes, skipping all planning ceremony.",
       "acceptanceCriteria": [
         "/bp:quick generates minimal spec, executes change, produces one atomic Git commit",
@@ -162,7 +162,7 @@
       ],
       "priority": 10,
       "passes": true,
-      "notes": "Completed. handler.ts with inferCommitType/buildQuickSpec/runGit. Args or TUI prompt \u2192 spec saved to .buildpact/specs/<slug>/quick-spec.md \u2192 git add + git commit type(quick): description. Constitution path injected when available."
+      "notes": "Completed. handler.ts with inferCommitType/buildQuickSpec/runGit. Args or TUI prompt → spec saved to .buildpact/specs/<slug>/quick-spec.md → git add + git commit type(quick): description. Constitution path injected when available."
     },
     {
       "id": "US-011",
@@ -193,7 +193,7 @@
       ],
       "priority": 12,
       "passes": true,
-      "notes": "Completed. buildFullPlan/validatePlanCompleteness/validatePlanFeasibility/verifyAgainstSpec/buildFixPlan in handler.ts. --full flag: generates plan.md, 2-perspective validation (completeness + feasibility), risk confirm before commit, verification \u2192 fix-plan.md on failure. 16 new tests (pure functions + handler). 248 total tests passing, zero typecheck errors."
+      "notes": "Completed. buildFullPlan/validatePlanCompleteness/validatePlanFeasibility/verifyAgainstSpec/buildFixPlan in handler.ts. --full flag: generates plan.md, 2-perspective validation (completeness + feasibility), risk confirm before commit, verification → fix-plan.md on failure. 16 new tests (pure functions + handler). 248 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-013",
@@ -214,10 +214,10 @@
     {
       "id": "US-014",
       "title": "Epic 4.2: Ambiguity Detection and Clarification Flow",
-      "description": "As a developer, I want the specify phase to detect ambiguities and offer structured choices with \u22653 numbered options plus free text.",
+      "description": "As a developer, I want the specify phase to detect ambiguities and offer structured choices with ≥3 numbered options plus free text.",
       "acceptanceCriteria": [
         "Ambiguity detection triggers clarification flow",
-        "Each ambiguity presents \u22653 numbered options with 'Other (free text)' as final choice",
+        "Each ambiguity presents ≥3 numbered options with 'Other (free text)' as final choice",
         "Selections incorporated into generated spec.md",
         "Skips clarification if no ambiguities detected",
         "Typecheck passes",
@@ -225,7 +225,7 @@
       ],
       "priority": 14,
       "passes": true,
-      "notes": "Completed. detectAmbiguities() with 12 pattern rules (quickly/fast/real-time/easy/simple/secure/scalable/some/several/appropriate/modern/large). runClarificationFlow() presents \u22653 numbered options + 'Other (free text)' per ambiguity via clack.select/text. Answers embedded in spec.md under '## Clarifications' table. Flow skipped when no ambiguities detected. 283 tests passing, zero typecheck errors."
+      "notes": "Completed. detectAmbiguities() with 12 pattern rules (quickly/fast/real-time/easy/simple/secure/scalable/some/several/appropriate/modern/large). runClarificationFlow() presents ≥3 numbered options + 'Other (free text)' per ambiguity via clack.select/text. Answers embedded in spec.md under '## Clarifications' table. Flow skipped when no ambiguities detected. 283 tests passing, zero typecheck errors."
     },
     {
       "id": "US-015",
@@ -240,7 +240,7 @@
       ],
       "priority": 15,
       "passes": true,
-      "notes": "Completed. readActiveSquad() reads active_squad from config.yaml + squad.yaml domain. getSquadQuestions() maps 4 domains (software/marketing/health/research) to 3 questions each with \u22653 options. runSquadFlow() uses clack.select (CLI) or clack.text (web bundle mode). readWebBundleMode() checks config mode: web-bundle. SpecInput.squadConstraints embedded in spec.md under ## Domain Constraints. 22 new tests. 305 total tests passing, zero typecheck errors."
+      "notes": "Completed. readActiveSquad() reads active_squad from config.yaml + squad.yaml domain. getSquadQuestions() maps 4 domains (software/marketing/health/research) to 3 questions each with ≥3 options. runSquadFlow() uses clack.select (CLI) or clack.text (web bundle mode). readWebBundleMode() checks config mode: web-bundle. SpecInput.squadConstraints embedded in spec.md under ## Domain Constraints. 22 new tests. 305 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-016",
@@ -256,7 +256,7 @@
       ],
       "priority": 16,
       "passes": true,
-      "notes": "Completed. scoreMaturity() scores frequency+predictability+humanDecisions (0-9) \u2192 5 stages. assessAutomationMaturity() uses 3 clack.select calls + override prompt. Recommendation and optional override written to spec.md under ## Automation Maturity Assessment. 14 new tests. 319 total tests passing, zero typecheck errors."
+      "notes": "Completed. scoreMaturity() scores frequency+predictability+humanDecisions (0-9) → 5 stages. assessAutomationMaturity() uses 3 clack.select calls + override prompt. Recommendation and optional override written to spec.md under ## Automation Maturity Assessment. 14 new tests. 319 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-017",
@@ -384,7 +384,7 @@
       ],
       "priority": 24,
       "passes": true,
-      "notes": "Implemented in src/engine/recovery.ts: selectNextStrategy (3-strategy retry chain: retry\u2192simplify\u2192skip), isStuckLoop (detect identical errors repeating), buildFailureSummary (markdown escalation report), handleTaskFailure (immutable session updates with exhaustion detection), createRecoverySession (captures git HEAD), executeRollback (git reset --hard). 30 unit tests. 560 total tests passing."
+      "notes": "Implemented in src/engine/recovery.ts: selectNextStrategy (3-strategy retry chain: retry→simplify→skip), isStuckLoop (detect identical errors repeating), buildFailureSummary (markdown escalation report), handleTaskFailure (immutable session updates with exhaustion detection), createRecoverySession (captures git HEAD), executeRollback (git reset --hard). 30 unit tests. 560 total tests passing."
     },
     {
       "id": "US-025",
@@ -453,7 +453,7 @@
     },
     {
       "id": "US-029",
-      "title": "Epic 7.3: Memory Layer Tier 1 \u2014 Session Feedback",
+      "title": "Epic 7.3: Memory Layer Tier 1 — Session Feedback",
       "description": "As a developer, I want verification sessions to auto-capture structured feedback files in .buildpact/memory/feedback/ with FIFO cap of 30 entries.",
       "acceptanceCriteria": [
         "Feedback files created in .buildpact/memory/feedback/ after verification",
@@ -470,7 +470,7 @@
     },
     {
       "id": "US-030",
-      "title": "Epic 7.4: Memory Layer Tier 2 \u2014 Lessons & Patterns (Beta)",
+      "title": "Epic 7.4: Memory Layer Tier 2 — Lessons & Patterns (Beta)",
       "description": "As a developer, I want recurring successful patterns distilled into lessons files for systematic reuse across sessions.",
       "acceptanceCriteria": [
         "Lessons files created in .buildpact/memory/lessons/ from recurring feedback patterns",
@@ -485,7 +485,7 @@
     },
     {
       "id": "US-031",
-      "title": "Epic 7.5: Memory Layer Tier 3 \u2014 Decisions Log (v1.0)",
+      "title": "Epic 7.5: Memory Layer Tier 3 — Decisions Log (v1.0)",
       "description": "As a tech lead, I want key architectural decisions saved to .buildpact/memory/decisions/ for permanent reference by future agent sessions.",
       "acceptanceCriteria": [
         "Decisions files created with: decision, rationale, alternatives considered, date",
@@ -516,7 +516,7 @@
     {
       "id": "US-033",
       "title": "Epic 8.2: 6-Layer Agent Definition",
-      "description": "As a Squad creator, I want an enforced 6-layer anatomy template (identity, persona, voice_dna, heuristics, examples\u00d73, handoffs) for each agent.",
+      "description": "As a Squad creator, I want an enforced 6-layer anatomy template (identity, persona, voice_dna, heuristics, examples×3, handoffs) for each agent.",
       "acceptanceCriteria": [
         "Agent template contains all 6 layers with inline documentation and examples",
         "Missing layers reported as errors during Squad validation with specific agent/layer reference",
@@ -542,7 +542,7 @@
       ],
       "priority": 34,
       "passes": true,
-      "notes": "Completed 2026-03-16. Added Anti-Patterns min 5 pairs validation (\u2718 count) to validateSquadStructure. Updated test validAgentContent to 5 pairs. Added 3 new tests. Created docs/voice-dna-guide.md with step-by-step guide. 796 total tests passing."
+      "notes": "Completed 2026-03-16. Added Anti-Patterns min 5 pairs validation (✘ count) to validateSquadStructure. Updated test validAgentContent to 5 pairs. Added 3 new tests. Created docs/voice-dna-guide.md with step-by-step guide. 796 total tests passing."
     },
     {
       "id": "US-035",
@@ -582,7 +582,7 @@
       "title": "Epic 8.6: Lazy Agent Loading (v2.0)",
       "description": "As a developer in Agent Mode, I want Squad agents loaded on-demand rather than all at once to stay within context budget.",
       "acceptanceCriteria": [
-        "Only Chief agent + lightweight index (\u22641KB) loaded initially in Agent Mode",
+        "Only Chief agent + lightweight index (≤1KB) loaded initially in Agent Mode",
         "Specialists loaded on-demand during handoffs, unloaded after completion",
         "Prompt Mode includes documented guide for manual agent loading best practices",
         "Typecheck passes",
@@ -594,7 +594,7 @@
     },
     {
       "id": "US-038",
-      "title": "Epic 9.1: Software Squad \u2014 Reference Implementation",
+      "title": "Epic 9.1: Software Squad — Reference Implementation",
       "description": "As a developer, I want the Software Squad pre-installed with PM, Architect, Developer, QA, and Tech Writer agents following 6-layer anatomy.",
       "acceptanceCriteria": [
         "Software Squad in .buildpact/squads/software/ with all 5 agents fully defined",
@@ -607,15 +607,15 @@
       ],
       "priority": 38,
       "passes": true,
-      "notes": "Completed. Fixed all 5 agents in templates/squads/software/ to have \u22655 \u2718 Anti-Patterns and VETO condition in Heuristics. Added phases: mapping to squad.yaml. Created 41-test suite in test/unit/engine/software-squad.test.ts. 923 total tests passing."
+      "notes": "Completed. Fixed all 5 agents in templates/squads/software/ to have ≥5 ✘ Anti-Patterns and VETO condition in Heuristics. Added phases: mapping to squad.yaml. Created 41-test suite in test/unit/engine/software-squad.test.ts. 923 total tests passing."
     },
     {
       "id": "US-039",
-      "title": "Epic 9.2: Medical Marketing Squad \u2014 CFM-Compliant (Private)",
+      "title": "Epic 9.2: Medical Marketing Squad — CFM-Compliant (Private)",
       "description": "As a medical marketing professional, I want a pre-built Squad with Strategist, Copywriter, Designer, Analytics agents enforcing CFM compliance.",
       "acceptanceCriteria": [
         "Strategist, Copywriter, Designer, Analytics agents available",
-        "Copywriter Voice DNA enforces CFM n\u00ba 1.974/2011 \u2014 refuses prohibited claims, flags violations",
+        "Copywriter Voice DNA enforces CFM nº 1.974/2011 — refuses prohibited claims, flags violations",
         "Built-in CFM/ANVISA checklists, WhatsApp CTA templates, Schema JSON-LD medical templates",
         "Compliance gate identifies CFM/ANVISA violations with specific rule references",
         "Typecheck passes",
@@ -623,7 +623,7 @@
       ],
       "priority": 39,
       "passes": true,
-      "notes": "Completed. templates/squads/medical-marketing/ with 4 agents (Strategist T1, Copywriter T2, Designer T2, Analytics T3). src/engine/cfm-compliance-gate.ts with checkCfmCompliance/formatComplianceReport/listTrackedRules \u2014 6 rule sets covering CFM 1.974/2011 Arts. 6/7\u00a71/7\u00a72/7\u00a73/9/14 + ANVISA RDC 96/2008. Built-in templates: cfm-checklist.md, whatsapp-cta.md (5 templates), schema-jsonld.json (MedicalOrganization+Physician+MedicalWebPage). 75 new tests (29 compliance gate + 46 squad structure). 998 total tests passing."
+      "notes": "Completed. templates/squads/medical-marketing/ with 4 agents (Strategist T1, Copywriter T2, Designer T2, Analytics T3). src/engine/cfm-compliance-gate.ts with checkCfmCompliance/formatComplianceReport/listTrackedRules — 6 rule sets covering CFM 1.974/2011 Arts. 6/7§1/7§2/7§3/9/14 + ANVISA RDC 96/2008. Built-in templates: cfm-checklist.md, whatsapp-cta.md (5 templates), schema-jsonld.json (MedicalOrganization+Physician+MedicalWebPage). 75 new tests (29 compliance gate + 46 squad structure). 998 total tests passing."
     },
     {
       "id": "US-040",
@@ -651,12 +651,12 @@
         "Tests pass"
       ],
       "priority": 41,
-      "passes": false,
+      "passes": true,
       "notes": "Beta milestone, private"
     },
     {
       "id": "US-042",
-      "title": "Epic 9.5: Agent Builder Squad \u2014 Meta Creation Tool (Public)",
+      "title": "Epic 9.5: Agent Builder Squad — Meta Creation Tool (Public)",
       "description": "As a domain expert, I want an Agent Builder Squad that guides me through creating a production-quality custom Squad.",
       "acceptanceCriteria": [
         "Agent Designer, Workflow Architect, Tester agents guide through: roles, Voice DNA, heuristics, examples, handoffs",
@@ -689,8 +689,8 @@
       "title": "Epic 10.2: Progressive Bundle Compression",
       "description": "As a Squad creator, I want deterministic compression to stay within platform token limits with tiered degradation.",
       "acceptanceCriteria": [
-        "Compression sequence: inline active agents \u2192 compress Constitution \u2192 exclude optimization/memory \u2192 current context only",
-        "If still over limit: tiered degradation (remove examples \u2192 remove heuristic detail \u2192 Chief-only \u2192 minimal quick-session)",
+        "Compression sequence: inline active agents → compress Constitution → exclude optimization/memory → current context only",
+        "If still over limit: tiered degradation (remove examples → remove heuristic detail → Chief-only → minimal quick-session)",
         "Each degradation tier documented inside bundle",
         "Typecheck passes",
         "Tests pass"
@@ -781,7 +781,7 @@
       "description": "As a maintainer, I want CONTRIBUTING.md (bilingual), good-first-issue labels, and ADRs for community sustainability.",
       "acceptanceCriteria": [
         "CONTRIBUTING.md in PT-BR and EN with step-by-step instructions",
-        "\u22655 good-first-issue labels with clear scope, <2hr effort, assigned mentor",
+        "≥5 good-first-issue labels with clear scope, <2hr effort, assigned mentor",
         "ADRs in docs/decisions/ following MADR template for significant decisions",
         "PR template enforces bilingual i18n strings for user-facing text",
         "Typecheck passes",
@@ -839,14 +839,14 @@
     },
     {
       "id": "US-054",
-      "title": "Epic 12.3: Git Ratchet \u2014 Commit Only Proven Improvements",
+      "title": "Epic 12.3: Git Ratchet — Commit Only Proven Improvements",
       "description": "As an expert user, I want the framework to auto-commit only when metrics improve and revert everything else.",
       "acceptanceCriteria": [
-        "Improved: commit with format optimize(N): description | metric: X.XX \u2192 Y.YY",
+        "Improved: commit with format optimize(N): description | metric: X.XX → Y.YY",
         "Equal or worse: git-revert to last successful state automatically",
-        "Independent TypeScript module at src/optimize/ratchet.ts with \u226580% Vitest coverage",
+        "Independent TypeScript module at src/optimize/ratchet.ts with ≥80% Vitest coverage",
         "All operations on isolated branch: optimize/{target-type}/{session-name}/{timestamp}",
-        "Human review required before merge to main \u2014 no auto-merge",
+        "Human review required before merge to main — no auto-merge",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -860,7 +860,7 @@
       "description": "As an expert user, I want built-in metrics for code/marketing/agents plus custom metric support via executable scripts.",
       "acceptanceCriteria": [
         "Software metrics: test pass rate, bundle size, Lighthouse score, build time, coverage, type-check",
-        "Marketing metrics: readability score, compliance pass rate, keyword density, CTA clarity (evaluator \u2260 generator model)",
+        "Marketing metrics: readability score, compliance pass rate, keyword density, CTA clarity (evaluator ≠ generator model)",
         "Custom metrics: any executable returning numeric score to stdout",
         "Typecheck passes",
         "Tests pass"

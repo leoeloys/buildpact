@@ -608,3 +608,21 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - database mentions for Literature Reviewer test: need ≥3 database name matches (PubMed, Embase, Cochrane all mentioned in single agent = 3 hits)
   - SAP template uses checkbox `- [ ]` format — PRISMA checklist items must be ≥20 for test to pass
 ---
+
+## 2026-03-16 - US-041
+- Created full Clinic Management Squad at templates/squads/clinic-management/ with 4 agents and 2 templates
+- agents/operations-manager.md: T1 orchestrator — clinic workflows, staffing, Lei 8.080/90 compliance, LGPD data process routing
+- agents/finance-analyst.md: T2 — TISS billing, ANS glosa contestation (RN 566/2022), revenue cycle, fee table validation
+- agents/compliance-checker.md: T3 — validates against Lei 8.080/90, CFM CEM 2019, ANS RN 566/2022, LGPD Lei 13.709/18, Estatuto do Idoso Lei 10.741/03
+- agents/patient-flow-optimizer.md: T4 — lean healthcare flow analysis, Estatuto do Idoso Art. 15 priority queue compliance, no-show management
+- templates/brazil-healthcare-compliance-checklist.md: 30+ item checklist covering all major Brazilian healthcare regulations
+- templates/patient-flow-dashboard.md: metrics template with priority patient compliance tracking
+- test/unit/engine/clinic-management-squad.test.ts: 52 tests — structural validation, compliance references, elderly rights, ANS/TISS billing, validateSquadStructure, validateHandoffGraph
+- Files changed: 9 new files in templates/squads/clinic-management/, test/unit/engine/clinic-management-squad.test.ts
+- 1108 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Clinic Management Squad pattern mirrors Medical Marketing Squad but spans 4 regulatory domains (Lei 8.080/90, CFM, ANS, LGPD) — tests must verify all 4
+  - Estatuto do Idoso Art. 15 (priority scheduling for 60+ patients) must appear in both Compliance Checker AND Patient Flow Optimizer — tested independently
+  - TISS/TUSS billing standard (ANS) is the key Brazilian health plan billing framework — Finance Analyst references must be explicit for test coverage
+  - Brazilian healthcare compliance checklist should use `- [ ]` format to match existing test pattern (count ≥20)
+---
