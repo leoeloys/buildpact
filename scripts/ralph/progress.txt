@@ -371,3 +371,20 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `createRecoverySession` uses `git rev-parse HEAD` which fails on repos with no commits — always call after at least one commit exists
   - `executeRollback` uses `git reset --hard` which discards ALL uncommitted changes — document clearly that this is destructive by design (FR-703 requirement)
 ---
+
+## 2026-03-16 - US-027
+- Implemented src/commands/verify/handler.ts with: extractAcsFromSpec (parses ## Acceptance Criteria section bullets), buildAcGuidance (keyword-based contextual guidance per AC), formatUatReport (markdown pass/fail table + summary), findLatestSpecSlug (last alphabetical spec directory)
+- Updated src/commands/verify/index.ts to re-export from handler.ts
+- Added SPEC_NOT_FOUND error code to src/contracts/errors.ts
+- Added 18 i18n keys under cli.verify.* in locales/en.yaml and locales/pt-br.yaml
+- Added 30 unit tests in test/unit/commands/verify.test.ts (6 extractAcsFromSpec, 7 buildAcGuidance, 8 formatUatReport, 4 findLatestSpecSlug, 5 handler integration)
+- 641 tests passing, zero typecheck errors
+- Files changed: src/commands/verify/handler.ts (new), src/commands/verify/index.ts, src/contracts/errors.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/verify.test.ts (new)
+- **Learnings for future iterations:**
+  - verify command follows same pattern as execute: pure functions exported for unit testing, handler.run() for integration
+  - extractAcsFromSpec stops at next ## heading — same pattern as extractSpecAcs in plan-validator.ts but simpler (no section alias variants)
+  - exactOptionalPropertyTypes: note field on AcVerificationEntry must use conditional spread `...(note !== undefined && { note })` — not `note: undefined`
+  - err() takes a CliError object `{ code, i18nKey, params? }` — never two arguments (not like err(code, message))
+  - clack.log.step() and clack.log.message() need to be in the vi.mock factory for tests to work
+  - Verified spec marked with HTML comment `<!-- verified: ... -->` appended to spec.md — non-destructive, preserves original content
+---
