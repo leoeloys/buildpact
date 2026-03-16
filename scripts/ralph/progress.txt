@@ -680,3 +680,19 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Handler now calls `applyProgressiveCompression` which always tries 'none' first; adds ~0ms overhead for bundles that fit
   - `filterChiefOnly` looks for agent name containing 'chief' (case-insensitive); falls back to `agents[0]` if none found
 ---
+
+## 2026-03-16 - US-045
+- Updated `buildWebBundle` (export-web/handler.ts): replaced "Workflow Instructions" with "Conversational Interaction Rules" — 5-point rules instruct the AI to use natural language (no slash commands), present choices as numbered options, and avoid technical jargon (repository, branch, commit, YAML, pipeline, subagent); PT-BR bundles use full Portuguese with no English fallback
+- Updated `runClarificationFlow` (specify/handler.ts): added `isWebBundle = false` param; uses `clack.text` with numbered options embedded in message when true (same pattern as existing squad flow)
+- Updated `assessAutomationMaturity` (specify/handler.ts): added `isWebBundle = false` param; all 4 questions (frequency, predictability, humanDecisions, override) use `clack.text` with numbered options in message; added `parseWebBundleChoice<T>` helper to map "1"/"2"/etc. to typed values
+- Updated `handler.run`: reads `isWebBundle` via `readWebBundleMode` in parallel with `readExperienceLevel` at startup; removed redundant read inside squad block; passes `isWebBundle` to `runClarificationFlow` and `assessAutomationMaturity`
+- Updated specify test: web bundle mode test now expects `clack.text` called 7 times (3 squad + 4 maturity), no `clack.select` calls
+- Added 4 new export-web tests: conversational rules in EN, Portuguese rules in PT-BR (no English fallback), no-slash-commands instruction in EN and PT-BR
+- Files changed: src/commands/export-web/handler.ts, src/commands/specify/handler.ts, test/unit/commands/export-web.test.ts, test/unit/commands/specify.test.ts
+- 1224 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - `parseWebBundleChoice<T>(response, values)` pattern: parseInt(text.trim(), 10) → 1-indexed → values[num-1] — default to values[0] on invalid input
+  - Web bundle mode check should be read once at handler.run startup (parallel with other config reads), not lazily inside sub-functions
+  - Bundle conversational rules are bilingual: EN uses 'Conversational Interaction Rules', PT-BR uses 'Regras de Interação Conversacional' — check `language` param in buildWebBundle
+  - When adapting clack.select flows to web-bundle clack.text: embed numbered options in the message string, reuse squad_web_bundle_placeholder for consistency
+---
