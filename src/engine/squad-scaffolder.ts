@@ -355,6 +355,18 @@ export async function validateSquadStructure(squadDir: string): Promise<Result<V
       }
     }
 
+    // Anti-Patterns: min 5 prohibited/required pairs (count ✘ markers)
+    const antiPatternsStart = agentContent.indexOf('### Anti-Patterns')
+    if (antiPatternsStart !== -1) {
+      const afterAntiPatterns = agentContent.slice(antiPatternsStart + '### Anti-Patterns'.length)
+      const nextSubsectionIdx = afterAntiPatterns.search(/^###\s/m)
+      const antiPatternsContent = nextSubsectionIdx === -1 ? afterAntiPatterns : afterAntiPatterns.slice(0, nextSubsectionIdx)
+      const prohibitedCount = (antiPatternsContent.match(/✘/g) ?? []).length
+      if (prohibitedCount < 5) {
+        errors.push(`agents/${agentFile}: Anti-Patterns requires minimum 5 prohibited/required pairs (found ${prohibitedCount})`)
+      }
+    }
+
     // Minimum 3 examples check
     const exampleMatches = agentContent.match(/^\d+\.\s+\*\*/gm) ?? []
     if (exampleMatches.length < 3) {

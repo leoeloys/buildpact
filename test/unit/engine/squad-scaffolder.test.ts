@@ -242,7 +242,7 @@ describe('validateSquadStructure', () => {
     '## Voice DNA',
     '### Personality Anchors\n- Precise\n- Concise\n- Systematic',
     '### Opinion Stance\n- Quality over speed',
-    '### Anti-Patterns\n- ✘ Never skip\n- ✔ Always verify\n- ✘ Never assume\n- ✔ Always clarify\n- ✘ Never ignore\n- ✔ Always check',
+    '### Anti-Patterns\n- ✘ Never skip\n- ✔ Always verify\n- ✘ Never assume\n- ✔ Always clarify\n- ✘ Never ignore\n- ✔ Always check\n- ✘ Never rush\n- ✔ Always review\n- ✘ Never guess\n- ✔ Always confirm',
     '### Never-Do Rules\n- Never ship unreviewed output',
     '### Inspirational Anchors\n- Inspired by: The Checklist Manifesto',
     '## Heuristics',
@@ -297,6 +297,50 @@ describe('validateSquadStructure', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.errors).toHaveLength(0)
+  })
+
+  it('reports error when Anti-Patterns has fewer than 5 pairs', async () => {
+    const squadDir = join(tmpDir, 'few-anti-patterns')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    // Replace 5-pair Anti-Patterns with only 3 ✘ pairs
+    const content = validAgentContent
+      .replace(
+        '- ✘ Never skip\n- ✔ Always verify\n- ✘ Never assume\n- ✔ Always clarify\n- ✘ Never ignore\n- ✔ Always check\n- ✘ Never rush\n- ✔ Always review\n- ✘ Never guess\n- ✔ Always confirm',
+        '- ✘ Never skip\n- ✔ Always verify\n- ✘ Never assume\n- ✔ Always clarify\n- ✘ Never ignore\n- ✔ Always check',
+      )
+    await writeFile(join(squadDir, 'agents', 'agent.md'), content, 'utf-8')
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors.some(e => e.includes('Anti-Patterns'))).toBe(true)
+  })
+
+  it('passes Anti-Patterns validation with exactly 5 pairs', async () => {
+    const squadDir = join(tmpDir, 'exactly-five-anti-patterns')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    // validAgentContent has 5 ✘ pairs — should pass
+    await writeFile(join(squadDir, 'agents', 'agent.md'), validAgentContent, 'utf-8')
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const antiPatternsErrors = result.value.errors.filter(e => e.includes('Anti-Patterns'))
+    expect(antiPatternsErrors).toHaveLength(0)
+  })
+
+  it('scaffolded agent templates pass Anti-Patterns validation (5+ pairs)', async () => {
+    const scaffoldResult = await scaffoldSquad('anti-patterns-squad', tmpDir)
+    expect(scaffoldResult.ok).toBe(true)
+    if (!scaffoldResult.ok) return
+
+    const result = await validateSquadStructure(scaffoldResult.value.squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const antiErrors = result.value.errors.filter(e => e.includes('Anti-Patterns'))
+    expect(antiErrors).toHaveLength(0)
   })
 
   it('scaffolded agent templates pass heuristics validation', async () => {
