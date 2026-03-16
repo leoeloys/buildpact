@@ -90,11 +90,12 @@ export async function loadWaveFiles(planDir: string): Promise<WaveFile[]> {
 export function buildWaveTaskGroups(
   waveFiles: WaveFile[],
   constitutionPath?: string,
+  phaseSlug?: string,
 ): WaveTask[][] {
   const waveMap = new Map<number, WaveTask[]>()
 
   for (const wf of waveFiles) {
-    const tasks = parseWaveTasksFromPlanFile(wf.content, wf.waveNumber, constitutionPath)
+    const tasks = parseWaveTasksFromPlanFile(wf.content, wf.waveNumber, constitutionPath, phaseSlug)
     const existing = waveMap.get(wf.waveNumber) ?? []
     waveMap.set(wf.waveNumber, [...existing, ...tasks])
   }
@@ -196,7 +197,8 @@ export const handler: CommandHandler = {
     }
 
     // Build wave task groups — parallel tasks per wave
-    const waveGroups = buildWaveTaskGroups(waveFiles, constitutionPath)
+    // Pass planSlug so each task's atomic commit message carries the plan scope (FR-702)
+    const waveGroups = buildWaveTaskGroups(waveFiles, constitutionPath, planSlug)
 
     const totalTasks = waveGroups.reduce((sum, g) => sum + g.length, 0)
     clack.log.info(

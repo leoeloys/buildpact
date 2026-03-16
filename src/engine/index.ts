@@ -11,3 +11,4 @@ export { loadOrchestratorTemplate, validateOrchestratorFile } from './orchestrat
 export { executeWave } from './wave-executor.js'
 export { recoverSession } from './recovery.js'
 export { checkBudget } from './budget-guard.js'
+export { inferCommitType, formatCommitMessage, runAtomicCommit } from './atomic-commit.js'

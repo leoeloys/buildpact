@@ -146,6 +146,25 @@ describe('buildWaveTaskGroups', () => {
     expect(groups[0]![0]!.constitutionPath).toBe('/path/constitution.md')
   })
 
+  it('passes phaseSlug to all tasks for atomic commit messages', () => {
+    const waveFiles = [
+      { filename: 'plan-wave-1.md', waveNumber: 0, content: '## Tasks\n- [ ] [AGENT] Task A\n- [ ] [AGENT] Task B' },
+    ]
+    const groups = buildWaveTaskGroups(waveFiles, undefined, 'auth-feature')
+    expect(groups[0]![0]!.phaseSlug).toBe('auth-feature')
+    expect(groups[0]![1]!.phaseSlug).toBe('auth-feature')
+  })
+
+  it('passes phaseSlug to tasks across multiple waves', () => {
+    const waveFiles = [
+      { filename: 'plan-wave-1.md', waveNumber: 0, content: '## Tasks\n- [ ] [AGENT] Task A' },
+      { filename: 'plan-wave-2.md', waveNumber: 1, content: '## Tasks\n- [ ] [AGENT] Task B' },
+    ]
+    const groups = buildWaveTaskGroups(waveFiles, undefined, 'payment-epic')
+    expect(groups[0]![0]!.phaseSlug).toBe('payment-epic')
+    expect(groups[1]![0]!.phaseSlug).toBe('payment-epic')
+  })
+
   it('returns empty tasks for wave file with no agent/human lines', () => {
     const waveFiles = [
       { filename: 'plan-wave-1.md', waveNumber: 0, content: '# Plan\n\n## Key References\n\n- `TypeScript`' },

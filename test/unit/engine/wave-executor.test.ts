@@ -88,6 +88,29 @@ describe('executeTaskStub', () => {
     expect(result.error).toBeUndefined()
   })
 
+  it('populates commitMessage for successful tasks', () => {
+    const result = executeTaskStub(opts({ title: 'Implement auth module', phaseSlug: 'auth-service' }))
+    expect(result.success).toBe(true)
+    expect(result.commitMessage).toBe('feat(auth-service): Implement auth module')
+  })
+
+  it('uses execute as default phaseSlug when not provided', () => {
+    const result = executeTaskStub(opts({ title: 'Add payment gateway' }))
+    expect(result.commitMessage).toMatch(/^\w+\(execute\): Add payment gateway$/)
+  })
+
+  it('commit message follows type(phaseSlug): title format', () => {
+    const result = executeTaskStub(opts({ title: 'Fix login redirect', phaseSlug: 'user-flow' }))
+    expect(result.commitMessage).toBe('fix(user-flow): Fix login redirect')
+  })
+
+  it('does not populate commitMessage for failed tasks', () => {
+    const hugeContent = 'x'.repeat(30 * 1024)
+    const result = executeTaskStub(opts({ planContent: hugeContent }))
+    expect(result.success).toBe(false)
+    expect(result.commitMessage).toBeUndefined()
+  })
+
   it('returns failure for oversized payload', () => {
     // 30KB of content — will exceed 20KB limit
     const hugeContent = 'x'.repeat(30 * 1024)
@@ -240,6 +263,16 @@ describe('parseWaveTasksFromPlanFile', () => {
   it('omits constitutionPath when not provided', () => {
     const tasks = parseWaveTasksFromPlanFile(planContent, 0)
     expect(tasks.every(t => t.constitutionPath === undefined)).toBe(true)
+  })
+
+  it('includes phaseSlug when provided', () => {
+    const tasks = parseWaveTasksFromPlanFile(planContent, 0, undefined, 'auth-service')
+    expect(tasks.every(t => t.phaseSlug === 'auth-service')).toBe(true)
+  })
+
+  it('omits phaseSlug when not provided', () => {
+    const tasks = parseWaveTasksFromPlanFile(planContent, 0)
+    expect(tasks.every(t => t.phaseSlug === undefined)).toBe(true)
   })
 
   it('generates unique taskIds for each task', () => {

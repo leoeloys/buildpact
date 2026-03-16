@@ -127,6 +127,7 @@ cli:
     done_summary: "{succeeded} task(s) succeeded, {failed} failed"
     wave_summary: "Wave {wave}: {passed}/{total} tasks passed ({failed} failed)"
     task_failed: "  ✗ {title}: {error}"
+    task_committed: "  ✓ Committed: {message}"
     complete: "Execution complete for plan '{slug}'"
   plan:
     welcome: "BuildPact Plan — Automated Parallel Research"

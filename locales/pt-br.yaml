@@ -127,6 +127,7 @@ cli:
     done_summary: "{succeeded} tarefa(s) concluída(s), {failed} falhou(aram)"
     wave_summary: "Wave {wave}: {passed}/{total} tarefas passou(aram) ({failed} falhou(aram))"
     task_failed: "  ✗ {title}: {error}"
+    task_committed: "  ✓ Commit criado: {message}"
     complete: "Execução concluída para o plano '{slug}'"
   plan:
     welcome: "BuildPact Plan — Pesquisa Paralela Automatizada"

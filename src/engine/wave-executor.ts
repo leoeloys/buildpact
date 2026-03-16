@@ -7,6 +7,7 @@
 import { randomUUID } from 'node:crypto'
 import { buildTaskPayload } from './subagent.js'
 import { validatePayloadSize } from './subagent.js'
+import { formatCommitMessage } from './atomic-commit.js'
 import type { TaskDispatchPayload, TaskResult } from '../contracts/task.js'
 import type { Result } from '../contracts/errors.js'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
@@ -29,6 +30,8 @@ export interface WaveTask {
   budgetUsd?: number
   /** Optional path to .buildpact/constitution.md */
   constitutionPath?: string
+  /** Plan slug used as scope in the atomic commit message — type(phaseSlug): title */
+  phaseSlug?: string
 }
 
 /** Result for a single task executed in a wave */
@@ -41,6 +44,13 @@ export interface TaskExecutionResult {
   artifacts: string[]
   /** Error message if task failed */
   error?: string
+  /**
+   * Formatted atomic commit message for this task — `type(phaseSlug): title`.
+   * Present only when the task succeeded.
+   * In Alpha: populated by the stub to confirm one commit would be produced per task.
+   * In production: the subagent executes this commit before returning its result.
+   */
+  commitMessage?: string
 }
 
 /** Aggregated result for all tasks in a single wave */
@@ -97,13 +107,18 @@ export function executeTaskStub(task: WaveTask): TaskExecutionResult {
     }
   }
 
-  // In Alpha: stub success — real Task() dispatch happens in production
+  // In Alpha: stub success — real Task() dispatch happens in production.
+  // Populate commitMessage to confirm exactly one commit per task (FR-702).
+  const phaseSlug = task.phaseSlug ?? 'execute'
+  const commitMessage = formatCommitMessage(task.title, phaseSlug)
+
   return {
     taskId: task.taskId,
     title: task.title,
     waveNumber: task.waveNumber,
     success: true,
     artifacts: [],
+    commitMessage,
   }
 }
 
@@ -167,6 +182,7 @@ export function parseWaveTasksFromPlanFile(
   planContent: string,
   waveNumber: number,
   constitutionPath?: string,
+  phaseSlug?: string,
 ): WaveTask[] {
   const tasks: WaveTask[] = []
   const lines = planContent.split('\n')
@@ -186,6 +202,7 @@ export function parseWaveTasksFromPlanFile(
       waveNumber,
       planContent,
       ...(constitutionPath !== undefined && { constitutionPath }),
+      ...(phaseSlug !== undefined && { phaseSlug }),
     })
   }
 
