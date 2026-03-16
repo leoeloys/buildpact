@@ -1,7 +1,9 @@
 /**
  * Quick command handler.
  * Zero-ceremony: natural language → minimal spec → atomic Git commit.
+ * --discuss variant asks 3-5 clarifying questions before execution.
  * @see FR-401 — Zero-Ceremony Execution
+ * @see FR-402 — Lightweight Context Gathering
  */
 
 import * as clack from '@clack/prompts'
@@ -11,12 +13,119 @@ import { execSync } from 'node:child_process'
 import { ok, err, ERROR_CODES } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
 import type { CommandHandler } from '../registry.js'
-import type { SupportedLanguage } from '../../contracts/i18n.js'
+import type { SupportedLanguage, I18nResolver } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { slugify } from '../../foundation/sharding.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
 import { buildTaskPayload } from '../../engine/subagent.js'
+
+// ---------------------------------------------------------------------------
+// Discuss-mode: clarifying questions
+// ---------------------------------------------------------------------------
+
+/** A single collected answer from the discuss flow */
+export interface DiscussAnswer {
+  key: string
+  question: string
+  answer: string
+}
+
+/** Static definition of the 4 clarifying questions used in --discuss mode */
+const DISCUSS_QUESTIONS = [
+  {
+    key: 'scope',
+    messageKey: 'cli.quick.discuss_scope_q',
+    options: [
+      { value: 'frontend', labelKey: 'cli.quick.discuss_scope_frontend' },
+      { value: 'backend', labelKey: 'cli.quick.discuss_scope_backend' },
+      { value: 'database', labelKey: 'cli.quick.discuss_scope_database' },
+      { value: 'fullstack', labelKey: 'cli.quick.discuss_scope_fullstack' },
+      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
+    ],
+  },
+  {
+    key: 'risk',
+    messageKey: 'cli.quick.discuss_risk_q',
+    options: [
+      { value: 'low', labelKey: 'cli.quick.discuss_risk_low' },
+      { value: 'medium', labelKey: 'cli.quick.discuss_risk_medium' },
+      { value: 'high', labelKey: 'cli.quick.discuss_risk_high' },
+      { value: 'unknown', labelKey: 'cli.quick.discuss_risk_unknown' },
+      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
+    ],
+  },
+  {
+    key: 'done',
+    messageKey: 'cli.quick.discuss_done_q',
+    options: [
+      { value: 'tests_pass', labelKey: 'cli.quick.discuss_done_tests' },
+      { value: 'new_tests', labelKey: 'cli.quick.discuss_done_new_tests' },
+      { value: 'manual', labelKey: 'cli.quick.discuss_done_manual' },
+      { value: 'deployed', labelKey: 'cli.quick.discuss_done_deployed' },
+      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
+    ],
+  },
+  {
+    key: 'constraints',
+    messageKey: 'cli.quick.discuss_constraints_q',
+    options: [
+      { value: 'none', labelKey: 'cli.quick.discuss_constraints_none' },
+      { value: 'compat', labelKey: 'cli.quick.discuss_constraints_compat' },
+      { value: 'perf', labelKey: 'cli.quick.discuss_constraints_perf' },
+      { value: 'security', labelKey: 'cli.quick.discuss_constraints_security' },
+      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
+    ],
+  },
+] as const
+
+/**
+ * Ask 4 clarifying questions via numbered-option selects.
+ * If the user picks "other", a free-text follow-up prompt is shown.
+ * Returns collected answers, or `undefined` if the user cancels.
+ */
+export async function gatherDiscussContext(
+  i18n: I18nResolver,
+): Promise<DiscussAnswer[] | undefined> {
+  const answers: DiscussAnswer[] = []
+
+  for (const question of DISCUSS_QUESTIONS) {
+    const options = question.options.map((opt) => ({
+      value: opt.value,
+      label: i18n.t(opt.labelKey),
+    }))
+
+    const selection = await clack.select({
+      message: i18n.t(question.messageKey),
+      options,
+    })
+
+    if (clack.isCancel(selection)) return undefined
+
+    const selectedValue = selection as string
+    let answerText: string
+
+    if (selectedValue === 'other') {
+      const freeText = await clack.text({
+        message: i18n.t('cli.quick.discuss_other_prompt'),
+        placeholder: i18n.t('cli.quick.discuss_other_placeholder'),
+      })
+      if (clack.isCancel(freeText) || !freeText) return undefined
+      answerText = String(freeText)
+    } else {
+      const opt = question.options.find((o) => o.value === selectedValue)
+      answerText = opt ? i18n.t(opt.labelKey) : selectedValue
+    }
+
+    answers.push({
+      key: question.key,
+      question: i18n.t(question.messageKey),
+      answer: answerText,
+    })
+  }
+
+  return answers
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,16 +170,19 @@ function buildQuickSpec(
   constitutionPath: string | undefined,
   payload: { taskId: string; type: string },
   generatedAt: string,
+  answers?: DiscussAnswer[],
 ): string {
   const constitutionLine = constitutionPath
     ? `- **Constitution**: \`${constitutionPath}\` (validated)`
     : `- **Constitution**: not configured`
 
-  return [
+  const modeLabel = answers ? 'quick (with discussion)' : 'quick (zero-ceremony)'
+
+  const lines = [
     `# Quick Spec — ${description}`,
     '',
     `> Generated: ${generatedAt}  `,
-    `> Mode: quick (zero-ceremony)`,
+    `> Mode: ${modeLabel}`,
     '',
     '## Goal',
     '',
@@ -88,7 +200,16 @@ function buildQuickSpec(
     `- [ ] All existing tests continue to pass`,
     `- [ ] One atomic Git commit produced with format \`type(quick): ${description}\``,
     '',
-  ].join('\n')
+  ]
+
+  if (answers && answers.length > 0) {
+    lines.push('## Context from Discussion', '')
+    for (const a of answers) {
+      lines.push(`**${a.question}**`, `→ ${a.answer}`, '')
+    }
+  }
+
+  return lines.join('\n')
 }
 
 /**
@@ -125,10 +246,13 @@ export const handler: CommandHandler = {
     const i18n = createI18n(lang)
     const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'cli.jsonl'))
 
+    const discussMode = args.includes('--discuss')
     // Accept description from CLI args or prompt
     const descriptionArg = args.filter((a) => !a.startsWith('--')).join(' ').trim()
 
-    clack.intro(i18n.t('cli.quick.welcome'))
+    clack.intro(
+      discussMode ? i18n.t('cli.quick.discuss_welcome') : i18n.t('cli.quick.welcome'),
+    )
 
     let description: string
     if (descriptionArg) {
@@ -143,6 +267,17 @@ export const handler: CommandHandler = {
         return ok(undefined)
       }
       description = String(input)
+    }
+
+    // Gather discuss context if --discuss flag provided
+    let discussAnswers: DiscussAnswer[] | undefined
+    if (discussMode) {
+      const gathered = await gatherDiscussContext(i18n)
+      if (gathered === undefined) {
+        clack.outro(i18n.t('cli.quick.cancelled'))
+        return ok(undefined)
+      }
+      discussAnswers = gathered
     }
 
     // Resolve constitution path for constitution validation (FR-203)
@@ -162,8 +297,14 @@ export const handler: CommandHandler = {
       ...(constitutionPath !== undefined && { constitutionPath }),
     })
 
-    // Generate minimal spec
-    const specContent = buildQuickSpec(description, constitutionPath, payload, generatedAt)
+    // Generate minimal spec (enriched with discussion answers if present)
+    const specContent = buildQuickSpec(
+      description,
+      constitutionPath,
+      payload,
+      generatedAt,
+      discussAnswers,
+    )
 
     // Write spec to disk
     try {

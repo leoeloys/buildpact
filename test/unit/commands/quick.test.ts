@@ -11,6 +11,7 @@ vi.mock('@clack/prompts', () => ({
   intro: vi.fn(),
   outro: vi.fn(),
   text: vi.fn(),
+  select: vi.fn(),
   log: {
     success: vi.fn(),
     warn: vi.fn(),
@@ -254,5 +255,142 @@ describe('quick handler', () => {
     // Even if git fails, handler must succeed (spec was written)
     const result = await handler.run(['add', 'theme', 'switcher'])
     expect(result.ok).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// --discuss mode tests
+// ---------------------------------------------------------------------------
+
+describe('quick handler --discuss mode', () => {
+  let tmpDir: string
+
+  /**
+   * Set up clack.select to return each response in order.
+   * Uses mockImplementation with a closure counter so it works
+   * reliably regardless of vi.clearAllMocks queue-clearing behaviour.
+   */
+  async function mockSelectSequence(responses: string[]) {
+    const clack = await import('@clack/prompts')
+    let idx = 0
+    vi.mocked(clack.select).mockImplementation(async () => responses[idx++] ?? 'none')
+  }
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-discuss-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+    vi.clearAllMocks()
+    // Explicitly restore isCancel to return false after clearAllMocks,
+    // guarding against any Vitest version that might wipe the factory impl.
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+    vi.unstubAllEnvs()
+  })
+
+  it('generates quick-spec.md with discussion context when --discuss given', async () => {
+    await mockSelectSequence(['frontend', 'low', 'tests_pass', 'none'])
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    const result = await handler.run(['--discuss', 'add', 'payment', 'integration'])
+    expect(result.ok).toBe(true)
+
+    const specPath = join(
+      tmpDir,
+      '.buildpact',
+      'specs',
+      'add-payment-integration',
+      'quick-spec.md',
+    )
+    const content = await readFile(specPath, 'utf-8')
+    expect(content).toContain('add payment integration')
+    expect(content).toContain('quick (with discussion)')
+    expect(content).toContain('Context from Discussion')
+  })
+
+  it('spec includes selected answer text, not generic placeholder', async () => {
+    await mockSelectSequence(['frontend', 'low', 'tests_pass', 'none'])
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--discuss', 'refactor', 'auth', 'module'])
+
+    const specPath = join(
+      tmpDir,
+      '.buildpact',
+      'specs',
+      'refactor-auth-module',
+      'quick-spec.md',
+    )
+    const content = await readFile(specPath, 'utf-8')
+    // Answers should reflect specific selections (Frontend / UI, Low — isolated...)
+    expect(content).toMatch(/Frontend/)
+    expect(content).toMatch(/Low/)
+    expect(content).toMatch(/All existing tests pass/)
+    expect(content).toMatch(/No special constraints/)
+  })
+
+  it('spec uses "other" free-text answer when user selects other', async () => {
+    // scope → other (free text), then remaining questions answered normally
+    await mockSelectSequence(['other', 'medium', 'manual', 'none'])
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.text).mockResolvedValueOnce('Shared utility library')
+
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--discuss', 'update', 'utils'])
+
+    const specPath = join(tmpDir, '.buildpact', 'specs', 'update-utils', 'quick-spec.md')
+    const content = await readFile(specPath, 'utf-8')
+    expect(content).toContain('Shared utility library')
+  })
+
+  it('cancels cleanly when user cancels a discuss question', async () => {
+    const clack = await import('@clack/prompts')
+    const cancelSymbol = Symbol('cancel')
+    vi.mocked(clack.select).mockImplementation(async () => cancelSymbol as unknown as string)
+    vi.mocked(clack.isCancel).mockImplementation((v) => v === cancelSymbol)
+
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    const result = await handler.run(['--discuss', 'add', 'feature'])
+    expect(result.ok).toBe(true)
+  })
+
+  it('asks exactly 4 questions in discuss mode', async () => {
+    await mockSelectSequence(['frontend', 'low', 'tests_pass', 'none'])
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+    const clack = await import('@clack/prompts')
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--discuss', 'add', 'dashboard', 'widget'])
+
+    expect(vi.mocked(clack.select)).toHaveBeenCalledTimes(4)
+  })
+
+  it('proceeds directly to execution after discuss answers (no extra pipeline steps)', async () => {
+    await mockSelectSequence(['frontend', 'low', 'tests_pass', 'none'])
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+    const { execSync } = await import('node:child_process')
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    const result = await handler.run(['--discuss', 'add', 'export', 'csv'])
+    expect(result.ok).toBe(true)
+
+    // Execution still produces git commit (same as base quick mode)
+    expect(vi.mocked(execSync)).toHaveBeenCalledWith(
+      expect.stringContaining('git add'),
+      expect.any(Object),
+    )
+    expect(vi.mocked(execSync)).toHaveBeenCalledWith(
+      expect.stringContaining('feat(quick): add export csv'),
+      expect.any(Object),
+    )
   })
 })
