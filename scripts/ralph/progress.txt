@@ -286,3 +286,36 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Plan wave filenames: plan-wave-1.md = waveNumber 0, plan-wave-1b.md = waveNumber 0 (split part)
 ---
 
+
+## 2026-03-16 - US-023
+- Implemented `src/engine/atomic-commit.ts` with three pure functions:
+  - `inferCommitType(description)` — maps keywords to conventional commit type (fix/docs/test/refactor/chore/style/feat)
+  - `formatCommitMessage(taskTitle, phaseSlug)` — returns `type(phaseSlug): taskTitle`
+  - `runAtomicCommit(taskTitle, phaseSlug, projectDir)` — git add -A + git commit, returns Result<string>
+- Added `phaseSlug?: string` to `WaveTask` interface — plan slug flows from execute handler into each task
+- Added `commitMessage?: string` to `TaskExecutionResult` — populated by executeTaskStub for successful tasks
+- Updated `parseWaveTasksFromPlanFile` to accept and pass `phaseSlug` parameter
+- Updated `buildWaveTaskGroups` in execute handler to accept and pass `phaseSlug` (from planSlug)
+- Updated execute handler to pass `planSlug` to `buildWaveTaskGroups`
+- Exported `inferCommitType`, `formatCommitMessage`, `runAtomicCommit` from `src/engine/index.ts`
+- Added i18n keys: `cli.execute.task_committed` (en + pt-br)
+- Created `test/unit/engine/atomic-commit.test.ts` with 16 tests
+- Extended `test/unit/engine/wave-executor.test.ts` with 5 new executeTaskStub tests + 2 parseWaveTasksFromPlanFile tests
+- Extended `test/unit/commands/execute.test.ts` with 2 new buildWaveTaskGroups tests
+- 530 tests pass, zero typecheck errors
+- Files changed:
+  - `src/engine/atomic-commit.ts` (new)
+  - `src/engine/wave-executor.ts`
+  - `src/engine/index.ts`
+  - `src/commands/execute/handler.ts`
+  - `locales/en.yaml`
+  - `locales/pt-br.yaml`
+  - `test/unit/engine/atomic-commit.test.ts` (new)
+  - `test/unit/engine/wave-executor.test.ts`
+  - `test/unit/commands/execute.test.ts`
+- **Learnings for future iterations:**
+  - Atomic commit pattern: `inferCommitType` + `formatCommitMessage` in atomic-commit.ts mirrors quick/handler.ts but as a standalone engine module
+  - `phaseSlug` flows: planSlug (execute handler) → buildWaveTaskGroups → parseWaveTasksFromPlanFile → WaveTask.phaseSlug → executeTaskStub → TaskExecutionResult.commitMessage
+  - `runAtomicCommit` uses `git add -A` (stages everything) — suitable for subagent completion; quick/handler uses specific path staging
+  - Tests for git operations should NOT call runAtomicCommit directly (requires real git repo); test pure functions inferCommitType and formatCommitMessage instead
+---
