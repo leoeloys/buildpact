@@ -15,6 +15,19 @@ import type { SupportedLanguage } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { slugify } from '../../foundation/sharding.js'
+import {
+  parseBudgetFromArgs,
+  createExperimentSession,
+  isSessionBudgetExhausted,
+  startNextExperiment,
+  completeExperiment,
+  stopSession,
+  addSessionSpend,
+  isCostLimitReached,
+  formatLoopStatus,
+  buildLoopSummary,
+} from '../../optimize/experiment-loop.js'
+import { readBudgetConfig } from '../../engine/budget-guard.js'
 
 /** Maximum line count for a target file before shard-first guard triggers */
 export const MAX_TARGET_LINES = 600
@@ -218,10 +231,118 @@ export const handler: CommandHandler = {
       }),
     )
 
+    // --loop flag: run the fixed-budget experiment loop
+    const hasLoop = args.includes('--loop')
+
+    if (!hasLoop) {
+      clack.outro(
+        i18n.t('cli.optimize.loop_no_flag', { target }),
+      )
+      return ok(undefined)
+    }
+
+    // Parse time budgets from args
+    const budget = parseBudgetFromArgs(args)
+    const budgetConfig = await readBudgetConfig(projectDir)
+
+    const expMinutes = Math.round(budget.experimentMs / 60_000)
+    const sessMinutes = Math.round(budget.sessionMs / 60_000)
+
+    clack.log.info(
+      i18n.t('cli.optimize.loop_start', {
+        exp: String(expMinutes),
+        session: String(sessMinutes),
+      }),
+    )
+
+    let session = createExperimentSession(budget, Date.now())
+
+    // Experiment loop — stub execution in Alpha (real execution via subagents in production)
+    while (!session.stopped) {
+      // Check session time budget
+      if (isSessionBudgetExhausted(session, Date.now())) {
+        session = stopSession(session, 'session_time_exhausted')
+        clack.log.warn(
+          i18n.t('cli.optimize.loop_session_exhausted', {
+            budget: String(sessMinutes),
+            count: String(session.completedExperiments.length),
+          }),
+        )
+        break
+      }
+
+      // Check cost budget (Budget Guard integration)
+      if (isCostLimitReached(session.sessionSpendUsd, budgetConfig.sessionLimitUsd)) {
+        clack.log.warn(
+          i18n.t('cli.optimize.loop_cost_limit', {
+            cost: session.sessionSpendUsd.toFixed(4),
+          }),
+        )
+
+        const choice = await clack.select({
+          message: i18n.t('cli.optimize.loop_cost_question'),
+          options: [
+            { value: 'continue', label: i18n.t('cli.optimize.loop_cost_continue') },
+            { value: 'switch', label: i18n.t('cli.optimize.loop_cost_switch') },
+            { value: 'stop', label: i18n.t('cli.optimize.loop_cost_stop') },
+          ],
+        })
+
+        if (clack.isCancel(choice) || choice === 'stop' || choice === 'switch') {
+          session = stopSession(session, 'cost_limit_reached')
+          break
+        }
+        // 'continue' — user chose to keep going (limit check bypassed for this iteration)
+      }
+
+      // Start next experiment
+      session = startNextExperiment(session, Date.now())
+      clack.log.info(
+        i18n.t('cli.optimize.loop_experiment_start', {
+          n: String(session.currentExperimentNumber),
+        }),
+      )
+
+      // Alpha stub: record a no_change result immediately (real implementation dispatches subagent)
+      const nowMs = Date.now()
+      const stubSpend = 0.001
+      session = addSessionSpend(session, stubSpend)
+
+      // In Alpha, complete with no_change to avoid infinite loop — real loop runs until budget exhausted
+      session = completeExperiment(session, {
+        completedAtMs: nowMs,
+        outcome: 'no_change',
+        description: `Experiment #${session.currentExperimentNumber} stub (Alpha)`,
+      })
+
+      clack.log.info(
+        i18n.t('cli.optimize.loop_experiment_complete', {
+          n: String(session.currentExperimentNumber),
+          outcome: 'no_change',
+        }),
+      )
+
+      // Show status
+      clack.log.info(formatLoopStatus(session, Date.now()))
+
+      // Stop after one stub iteration in Alpha to prevent infinite loop
+      session = stopSession(session, 'session_time_exhausted')
+    }
+
+    // Log loop completion
+    const summary = buildLoopSummary(session, Date.now())
+    clack.log.success(summary)
+
+    await audit.log({
+      action: 'optimize.loop',
+      agent: 'optimize',
+      files: [`.buildpact/optimize/${slug}/program.md`],
+      outcome: 'success',
+    })
+
     clack.outro(
-      i18n.t('cli.optimize.done', {
-        target,
-        path: `.buildpact/optimize/${slug}/program.md`,
+      i18n.t('cli.optimize.loop_stopped', {
+        count: String(session.completedExperiments.length),
       }),
     )
 
