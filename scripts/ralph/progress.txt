@@ -717,3 +717,17 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `findLatestBundleForPlatform` uses lexicographic sort on `web-bundle-<platform>-<timestamp>.txt` — timestamp in filename gives correct chronological order
   - Handler staleness check uses try/catch around readFile — if existing bundle is unreadable, silently skip (don't block fresh export)
 ---
+
+## 2026-03-16 - US-047
+- Implemented `src/commands/migrate-to-agent/handler.ts` with: validateBuildpactFiles (checks config.yaml, constitution.md, project-context.md), buildAgentModeConfig (generates agent-mode.yaml with mode: prompt default), buildCompatibilityReport (markdown report with file status, remediation steps, next steps)
+- Handler flow: validate files → report status via clack.log → write .buildpact/agent-mode.yaml (mode: prompt) → write .buildpact/agent-mode-compatibility.md → audit log
+- Created `src/commands/migrate-to-agent/index.ts` re-export
+- Registered `migrate-to-agent` in `src/commands/registry.ts` (CommandId union + REGISTRY entry)
+- Added 9 i18n keys under `cli.migrate_to_agent.*` in both EN and PT-BR locales
+- Added 18 unit tests covering validateBuildpactFiles (6), buildAgentModeConfig (6), buildCompatibilityReport (6), and handler integration (4) — 1270 tests total
+- Files changed: src/commands/migrate-to-agent/handler.ts (new), src/commands/migrate-to-agent/index.ts (new), src/commands/registry.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/migrate-to-agent.test.ts (new)
+- **Learnings for future iterations:**
+  - Config YAML comments can trip up `not.toContain()` tests — e.g., `# enabled when mode: agent` contains the substring `mode: agent`; use unambiguous phrases in comments or write targeted assertions
+  - migrate-to-agent writes two files: `.buildpact/agent-mode.yaml` (config) and `.buildpact/agent-mode-compatibility.md` (report); both created via mkdir({ recursive: true }) so safe on fresh projects
+  - mode: prompt is the safe default — Agent Mode only activates when user explicitly changes to mode: agent
+---
