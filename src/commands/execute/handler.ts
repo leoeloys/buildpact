@@ -34,6 +34,11 @@ import {
   formatCostSummary,
   STUB_COST_PER_TASK_USD,
 } from '../../engine/budget-guard.js'
+import {
+  readApprovalStore,
+  getAgentLevel,
+  requiresWriteConfirmation,
+} from '../../engine/autonomy-manager.js'
 
 // ---------------------------------------------------------------------------
 // Plan discovery — pure functions exported for unit testing
@@ -161,6 +166,23 @@ async function loadSpecContent(projectDir: string, planSlug: string): Promise<st
   }
 }
 
+/** Read active_squad name from .buildpact/config.yaml, or undefined if none/missing */
+async function readActiveSquadName(projectDir: string): Promise<string | undefined> {
+  try {
+    const content = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('active_squad:')) {
+        const value = trimmed.slice('active_squad:'.length).trim().replace(/^["']|["']$/g, '')
+        if (value && value !== 'none') return value
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return undefined
+}
+
 /** Read language from .buildpact/config.yaml, fallback to 'en' */
 async function readLanguage(projectDir: string): Promise<SupportedLanguage> {
   try {
@@ -248,6 +270,12 @@ export const handler: CommandHandler = {
     let sessionSpendUsd = 0
     let phaseSpendUsd = 0
 
+    // Autonomy level check — L1 agents require user confirmation before write operations (FR-851)
+    const activeSquadName = await readActiveSquadName(projectDir)
+    const approvalStore = await readApprovalStore(projectDir)
+    const agentLevel = getAgentLevel(activeSquadName ?? '__default__', approvalStore, 'L2')
+    const needsWriteConfirm = requiresWriteConfirmation(agentLevel)
+
     // Execute waves sequentially with goal-backward verification after each wave
     const executeSpinner = clack.spinner()
     executeSpinner.start(i18n.t('cli.execute.executing'))
@@ -307,6 +335,24 @@ export const handler: CommandHandler = {
         executeSpinner.start(i18n.t('cli.execute.executing'))
       }
       const waveNumber = waveTasks[0]?.waveNumber ?? 0
+
+      // L1 autonomy confirmation — L1 agents require explicit approval before any write op (FR-851)
+      if (needsWriteConfirm) {
+        executeSpinner.stop(i18n.t('cli.execute.executing'))
+        const firstTask = waveTasks[0]?.title ?? ''
+        const confirmed = await clack.confirm({
+          message: i18n.t('cli.autonomy.l1_write_confirm', {
+            agent: activeSquadName ?? 'agent',
+            task: firstTask,
+          }),
+        })
+        if (clack.isCancel(confirmed) || confirmed === false) {
+          clack.log.warn(i18n.t('cli.autonomy.l1_write_cancelled', { agent: activeSquadName ?? 'agent' }))
+          break
+        }
+        executeSpinner.start(i18n.t('cli.execute.executing'))
+      }
+
       const waveResult = executeWave(waveTasks)
       waveResults.push(waveResult)
 

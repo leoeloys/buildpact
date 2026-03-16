@@ -260,6 +260,15 @@ cli:
     validate_cancelled: "Validação do Squad cancelada"
     unknown_subcommand: "Subcomando de squad desconhecido: '{subcommand}'"
     usage_hint: "Uso: buildpact squad create <nome> | buildpact squad add <caminho> | buildpact squad validate <caminho>"
+  autonomy:
+    l1_write_confirm: "Agente '{agent}' está em L1 (Observador) — confirmar operação de escrita: {task}"
+    l1_write_cancelled: "Operação de escrita cancelada pelo usuário — agente '{agent}' está em L1 e requer confirmação"
+    promote_suggest: "Agente '{agent}' tem {rate}% de aprovação em 7 dias — promover de {from} para {to}?"
+    demote_suggest: "Agente '{agent}' tem {rate}% de rejeição em 7 dias — rebaixar de {from} para {to}?"
+    level_changed: "Nível do agente '{agent}' atualizado: {from} → {to}"
+    level_unchanged: "Nível do agente '{agent}' sem alteração"
+    no_suggestions: "Nenhuma mudança de nível sugerida — todos os agentes estão dentro dos limites normais"
+    check_welcome: "BuildPact Autonomy — Verificação de Nível dos Agentes"
 
 domain:
   software: "Software"
@@ -300,3 +309,5 @@ error:
     write_failed: "Falha ao gravar arquivo de lições em .buildpact/memory/lessons/"
   decisions:
     write_failed: "Falha ao gravar decisão '{id}' em .buildpact/memory/decisions/"
+  autonomy:
+    store_failed: "Falha ao gravar store de níveis de agente em .buildpact/agent-levels.json"

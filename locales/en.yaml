@@ -260,6 +260,15 @@ cli:
     validate_cancelled: "Squad validate cancelled"
     unknown_subcommand: "Unknown squad subcommand: '{subcommand}'"
     usage_hint: "Usage: buildpact squad create <name> | buildpact squad add <path> | buildpact squad validate <path>"
+  autonomy:
+    l1_write_confirm: "Agent '{agent}' is at L1 (Observer) — confirm write operation: {task}"
+    l1_write_cancelled: "Write operation cancelled by user — agent '{agent}' is at L1 and requires confirmation"
+    promote_suggest: "Agent '{agent}' has {rate}% approval over 7 days — promote from {from} to {to}?"
+    demote_suggest: "Agent '{agent}' has {rate}% rejection over 7 days — demote from {from} to {to}?"
+    level_changed: "Agent '{agent}' level updated: {from} → {to}"
+    level_unchanged: "Agent '{agent}' level unchanged"
+    no_suggestions: "No level changes suggested — all agents are performing within normal thresholds"
+    check_welcome: "BuildPact Autonomy — Agent Level Check"
 
 domain:
   software: "Software"
@@ -300,3 +309,5 @@ error:
     write_failed: "Failed to write lessons file to .buildpact/memory/lessons/"
   decisions:
     write_failed: "Failed to write decision '{id}' to .buildpact/memory/decisions/"
+  autonomy:
+    store_failed: "Failed to write agent level store to .buildpact/agent-levels.json"
