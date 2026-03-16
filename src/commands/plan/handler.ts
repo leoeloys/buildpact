@@ -66,6 +66,33 @@ export interface PlanTask {
   wave: number
 }
 
+// ---------------------------------------------------------------------------
+// Human / Agent classification types
+// ---------------------------------------------------------------------------
+
+/** Whether a task requires a human or can be executed by an agent */
+export type ExecutionType = 'HUMAN' | 'AGENT'
+
+/**
+ * Progress entry for a single task — persisted to progress.json for session resume.
+ */
+export interface TaskProgressEntry {
+  taskId: string
+  title: string
+  executionType: ExecutionType
+  completed: boolean
+  completedAt?: string
+}
+
+/**
+ * Full plan progress state — written to progress.json in the plan directory.
+ */
+export interface PlanProgress {
+  slug: string
+  generatedAt: string
+  tasks: TaskProgressEntry[]
+}
+
 /** A group of tasks that can run in parallel (same wave) */
 export interface WaveGroup {
   waveNumber: number
@@ -251,6 +278,77 @@ export function splitWavesIfNeeded(
   return files
 }
 
+// ---------------------------------------------------------------------------
+// Human / Agent classification — exported for unit testing
+// ---------------------------------------------------------------------------
+
+/**
+ * Keywords in task titles that indicate a human manual action is required.
+ * Case-insensitive substring match — order matters (more specific first).
+ */
+const HUMAN_KEYWORDS = [
+  'review',
+  'approve',
+  'sign off',
+  'sign-off',
+  'manually',
+  'manual ',
+  'call ',
+  'meeting',
+  'interview',
+  'contact ',
+  'visit ',
+  'present',
+  'negotiate',
+  'decide',
+  'authorize',
+  'inspect',
+  'survey',
+  'hand off',
+  'hand-off',
+  'coordinate',
+  'train ',
+  'onboard',
+  'audit ',
+  'confirm with',
+  'notify ',
+] as const
+
+/**
+ * Classify a task as [HUMAN] or [AGENT] based on its title.
+ * Uses keyword heuristics: if title contains any HUMAN_KEYWORDS → HUMAN.
+ * All other tasks are assumed automatable → AGENT.
+ * Pure function — no side effects.
+ */
+export function classifyTask(title: string): ExecutionType {
+  const lower = title.toLowerCase()
+  for (const kw of HUMAN_KEYWORDS) {
+    if (lower.includes(kw)) return 'HUMAN'
+  }
+  return 'AGENT'
+}
+
+/**
+ * Build the initial progress state for a plan (all tasks incomplete).
+ * Pure function — no side effects.
+ */
+export function buildProgressContent(
+  slug: string,
+  tasks: PlanTask[],
+  generatedAt: string,
+): PlanProgress {
+  return {
+    slug,
+    generatedAt,
+    tasks: tasks.map(t => ({
+      taskId: t.id,
+      title: t.title,
+      executionType: classifyTask(t.title),
+      completed: false,
+    })),
+  }
+}
+
 /**
  * Build the markdown content for a single wave plan file.
  * Pure function — no side effects.
@@ -270,6 +368,10 @@ export function buildWaveFileContent(
     .map(t => {
       const depNote =
         t.dependencies.length > 0 ? ` _(after: ${t.dependencies.join(', ')})_` : ''
+      const execType = classifyTask(t.title)
+      if (execType === 'HUMAN') {
+        return `- [ ] [HUMAN] ${t.title}${depNote}\n  - [ ] Confirm step completed manually`
+      }
       return `- [ ] [AGENT] ${t.title}${depNote}`
     })
     .join('\n')
@@ -405,7 +507,13 @@ export function buildPlanContent(
     for (const task of wave.tasks) {
       const depNote =
         task.dependencies.length > 0 ? ` _(after: ${task.dependencies.join(', ')})_` : ''
-      waveSections.push(`- [ ] [AGENT] ${task.title}${depNote}`)
+      const execType = classifyTask(task.title)
+      if (execType === 'HUMAN') {
+        waveSections.push(`- [ ] [HUMAN] ${task.title}${depNote}`)
+        waveSections.push(`  - [ ] Confirm step completed manually`)
+      } else {
+        waveSections.push(`- [ ] [AGENT] ${task.title}${depNote}`)
+      }
     }
     waveSections.push('')
   }
@@ -655,6 +763,34 @@ export const handler: CommandHandler = {
         writtenFiles.push(wavePath)
       }
     }
+
+    // --- Human step acknowledgement ---
+    // Walk through HUMAN tasks in wave order and pause for user confirmation.
+    const humanTasks = finalTasks.filter(t => classifyTask(t.title) === 'HUMAN')
+    const progress = buildProgressContent(specSlug, finalTasks, generatedAt)
+
+    for (const task of humanTasks) {
+      clack.log.warn(i18n.t('cli.plan.human_pause', { title: task.title }))
+      const confirmed = await clack.confirm({
+        message: i18n.t('cli.plan.human_confirm'),
+      })
+
+      if (!clack.isCancel(confirmed) && confirmed === true) {
+        const entry = progress.tasks.find(e => e.taskId === task.id)
+        if (entry) {
+          entry.completed = true
+          entry.completedAt = new Date().toISOString()
+        }
+      } else {
+        clack.log.warn(i18n.t('cli.plan.human_skipped', { title: task.title }))
+      }
+    }
+
+    // Persist progress for session resume
+    const progressPath = join(planDir, 'progress.json')
+    await writeFile(progressPath, JSON.stringify(progress, null, 2), 'utf-8')
+    writtenFiles.push(progressPath)
+    clack.log.info(i18n.t('cli.plan.progress_saved', { path: progressPath }))
 
     // Audit
     await audit.log({

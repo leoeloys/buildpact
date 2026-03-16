@@ -135,6 +135,10 @@ cli:
     validation_revised: "Plano revisado automaticamente — problemas críticos resolvidos"
     validation_overridden: "Problemas críticos ignorados — plano gerado como está"
     validation_cancelled: "Geração do plano cancelada — nenhum arquivo escrito"
+    human_pause: "Etapa humana necessária: {title}"
+    human_confirm: "Você concluiu esta etapa manual?"
+    human_skipped: "Etapa ignorada — marcada como pendente em progress.json: {title}"
+    progress_saved: "Progresso salvo em {path}"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

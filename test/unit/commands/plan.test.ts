@@ -543,6 +543,121 @@ describe('buildPlanContent', () => {
 })
 
 // ---------------------------------------------------------------------------
+// classifyTask unit tests
+// ---------------------------------------------------------------------------
+
+describe('classifyTask', () => {
+  it('classifies "review document" as HUMAN', async () => {
+    const { classifyTask } = await import('../../../src/commands/plan/handler.js')
+    expect(classifyTask('Review document for compliance')).toBe('HUMAN')
+  })
+
+  it('classifies "approve release" as HUMAN', async () => {
+    const { classifyTask } = await import('../../../src/commands/plan/handler.js')
+    expect(classifyTask('Approve release with stakeholders')).toBe('HUMAN')
+  })
+
+  it('classifies "implement auth endpoint" as AGENT', async () => {
+    const { classifyTask } = await import('../../../src/commands/plan/handler.js')
+    expect(classifyTask('Implement auth endpoint')).toBe('AGENT')
+  })
+
+  it('classifies "run tests" as AGENT', async () => {
+    const { classifyTask } = await import('../../../src/commands/plan/handler.js')
+    expect(classifyTask('Run integration tests')).toBe('AGENT')
+  })
+
+  it('classifies "coordinate with legal team" as HUMAN', async () => {
+    const { classifyTask } = await import('../../../src/commands/plan/handler.js')
+    expect(classifyTask('Coordinate with legal team')).toBe('HUMAN')
+  })
+
+  it('is case-insensitive', async () => {
+    const { classifyTask } = await import('../../../src/commands/plan/handler.js')
+    expect(classifyTask('REVIEW the output')).toBe('HUMAN')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildProgressContent unit tests
+// ---------------------------------------------------------------------------
+
+describe('buildProgressContent', () => {
+  it('builds progress with all tasks marked incomplete initially', async () => {
+    const { buildProgressContent } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Implement feature', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Review output', dependencies: ['T1'], wave: 1 },
+    ]
+    const progress = buildProgressContent('my-slug', tasks, '2026-03-16T00:00:00.000Z')
+    expect(progress.slug).toBe('my-slug')
+    expect(progress.generatedAt).toBe('2026-03-16T00:00:00.000Z')
+    expect(progress.tasks).toHaveLength(2)
+    expect(progress.tasks.every(t => !t.completed)).toBe(true)
+  })
+
+  it('classifies tasks correctly in progress entries', async () => {
+    const { buildProgressContent } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Implement feature', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Review output', dependencies: [], wave: 0 },
+    ]
+    const progress = buildProgressContent('slug', tasks, '2026-03-16T00:00:00.000Z')
+    expect(progress.tasks[0]?.executionType).toBe('AGENT')
+    expect(progress.tasks[1]?.executionType).toBe('HUMAN')
+  })
+
+  it('includes taskId and title for each entry', async () => {
+    const { buildProgressContent } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [{ id: 'T1', title: 'Foundation setup', dependencies: [], wave: 0 }]
+    const progress = buildProgressContent('test', tasks, '2026-03-16T00:00:00.000Z')
+    expect(progress.tasks[0]?.taskId).toBe('T1')
+    expect(progress.tasks[0]?.title).toBe('Foundation setup')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildWaveFileContent HUMAN/AGENT tagging tests
+// ---------------------------------------------------------------------------
+
+describe('buildWaveFileContent human/agent tagging', () => {
+  it('tags agent tasks with [AGENT]', async () => {
+    const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
+    const research = consolidateResearch(
+      buildStubFindings('tech_stack', '# Spec'),
+      buildStubFindings('codebase', '# Spec'),
+      buildStubFindings('squad_domain', '# Spec'),
+    )
+    const fileSpec = {
+      filename: 'plan-wave-1.md',
+      waveNumber: 0,
+      partSuffix: '',
+      tasks: [{ id: 'T1', title: 'Implement login endpoint', dependencies: [], wave: 0 }],
+    }
+    const content = buildWaveFileContent(fileSpec, research, 'slug', '2026-03-16T00:00:00.000Z')
+    expect(content).toContain('[AGENT] Implement login endpoint')
+  })
+
+  it('tags human tasks with [HUMAN] and adds manual checklist', async () => {
+    const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
+    const research = consolidateResearch(
+      buildStubFindings('tech_stack', '# Spec'),
+      buildStubFindings('codebase', '# Spec'),
+      buildStubFindings('squad_domain', '# Spec'),
+    )
+    const fileSpec = {
+      filename: 'plan-wave-1.md',
+      waveNumber: 0,
+      partSuffix: '',
+      tasks: [{ id: 'T1', title: 'Review legal document', dependencies: [], wave: 0 }],
+    }
+    const content = buildWaveFileContent(fileSpec, research, 'slug', '2026-03-16T00:00:00.000Z')
+    expect(content).toContain('[HUMAN] Review legal document')
+    expect(content).toContain('Confirm step completed manually')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // handler integration tests
 // ---------------------------------------------------------------------------
 
@@ -638,6 +753,119 @@ describe('plan handler integration', () => {
     const reportContent = await readFile(reportPath, 'utf-8')
     expect(reportContent).toContain('Nyquist Plan Validation Report')
     expect(reportContent).toContain('Completeness vs Spec')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// plan handler human-step and progress tests
+// ---------------------------------------------------------------------------
+
+describe('plan handler human step and progress', () => {
+  let tmpDir: string
+  const origCwd = process.cwd
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-plan-human-test-'))
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+  })
+
+  afterEach(async () => {
+    vi.spyOn(process, 'cwd').mockImplementation(origCwd)
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('writes progress.json to plan directory', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'progress-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Implement authentication endpoint\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm).mockResolvedValue(true)
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    const progressPath = join(tmpDir, '.buildpact', 'plans', 'progress-feature', 'progress.json')
+    const raw = await readFile(progressPath, 'utf-8')
+    const progress = JSON.parse(raw) as { slug: string; tasks: Array<{ taskId: string }> }
+    expect(progress.slug).toBe('progress-feature')
+    expect(Array.isArray(progress.tasks)).toBe(true)
+  })
+
+  it('pauses and calls clack.confirm for each HUMAN task', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'review-feature')
+    await mkdir(specsDir, { recursive: true })
+    // Spec with 1 human task ("review")
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Review compliance documentation with legal\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm).mockResolvedValue(true)
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const confirmSpy = vi.mocked(clack.confirm)
+    confirmSpy.mockClear()
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    await handler.run([])
+
+    // clack.confirm should have been called at least once for the human task
+    expect(confirmSpy).toHaveBeenCalled()
+  })
+
+  it('marks task as completed in progress.json when user confirms', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'confirm-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Review security policy document\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm).mockResolvedValue(true)
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    await handler.run([])
+
+    const progressPath = join(tmpDir, '.buildpact', 'plans', 'confirm-feature', 'progress.json')
+    const raw = await readFile(progressPath, 'utf-8')
+    const progress = JSON.parse(raw) as { tasks: Array<{ completed: boolean; executionType: string }> }
+    const humanTask = progress.tasks.find(t => t.executionType === 'HUMAN')
+    expect(humanTask?.completed).toBe(true)
+  })
+
+  it('progress.json has all tasks incomplete for AGENT-only plans', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'agent-only-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Implement the database schema migration\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm).mockResolvedValue(true)
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    await handler.run([])
+
+    const progressPath = join(tmpDir, '.buildpact', 'plans', 'agent-only-feature', 'progress.json')
+    const raw = await readFile(progressPath, 'utf-8')
+    const progress = JSON.parse(raw) as { tasks: Array<{ completed: boolean }> }
+    // No human tasks → all completed=false initially
+    expect(progress.tasks.every(t => !t.completed)).toBe(true)
   })
 })
 
