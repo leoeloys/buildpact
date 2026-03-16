@@ -12,7 +12,7 @@ function resolveTemplatesDir(): string {
   try {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = dirname(__filename)
-    return join(__dirname, '..', '..', 'templates')
+    return join(__dirname, '..', 'templates')
   } catch {
     // Fallback for environments where import.meta.url is unavailable
     return join(process.cwd(), 'templates')
