@@ -1,0 +1,43 @@
+# Agent Builder Squad — Public
+# Meta-creation tool — guides domain experts through building production-quality custom Squads.
+
+name: agent-builder
+version: "0.1.0"
+domain: software
+description: "Agent Builder Squad — Agent Designer, Workflow Architect, Squad Tester"
+initial_level: L2
+
+bundle_disclaimers:
+  pt-br: "Este Squad gerado por IA deve ser revisado por um especialista de domínio antes de uso em produção."
+  en: "This AI-generated Squad must be reviewed by a domain expert before production use."
+
+agents:
+  agent-designer:
+    file: agents/agent-designer.md
+  workflow-architect:
+    file: agents/workflow-architect.md
+  squad-tester:
+    file: agents/squad-tester.md
+
+# Pipeline phase routing — which agent leads each phase
+phases:
+  specify: agent-designer
+  plan: workflow-architect
+  execute: workflow-architect
+  verify: squad-tester
+  document: agent-designer
+
+# Domain-aware questions for Squad design specification
+domain_questions:
+  - id: squad_purpose
+    prompt: "What is the primary purpose of the Squad you want to build? (e.g., 'automate legal contract review', 'manage e-commerce operations')"
+    required: true
+  - id: target_domain
+    prompt: "What domain does this Squad serve? (e.g., legal, finance, marketing, healthcare, software)"
+    required: true
+  - id: agent_roles
+    prompt: "What specialist roles do you need? List each agent's main responsibility in one sentence."
+    required: true
+  - id: workflow_handoffs
+    prompt: "Describe the typical workflow: which agent starts, how tasks flow between agents, and who produces the final output?"
+    required: true
