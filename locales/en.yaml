@@ -92,6 +92,10 @@ cli:
     wizard_success_placeholder: "e.g. they receive an email and can set a new password"
     wizard_constraints: "Any constraints or rules to keep in mind? (press Enter to skip)"
     wizard_constraints_placeholder: "e.g. must work on mobile, email sent within 60 seconds"
+    ambiguity_detected: "Ambiguities detected — I'll ask a few clarifying questions to make the spec more precise"
+    clarification_other: "Other (please specify)"
+    clarification_other_prompt: "Please describe what you mean"
+    clarification_other_placeholder: "Enter your answer in plain language"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"

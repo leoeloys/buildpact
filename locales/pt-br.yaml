@@ -92,6 +92,10 @@ cli:
     wizard_success_placeholder: "ex: eles recebem um e-mail e conseguem definir uma nova senha"
     wizard_constraints: "Alguma restrição ou regra a considerar? (pressione Enter para pular)"
     wizard_constraints_placeholder: "ex: deve funcionar no celular, e-mail enviado em até 60 segundos"
+    ambiguity_detected: "Ambiguidades detectadas — vou fazer algumas perguntas para tornar a spec mais precisa"
+    clarification_other: "Outro (especifique)"
+    clarification_other_prompt: "Descreva o que você quer dizer"
+    clarification_other_placeholder: "Digite sua resposta em linguagem simples"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

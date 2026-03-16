@@ -361,3 +361,261 @@ describe('specify handler (beginner mode)', () => {
     expect(vi.mocked(clack.outro)).toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------------
+// detectAmbiguities unit tests (pure function)
+// ---------------------------------------------------------------------------
+
+describe('detectAmbiguities', () => {
+  it('returns empty array for clear, unambiguous input', async () => {
+    const { detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    expect(detectAmbiguities('Users should be able to reset their password via email')).toEqual([])
+    expect(detectAmbiguities('Add a product search feature with filters')).toEqual([])
+    expect(detectAmbiguities('Show a confirmation dialog before deleting an item')).toEqual([])
+  })
+
+  it('returns matching ambiguity for "quickly"', async () => {
+    const { detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const result = detectAmbiguities('The page should load quickly')
+    expect(result).toHaveLength(1)
+    expect(result[0].phrase).toBe('quickly')
+    expect(result[0].options.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('returns matching ambiguity for "fast"', async () => {
+    const { detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const result = detectAmbiguities('We need a fast checkout process')
+    expect(result).toHaveLength(1)
+    expect(result[0].phrase).toBe('fast')
+  })
+
+  it('returns multiple ambiguities when multiple phrases are present', async () => {
+    const { detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const result = detectAmbiguities('It should be easy and secure for users')
+    const phrases = result.map((a) => a.phrase)
+    expect(phrases).toContain('easy')
+    expect(phrases).toContain('secure')
+    expect(result.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('deduplicates when same phrase appears multiple times', async () => {
+    const { detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const result = detectAmbiguities('make it fast and also very fast')
+    const fastMatches = result.filter((a) => a.phrase === 'fast')
+    expect(fastMatches).toHaveLength(1)
+  })
+
+  it('detects phrases case-insensitively', async () => {
+    const { detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const lower = detectAmbiguities('load quickly')
+    const upper = detectAmbiguities('load QUICKLY')
+    expect(lower).toHaveLength(1)
+    expect(upper).toHaveLength(1)
+    expect(lower[0].phrase).toBe(upper[0].phrase)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// runClarificationFlow unit tests
+// ---------------------------------------------------------------------------
+
+describe('runClarificationFlow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns empty array when given no ambiguities', async () => {
+    const { runClarificationFlow } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+    const result = await runClarificationFlow([], i18n)
+    expect(result).toEqual([])
+  })
+
+  it('returns answer when user selects a numbered option', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select).mockResolvedValueOnce('Under 1 second')
+
+    const { runClarificationFlow, detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const ambiguities = detectAmbiguities('load quickly')
+    const result = await runClarificationFlow(ambiguities, i18n)
+
+    expect(result).not.toBeUndefined()
+    expect(result).toHaveLength(1)
+    expect(result![0].phrase).toBe('quickly')
+    expect(result![0].answer).toBe('Under 1 second')
+  })
+
+  it('returns free-text answer when user selects "Other"', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select).mockResolvedValueOnce('__other__')
+    vi.mocked(clack.text).mockResolvedValueOnce('Roughly 2 seconds max')
+
+    const { runClarificationFlow, detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const ambiguities = detectAmbiguities('load quickly')
+    const result = await runClarificationFlow(ambiguities, i18n)
+
+    expect(result).not.toBeUndefined()
+    expect(result![0].answer).toBe('Roughly 2 seconds max')
+  })
+
+  it('returns undefined when user cancels select', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation((v) => v === Symbol.for('cancel'))
+    const cancelSymbol = Symbol.for('cancel')
+    vi.mocked(clack.select).mockResolvedValueOnce(cancelSymbol as unknown as string)
+    vi.mocked(clack.isCancel).mockReturnValueOnce(true)
+
+    const { runClarificationFlow, detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const ambiguities = detectAmbiguities('load quickly')
+    const result = await runClarificationFlow(ambiguities, i18n)
+    expect(result).toBeUndefined()
+  })
+
+  it('handles multiple ambiguities and returns all answers', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    let callIdx = 0
+    vi.mocked(clack.select).mockImplementation(async () => {
+      return callIdx++ === 0 ? 'Under 5 seconds' : 'HTTPS and standard auth (session/JWT)'
+    })
+
+    const { runClarificationFlow, detectAmbiguities } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const ambiguities = detectAmbiguities('load fast and be secure')
+    const result = await runClarificationFlow(ambiguities, i18n)
+
+    expect(result).not.toBeUndefined()
+    expect(result!.length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildSpecContent with clarifications
+// ---------------------------------------------------------------------------
+
+describe('buildSpecContent with clarifications', () => {
+  const basePayload = { taskId: 'test-456', type: 'specify' }
+  const generatedAt = '2026-03-16T00:00:00.000Z'
+
+  it('includes Clarifications section when answers provided', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'The system should respond quickly',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'fast-response',
+      clarifications: [
+        { phrase: 'quickly', question: 'How quickly should this happen?', answer: 'Under 1 second' },
+      ],
+    })
+
+    expect(content).toContain('## Clarifications')
+    expect(content).toContain('quickly')
+    expect(content).toContain('Under 1 second')
+    expect(content).toContain('How quickly should this happen?')
+  })
+
+  it('omits Clarifications section when no clarifications provided', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Show a dialog before deleting',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'delete-dialog',
+    })
+
+    expect(content).not.toContain('## Clarifications')
+  })
+
+  it('omits Clarifications section when empty array provided', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Show a dialog before deleting',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'delete-dialog',
+      clarifications: [],
+    })
+
+    expect(content).not.toContain('## Clarifications')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// handler integration tests — ambiguity detection flow
+// ---------------------------------------------------------------------------
+
+describe('specify handler — ambiguity clarification integration', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-specify-amb-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+    vi.clearAllMocks()
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('skips clarification when description has no ambiguities', async () => {
+    const clack = await import('@clack/prompts')
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    const result = await handler.run(['users', 'can', 'reset', 'their', 'password'])
+    expect(result.ok).toBe(true)
+
+    // clack.select should not have been called (no ambiguities)
+    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
+  })
+
+  it('triggers clarification flow when description contains ambiguous phrase', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select).mockResolvedValueOnce('Under 1 second')
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    const result = await handler.run(['the', 'page', 'should', 'load', 'quickly'])
+    expect(result.ok).toBe(true)
+
+    expect(vi.mocked(clack.select)).toHaveBeenCalledOnce()
+  })
+
+  it('writes clarifications into spec.md when ambiguity resolved', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select).mockResolvedValueOnce('Under 5 seconds')
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    await handler.run(['load', 'quickly'])
+
+    const specPath = join(tmpDir, '.buildpact', 'specs', 'load-quickly', 'spec.md')
+    const content = await readFile(specPath, 'utf-8')
+    expect(content).toContain('## Clarifications')
+    expect(content).toContain('quickly')
+    expect(content).toContain('Under 5 seconds')
+  })
+})
