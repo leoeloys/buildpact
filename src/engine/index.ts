@@ -83,3 +83,15 @@ export {
   listAvailableAgents,
   MAX_INDEX_BYTES,
 } from './lazy-agent-loader.js'
+export {
+  isRegistryName,
+  buildSquadFileUrl,
+  buildValidationBadge,
+  formatRegistryIndex,
+  parseSquadManifest,
+  fetchSquadManifest,
+  downloadManifestFiles,
+  downloadSquadFromHub,
+  REGISTRY_BASE_URL,
+  SQUAD_MANIFEST_FILE,
+} from './community-hub.js'

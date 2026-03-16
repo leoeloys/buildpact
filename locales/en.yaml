@@ -258,8 +258,11 @@ cli:
     validate_fail: "Validation failed: {count} error(s) found — see details above"
     validate_blocked: "Squad blocked — resolve all security issues before using as a community Squad"
     validate_cancelled: "Squad validate cancelled"
+    hub_downloading: "Downloading Squad '{name}' from community hub..."
+    hub_downloaded: "Squad '{name}' downloaded from community hub"
+    hub_download_failed: "Failed to download Squad '{name}' from community hub"
     unknown_subcommand: "Unknown squad subcommand: '{subcommand}'"
-    usage_hint: "Usage: buildpact squad create <name> | buildpact squad add <path> | buildpact squad validate <path>"
+    usage_hint: "Usage: buildpact squad create <name> | buildpact squad add <name-or-path> | buildpact squad validate <path>"
   autonomy:
     l1_write_confirm: "Agent '{agent}' is at L1 (Observer) — confirm write operation: {task}"
     l1_write_cancelled: "Write operation cancelled by user — agent '{agent}' is at L1 and requires confirmation"

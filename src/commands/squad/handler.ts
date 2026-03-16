@@ -5,8 +5,9 @@
  */
 
 import * as clack from '@clack/prompts'
-import { readFile } from 'node:fs/promises'
+import { readFile, mkdtemp, rm } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { ok, err, ERROR_CODES } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
 import type { CommandHandler } from '../registry.js'
@@ -20,6 +21,7 @@ import {
   validateHandoffGraph,
   installSquad,
 } from '../../engine/squad-scaffolder.js'
+import { isRegistryName, downloadSquadFromHub } from '../../engine/community-hub.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -133,7 +135,7 @@ export async function runCreate(args: string[], projectDir: string): Promise<Res
 
 /**
  * Handle `buildpact squad add <name>`.
- * In Alpha: expects a local path. Downloads from registry in v1.0.
+ * Accepts either a squad name (downloads from community hub) or a local path.
  * Validates structure + security, then installs to .buildpact/squads/.
  */
 export async function runAdd(args: string[], projectDir: string): Promise<Result<undefined>> {
@@ -166,8 +168,28 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
     return ok(undefined)
   }
 
-  // In Alpha: treat rawName as a local directory path
-  const sourceDir = resolve(rawName)
+  // Detect whether input is a registry name or a local path
+  let sourceDir: string
+  let tempDir: string | undefined
+
+  if (isRegistryName(rawName)) {
+    // Download from community hub
+    const spinner = clack.spinner()
+    spinner.start(i18n.t('cli.squad.hub_downloading', { name: rawName }))
+    tempDir = await mkdtemp(join(tmpdir(), 'bp-hub-'))
+    const downloadResult = await downloadSquadFromHub(rawName, tempDir)
+    if (!downloadResult.ok) {
+      spinner.stop(i18n.t('cli.squad.hub_download_failed', { name: rawName }))
+      await rm(tempDir, { recursive: true, force: true })
+      clack.outro(i18n.t('cli.squad.add_cancelled'))
+      return err(downloadResult.error)
+    }
+    spinner.stop(i18n.t('cli.squad.hub_downloaded', { name: rawName }))
+    sourceDir = tempDir
+  } else {
+    // Treat as local path
+    sourceDir = resolve(rawName)
+  }
 
   await audit.log({
     action: 'squad.add.start',
@@ -200,6 +222,7 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
       outcome: 'failure',
       error: `${structureResult.value.errors.length} structural error(s)`,
     })
+    if (tempDir) await rm(tempDir, { recursive: true, force: true })
     clack.outro(i18n.t('cli.squad.add_cancelled'))
     return err({
       code: ERROR_CODES.SQUAD_VALIDATION_FAILED,
@@ -215,6 +238,7 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
   if (!securityResult.ok) {
     spinner.stop(i18n.t('cli.squad.add_validation_failed'))
     await audit.log({ action: 'squad.add.security_error', agent: 'squad-command', files: [], outcome: 'failure' })
+    if (tempDir) await rm(tempDir, { recursive: true, force: true })
     clack.outro(i18n.t('cli.squad.add_cancelled'))
     return err(securityResult.error)
   }
@@ -231,6 +255,7 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
       outcome: 'failure',
       error: `${securityResult.value.errors.length} security issue(s)`,
     })
+    if (tempDir) await rm(tempDir, { recursive: true, force: true })
     clack.outro(i18n.t('cli.squad.add_blocked'))
     return err({
       code: ERROR_CODES.SQUAD_VALIDATION_FAILED,
@@ -243,6 +268,7 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
   // Install
   spinner.start(i18n.t('cli.squad.add_installing'))
   const installResult = await installSquad(sourceDir, projectDir)
+  if (tempDir) await rm(tempDir, { recursive: true, force: true })
   if (!installResult.ok) {
     spinner.stop(i18n.t('cli.squad.add_install_failed'))
     await audit.log({

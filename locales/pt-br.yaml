@@ -258,8 +258,11 @@ cli:
     validate_fail: "Validação falhou: {count} erro(s) encontrado(s) — veja os detalhes acima"
     validate_blocked: "Squad bloqueado — resolva todos os problemas de segurança antes de usar como Squad da comunidade"
     validate_cancelled: "Validação do Squad cancelada"
+    hub_downloading: "Baixando Squad '{name}' do hub da comunidade..."
+    hub_downloaded: "Squad '{name}' baixado do hub da comunidade"
+    hub_download_failed: "Falha ao baixar Squad '{name}' do hub da comunidade"
     unknown_subcommand: "Subcomando de squad desconhecido: '{subcommand}'"
-    usage_hint: "Uso: buildpact squad create <nome> | buildpact squad add <caminho> | buildpact squad validate <caminho>"
+    usage_hint: "Uso: buildpact squad create <nome> | buildpact squad add <nome-ou-caminho> | buildpact squad validate <caminho>"
   autonomy:
     l1_write_confirm: "Agente '{agent}' está em L1 (Observador) — confirmar operação de escrita: {task}"
     l1_write_cancelled: "Operação de escrita cancelada pelo usuário — agente '{agent}' está em L1 e requer confirmação"

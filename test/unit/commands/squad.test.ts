@@ -4,6 +4,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { validateSquadName, runValidate } from '../../../src/commands/squad/handler.js'
 
+// Mock community-hub to avoid real network calls in handler tests
+vi.mock('../../../src/engine/community-hub.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../../src/engine/community-hub.js')>()
+  return {
+    ...original,
+    downloadSquadFromHub: vi.fn().mockResolvedValue({ ok: false, error: { code: 'REMOTE_FETCH_FAILED', i18nKey: 'error.network.remote_fetch_failed', params: { url: 'manifest.json', reason: 'mocked' } } }),
+  }
+})
+
 // ---------------------------------------------------------------------------
 // Mock @clack/prompts so tests don't block on interactive TTY prompts
 // ---------------------------------------------------------------------------
@@ -242,6 +251,29 @@ describe('runAdd', () => {
     const result = await runAdd([badSquadDir], tmpDir)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('SQUAD_VALIDATION_FAILED')
+  })
+
+  it('attempts download when input is a registry name (no path separators)', async () => {
+    const { runAdd } = await import('../../../src/commands/squad/handler.js')
+    const communityHub = await import('../../../src/engine/community-hub.js')
+
+    // downloadSquadFromHub is mocked to fail — test that it's called for registry names
+    const result = await runAdd(['software'], tmpDir)
+    expect(result.ok).toBe(false)
+    expect(vi.mocked(communityHub.downloadSquadFromHub)).toHaveBeenCalledWith(
+      'software',
+      expect.any(String),
+    )
+  })
+
+  it('uses local path when input contains path separator', async () => {
+    const { runAdd } = await import('../../../src/commands/squad/handler.js')
+    const communityHub = await import('../../../src/engine/community-hub.js')
+
+    // Pass a local path — downloadSquadFromHub should NOT be called
+    const localPath = join(tmpDir, 'nonexistent-squad')
+    await runAdd([localPath], tmpDir)
+    expect(vi.mocked(communityHub.downloadSquadFromHub)).not.toHaveBeenCalled()
   })
 
   it('blocks squad with security violations', async () => {
