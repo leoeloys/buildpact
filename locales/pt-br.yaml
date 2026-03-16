@@ -112,6 +112,17 @@ cli:
     maturity_stage_3: "Estágio 3 — Alias (um único comando ou script)"
     maturity_stage_4: "Estágio 4 — Verificação Periódica (agendamento / monitoramento automatizado)"
     maturity_stage_5: "Estágio 5 — Automação Total (orientado por IA, ponta a ponta)"
+  plan:
+    welcome: "BuildPact Plan — Pesquisa Paralela Automatizada"
+    research_start: "Iniciando agentes de pesquisa — stack tecnológico, base de código, restrições de domínio..."
+    research_done: "{count} agentes de pesquisa concluídos"
+    research_tech: "Pesquisa de stack tecnológico: {keywords}"
+    research_codebase: "Pesquisa da base de código: {keywords}"
+    research_domain: "Pesquisa de restrições de domínio: {keywords}"
+    spec_not_found: "Spec não encontrada em '{path}' — forneça um caminho válido para spec.md"
+    no_spec_found: "Nenhuma spec encontrada em .buildpact/specs/ — execute /bp:specify primeiro"
+    no_spec_outro: "Execute /bp:specify para criar uma spec antes de planejar"
+    done: "Plano salvo em {path}"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

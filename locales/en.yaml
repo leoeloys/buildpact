@@ -112,6 +112,17 @@ cli:
     maturity_stage_3: "Stage 3 — Alias (single command or script)"
     maturity_stage_4: "Stage 4 — Heartbeat Check (automated scheduling / monitoring)"
     maturity_stage_5: "Stage 5 — Full Automation (AI-driven, end-to-end)"
+  plan:
+    welcome: "BuildPact Plan — Automated Parallel Research"
+    research_start: "Spawning research agents — tech stack, codebase, domain constraints..."
+    research_done: "{count} research agents completed"
+    research_tech: "Tech stack research: {keywords}"
+    research_codebase: "Codebase research: {keywords}"
+    research_domain: "Domain constraints research: {keywords}"
+    spec_not_found: "Spec not found at '{path}' — provide a valid path to spec.md"
+    no_spec_found: "No spec found in .buildpact/specs/ — run /bp:specify first"
+    no_spec_outro: "Run /bp:specify to create a spec before planning"
+    done: "Plan saved to {path}"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"
