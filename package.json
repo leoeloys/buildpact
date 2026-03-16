@@ -1,13 +1,13 @@
 {
   "name": "buildpact",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Open-source Spec-Driven Development framework — bilingual CLI for developers and domain experts",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
   },
   "bin": {
-    "buildpact": "./dist/cli/index.js"
+    "buildpact": "./dist/index.mjs"
   },
   "files": [
     "dist",
@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/buildpact/buildpact.git"
+    "url": "https://github.com/leoeloys/buildpact.git"
   },
   "publishConfig": {
     "access": "public"
