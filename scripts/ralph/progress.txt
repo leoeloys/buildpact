@@ -774,3 +774,20 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Step summary includes squad name in the install command so contributors can copy-paste it exactly
   - CiSummaryReport.checks[0] is always structural-validation and checks[1] is always security-validation — consumers can rely on this order
 ---
+
+## 2026-03-16 - US-050
+- Created `CONTRIBUTING.md` — bilingual (EN + PT-BR) with 8 numbered steps in each language covering fork/clone, env setup, issue picking, branching, implementation, quality checks, commit convention, and PR opening
+- Created `docs/decisions/TEMPLATE-MADR.md` — MADR ADR template with Status/Context/Drivers/Options/Outcome/Pros-Cons/Links sections
+- Created `docs/decisions/ADR-000-esm-typescript-result-pattern.md` — concrete accepted ADR documenting ESM + TypeScript strict + Result<T> error handling decision with 3 alternatives analysed
+- Created `.github/PULL_REQUEST_TEMPLATE.md` — PR template with bilingual checklist enforcing same i18n key in both en.yaml and pt-br.yaml; includes typecheck/test/architecture/layer/named-exports checks
+- Created `.github/labels.yml` — 7 good-first-issue labels (scope + Effort: <N hr + Mentor: ref) plus bug, enhancement, process labels; good-first-issue labels use reserved color 7057ff
+- Created `test/unit/community/governance.test.ts` — 24 tests covering all 4 governance artifacts (CONTRIBUTING bilingual steps, decisions/ MADR template + ADR, PR template bilingual i18n, labels ≥5 good-first-issue with scope/effort/mentor)
+- 1368 tests passing, zero typecheck errors
+- Files changed: CONTRIBUTING.md (new), docs/decisions/TEMPLATE-MADR.md (new), docs/decisions/ADR-000-esm-typescript-result-pattern.md (new), .github/PULL_REQUEST_TEMPLATE.md (new), .github/labels.yml (new), test/unit/community/governance.test.ts (new)
+- **Learnings for future iterations:**
+  - `docs/decisions/` follows MADR format (not ADL/RFC) — Status field must include proposed/accepted/deprecated/superseded as options
+  - `.github/labels.yml` is consumed by GitHub label sync actions; good-first-issue labels use GitHub's reserved color 7057ff
+  - PR template bilingual i18n check: enforce "same key" wording to distinguish from just "key in each file" — tests assert `.toContain('same key')`
+  - Test file for community/governance goes in `test/unit/community/` — a new sibling directory to `commands/`, `engine/`, `foundation/`
+  - good-first-issue labels use inline `Scope: X. Effort: <Nhr. Mentor: @Y` in description — tests use regex count on `Scope:` / `Effort:` / `Mentor:` occurrences
+---

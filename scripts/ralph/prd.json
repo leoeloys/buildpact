@@ -788,8 +788,8 @@
         "Tests pass"
       ],
       "priority": 50,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "CONTRIBUTING.md (bilingual EN+PT-BR), docs/decisions/ with MADR template + ADR-000, .github/PULL_REQUEST_TEMPLATE.md, .github/labels.yml with 7 good-first-issue labels. 24 new governance tests. 1368 total tests passing."
     },
     {
       "id": "US-051",
