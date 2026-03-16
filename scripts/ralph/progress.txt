@@ -320,6 +320,23 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Tests for git operations should NOT call runAtomicCommit directly (requires real git repo); test pure functions inferCommitType and formatCommitMessage instead
 ---
 
+## 2026-03-16 - US-025
+- Implemented src/engine/wave-verifier.ts with: mapAcsToWave (filter spec ACs relevant to a wave by keyword overlap with task titles), verifyWaveAcs (verify each relevant AC against wave execution results — passed if at least one covering task succeeded), formatWaveVerificationReport (markdown pass/fail report per AC), buildWaveFixPlan (targeted fix plan with [AGENT] tasks for each failed AC, executable via /bp:execute)
+- Updated src/commands/execute/handler.ts: replaced executeWaves() call with manual wave loop; after each wave, always runs AC verification when spec is available; writes verification-wave-N.md report for every wave; writes fix/plan-wave-1.md when any AC fails; falls back to task-only failure checking when no spec found
+- Updated src/engine/index.ts to export all 4 wave-verifier functions
+- Added 4 i18n keys in en.yaml and pt-br.yaml under cli.execute: no_spec_for_verification, verification_passed, verification_failed, fix_plan_written
+- Created test/unit/engine/wave-verifier.test.ts with 20 unit tests covering all 4 pure functions
+- Added 4 handler.run() integration tests to test/unit/commands/execute.test.ts
+- Files changed: src/engine/wave-verifier.ts (new), src/engine/index.ts, src/commands/execute/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/wave-verifier.test.ts (new), test/unit/commands/execute.test.ts
+- 584 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - AC verification happens REGARDLESS of task success/failure — failed tasks cause their mapped ACs to fail, which triggers the fix plan
+  - Always write verification report for both passing and failing waves — handler consumers need the report even for successful waves
+  - Fix plan written to `<planDir>/fix/plan-wave-1.md` — user runs `/bp:execute <planDir>/fix` to resolve
+  - mapAcsToWave returns empty when spec has no AC section or no keyword overlap — verReport.allPassed=true in that case (non-blocking)
+  - When no spec found, handler falls back to task-only failure checking (no verification, no fix plan)
+---
+
 ## 2026-03-16 - US-024
 - Implemented src/engine/recovery.ts with: selectNextStrategy (3-strategy chain: retry→simplify→skip), isStuckLoop (detects same error repeating across consecutive attempts for same task), buildFailureSummary (markdown escalation report with task failures grouped by taskId), handleTaskFailure (immutable session state updates, escalation after 3 attempts or stuck loop), createRecoverySession (captures git HEAD as last good commit ref), executeRollback (git reset --hard to named commitRef)
 - Updated src/engine/index.ts to export all 6 new recovery functions (removed old stub recoverSession export)
