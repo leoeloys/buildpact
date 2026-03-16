@@ -511,3 +511,19 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - docs/ directory already exists at project root — documentation guides go there
   - Voice DNA validation order in squad-scaffolder.ts: (1) 5-section check → (2) Anti-Patterns min pairs → (3) Examples min 3 → (4) Heuristics min 3 IF/THEN + VETO
 ---
+
+## 2026-03-16 - US-035
+- Added `validateHandoffGraph(squadDir)` to `src/engine/squad-scaffolder.ts`: reads all agents/ files, checks that Handoffs section has at least one line matching `/^-\s+[←→]/m`; returns empty errors if agents/ dir missing (structural validation covers that)
+- Added `runValidate(args, projectDir)` to `src/commands/squad/handler.ts`: accepts squad path + optional `--community` flag; runs structural validation → handoff graph check → security checks (community only); shows detailed PASS/FAIL report per check; blocks community squads if security fails
+- Registered `validate` subcommand in `handler.run()`; updated `usage_hint` i18n key to include validate
+- Added 19 i18n keys under `cli.squad.validate_*` in both `locales/en.yaml` and `locales/pt-br.yaml`
+- Added 4 tests for `validateHandoffGraph` in `test/unit/engine/squad-scaffolder.test.ts`
+- Added 6 tests for `runValidate` in `test/unit/commands/squad.test.ts` including route dispatch, structural pass/fail, community security blocking, and no-security-without-flag
+- Files changed: `src/engine/squad-scaffolder.ts`, `src/commands/squad/handler.ts`, `locales/en.yaml`, `locales/pt-br.yaml`, `test/unit/engine/squad-scaffolder.test.ts`, `test/unit/commands/squad.test.ts`
+- 806 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - `buildValidAgent` test helper must have ≥5 ✘ marks in Anti-Patterns (not 3) — structural validation requires min 5 prohibited/required pairs
+  - `validateHandoffGraph` only checks presence of `← ` or `→` prefixed handoff entries; missing agents/ dir returns ok (structural check handles that)
+  - `--community` flag is a string in args array — filter with `args.filter(a => !a.startsWith('--'))` to separate path from flags
+  - Scaffolded templates already include `- ← [Agent]:` and `- → [Agent]:` patterns so handoff graph passes for fresh scaffolds
+---
