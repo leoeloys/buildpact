@@ -620,4 +620,151 @@ describe('plan handler integration', () => {
     const waveFile1b = await readFile(join(planDir, 'plan-wave-1b.md'), 'utf-8')
     expect(waveFile1b).toContain('Wave 1B')
   })
+
+  it('writes validation-report.md alongside plan.md', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'validation-test-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Implement authentication system endpoint\n',
+      'utf-8',
+    )
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    const reportPath = join(tmpDir, '.buildpact', 'plans', 'validation-test-feature', 'validation-report.md')
+    const reportContent = await readFile(reportPath, 'utf-8')
+    expect(reportContent).toContain('Nyquist Plan Validation Report')
+    expect(reportContent).toContain('Completeness vs Spec')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// plan handler validation flow tests
+// ---------------------------------------------------------------------------
+
+describe('plan handler validation flow', () => {
+  let tmpDir: string
+  const origCwd = process.cwd
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-plan-val-test-'))
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+  })
+
+  afterEach(async () => {
+    vi.spyOn(process, 'cwd').mockImplementation(origCwd)
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('proceeds without prompting user when plan has no critical issues', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'clean-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Implement clean feature endpoint successfully\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    const selectSpy = vi.mocked(clack.select)
+    selectSpy.mockClear()
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+    // select should NOT have been called for validation (no critical issues)
+    expect(selectSpy).not.toHaveBeenCalled()
+  })
+
+  it('calls clack.select with 3 options when critical issues exist', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'broken-feature')
+    await mkdir(specsDir, { recursive: true })
+    // AC bullet with 4-char title "Fix!" passes extractTasksFromSpec (>3) but
+    // fails validateConsistency (<5) → consistency critical issue
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Fix!\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.select).mockResolvedValueOnce('override')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+    expect(vi.mocked(clack.select)).toHaveBeenCalled()
+    const callArgs = vi.mocked(clack.select).mock.calls[0]?.[0]
+    expect((callArgs as { options: unknown[] }).options).toHaveLength(3)
+  })
+
+  it('returns ok without writing files when user cancels on critical issues', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'cancel-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Fix!\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.select).mockResolvedValueOnce('cancel')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    // plan.md should NOT have been written
+    const planPath = join(tmpDir, '.buildpact', 'plans', 'cancel-feature', 'plan.md')
+    await expect(readFile(planPath, 'utf-8')).rejects.toThrow()
+  })
+
+  it('generates plan when user chooses override on critical issues', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'override-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Fix!\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.select).mockResolvedValueOnce('override')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    const planPath = join(tmpDir, '.buildpact', 'plans', 'override-feature', 'plan.md')
+    const content = await readFile(planPath, 'utf-8')
+    expect(content).toContain('# Plan')
+  })
+
+  it('generates revised plan when user chooses revise on critical issues', async () => {
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'revise-feature')
+    await mkdir(specsDir, { recursive: true })
+    await writeFile(
+      join(specsDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Fix!\n',
+      'utf-8',
+    )
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.select).mockResolvedValueOnce('revise')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    const planPath = join(tmpDir, '.buildpact', 'plans', 'revise-feature', 'plan.md')
+    const content = await readFile(planPath, 'utf-8')
+    expect(content).toContain('# Plan')
+  })
 })

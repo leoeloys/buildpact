@@ -4,6 +4,7 @@
  * consolidates findings, and generates a wave-based plan.md referencing specific research results.
  * @see FR-501 — Automated Parallel Research Before Planning
  * @see FR-502 — Wave-Based Plan Generation
+ * @see FR-504 — Nyquist Multi-Perspective Plan Validation
  */
 
 import * as clack from '@clack/prompts'
@@ -18,6 +19,11 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { buildTaskPayload } from '../../engine/subagent.js'
 import type { TaskDispatchPayload } from '../../contracts/task.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
+import {
+  validatePlan,
+  formatValidationReport,
+  autoRevisePlan,
+} from '../../engine/plan-validator.js'
 
 // ---------------------------------------------------------------------------
 // Research types
@@ -549,13 +555,76 @@ export const handler: CommandHandler = {
 
     // Generate main plan.md (overview with all waves)
     const generatedAt = new Date().toISOString()
-    const planContent = buildPlanContent(specContent, research, specSlug, generatedAt)
 
-    // Compute wave files (auto-split waves > MAX_TASKS_PER_PLAN_FILE tasks)
+    // Compute tasks for validation + wave planning
     const rawTasks = extractTasksFromSpec(specContent)
     const withDeps = inferDependencies(rawTasks)
     const withWaves = assignWaves(withDeps)
-    const waves = groupIntoWaves(withWaves)
+
+    // --- Nyquist Multi-Perspective Validation ---
+    const validationSpinner = clack.spinner()
+    validationSpinner.start(i18n.t('cli.plan.validation_start'))
+    const validationReport = validatePlan(specContent, withWaves)
+    validationSpinner.stop(i18n.t('cli.plan.validation_done'))
+
+    if (validationReport.totalIssues > 0) {
+      clack.log.warn(
+        i18n.t('cli.plan.validation_issues', {
+          total: String(validationReport.totalIssues),
+          critical: String(
+            validationReport.perspectives
+              .flatMap(p => p.issues)
+              .filter(i => i.severity === 'critical').length,
+          ),
+        }),
+      )
+
+      // Show issues per perspective
+      for (const perspective of validationReport.perspectives) {
+        if (perspective.issues.length > 0) {
+          for (const issue of perspective.issues) {
+            if (issue.severity === 'critical') {
+              clack.log.error(`[${perspective.label}] ${issue.message}`)
+            } else {
+              clack.log.warn(`[${perspective.label}] ${issue.message}`)
+            }
+          }
+        }
+      }
+    } else {
+      clack.log.success(i18n.t('cli.plan.validation_passed'))
+    }
+
+    // If there are critical issues, ask user whether to revise or override
+    let finalTasks = withWaves
+    if (validationReport.hasCritical) {
+      const choice = await clack.select({
+        message: i18n.t('cli.plan.validation_block'),
+        options: [
+          { value: 'revise', label: i18n.t('cli.plan.validation_revise') },
+          { value: 'override', label: i18n.t('cli.plan.validation_override') },
+          { value: 'cancel', label: i18n.t('cli.plan.validation_cancel') },
+        ],
+      })
+
+      if (clack.isCancel(choice) || choice === 'cancel') {
+        clack.outro(i18n.t('cli.plan.validation_cancelled'))
+        return ok(undefined)
+      }
+
+      if (choice === 'revise') {
+        finalTasks = assignWaves(inferDependencies(autoRevisePlan(specContent, withWaves)))
+        clack.log.success(i18n.t('cli.plan.validation_revised'))
+      }
+      // 'override' → proceed with original tasks, just log it
+      if (choice === 'override') {
+        clack.log.warn(i18n.t('cli.plan.validation_overridden'))
+      }
+    }
+
+    const planContent = buildPlanContent(specContent, research, specSlug, generatedAt)
+
+    const waves = groupIntoWaves(finalTasks)
     const planFiles = splitWavesIfNeeded(waves)
 
     // Write plan directory
@@ -566,8 +635,12 @@ export const handler: CommandHandler = {
     const planPath = join(planDir, 'plan.md')
     await writeFile(planPath, planContent, 'utf-8')
 
+    // Write validation report
+    const validationReportPath = join(planDir, 'validation-report.md')
+    await writeFile(validationReportPath, formatValidationReport(validationReport), 'utf-8')
+
     // Write per-wave files when multiple files are needed
-    const writtenFiles: string[] = [planPath]
+    const writtenFiles: string[] = [planPath, validationReportPath]
     if (planFiles.length > 1) {
       clack.log.info(
         i18n.t('cli.plan.wave_split', {
