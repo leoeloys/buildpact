@@ -696,8 +696,8 @@
         "Tests pass"
       ],
       "priority": 44,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented 8-tier progressive compression in export-web handler: inlineAgents, compressConstitution, excludeOptionalSections, context_only, removeExamples, removeHeuristics, filterChiefOnly, minimal. applyProgressiveCompression tries tiers in sequence. Each tier documented inside bundle via ## Bundle Compression Notice section. 43 new tests, 1220 total."
     },
     {
       "id": "US-045",

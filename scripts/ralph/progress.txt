@@ -660,3 +660,23 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - squad-design-worksheet.md needs ≥10 `- [ ]` checklist items to pass the test — count them carefully when writing new templates
   - Test pattern mirrors clinic-management-squad.test.ts exactly — always use that as the canonical template for new squad test files
 ---
+
+## 2026-03-16 - US-044
+- Added `CompressionTier` union type (9 tiers: none → inline_agents → compress_constitution → exclude_optional_sections → context_only → remove_examples → remove_heuristics → chief_only → minimal)
+- Added `COMPRESSION_TIER_DESCRIPTIONS` record with human-readable description per tier
+- Added 6 pure compression helper functions: `inlineAgents`, `compressConstitution`, `excludeOptionalSections`, `removeExamples`, `removeHeuristics`, `filterChiefOnly`
+- Added `applyProgressiveCompression(input, tokenLimit)` — tries each tier cumulatively until bundle fits; always returns a result (minimal as last resort)
+- Updated `WebBundleInput` interface: added optional `compressionTier?: CompressionTier`
+- Updated `buildWebBundle`: adds `## Bundle Compression Notice` section with tier name + description when compressionTier is set and not 'none'
+- Updated `handler.run()`: calls `applyProgressiveCompression` instead of `buildWebBundle` directly; shows `compression_applied` warning when tier is not 'none'
+- Added `cli.export_web.compression_applied` i18n key in both locales
+- Added 43 new tests covering all compression helpers + applyProgressiveCompression + buildWebBundle tier notice
+- 1220 tests passing, zero typecheck errors
+- Files changed: src/commands/export-web/handler.ts, test/unit/commands/export-web.test.ts, locales/en.yaml, locales/pt-br.yaml
+- **Learnings for future iterations:**
+  - `_removeSectionsByKeywords` helper uses line-by-line scanning (not regex) to remove `##` sections — avoids multiline regex edge cases, safe with any markdown
+  - `applyProgressiveCompression` tiers are cumulative: t1Input is based on original, t2Input based on t1Input, etc. (not independent transforms)
+  - Tier 7 (chief_only) resets to original agents before filtering — it starts fresh, not from context_only
+  - Handler now calls `applyProgressiveCompression` which always tries 'none' first; adds ~0ms overhead for bundles that fit
+  - `filterChiefOnly` looks for agent name containing 'chief' (case-insensitive); falls back to `agents[0]` if none found
+---
