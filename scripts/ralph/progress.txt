@@ -23,3 +23,33 @@ Started: 2026-03-15
 
 Stories US-001 through US-007 were completed before Ralph loop started.
 All 157 tests passing. TypeScript compiles with zero errors.
+
+---
+
+## 2026-03-15 - US-008
+- Implemented constitution-enforcer.ts with: extractPrinciples (parse constitution into named sections/rules), validateOutput (detect prohibition-keyword violations), formatViolationWarning (expert vs beginner mode), resolveConstitutionPath (returns path if constitution exists, undefined otherwise)
+- Added CONSTITUTION_VIOLATION error code to contracts/errors.ts
+- Added user consent confirmation before constitution edits in handler.ts (NFR-25)
+- Added i18n keys for consent prompt and violation warnings in EN and PT-BR locales
+- Updated existing constitution handler tests and integration test to provide consent `true` first
+- Added 24 new unit tests in test/unit/engine/constitution-enforcer.test.ts
+- Files changed: src/engine/constitution-enforcer.ts (new), src/contracts/errors.ts, src/commands/constitution/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/constitution-enforcer.test.ts (new), test/unit/commands/constitution.test.ts, test/integration/pipeline/constitution-flow.test.ts
+- **Learnings for future iterations:**
+  - Prohibition keywords for pattern matching: "no ", "never ", "must not ", "do not ", "don't ", "prohibited", "forbidden", "disallowed", "avoid ", "ban ", "cannot ", "can't "
+  - validateOutput does exact substring match (case-insensitive) — tests must use exact prohibited phrase, not morphological variants (e.g., "expose" not "exposes")
+  - Integration tests that mock clack.confirm must account for ALL confirm calls in order — adding a new confirm shifts indices
+  - `resolveConstitutionPath` returns the absolute path string (for injection into TaskDispatchPayload.constitutionPath)
+---
+
+## 2026-03-15 - US-009
+- Implemented constitution-versioner.ts with: diffConstitutionPrinciples (diff two constitution versions into PrincipleChange[]), scanDownstreamArtifacts (scan .buildpact/specs/ and .buildpact/plans/ for files referencing changed principle names), buildChecklistContent (generate markdown checklist with What Changed / Reason / Downstream Artifacts sections), writeUpdateChecklist (write to .buildpact/constitution_update_checklist.md)
+- Extended constitution handler.ts edit flow: captures old content before edit, asks user for reason (clack.text), calls versioner after save, writes checklist, logs to audit with both files, shows log.success
+- Added i18n keys: cli.constitution.reason_prompt, cli.constitution.reason_placeholder, cli.constitution.checklist_generated in both EN and PT-BR locales
+- Files changed: src/engine/constitution-versioner.ts (new), src/commands/constitution/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/constitution-versioner.test.ts (new), test/unit/commands/constitution.test.ts
+- 211 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - diffConstitutionPrinciples relies on extractPrinciples — "Version History" and "Immutable Principles" headings are excluded from principle extraction, so they won't show as changes
+  - scanDownstreamArtifacts silently skips missing specs/plans directories — safe to call even on fresh projects
+  - When adding a new clack.text prompt inside an existing edit flow, update ALL tests that mock clack.text in that path to add an extra mockResolvedValueOnce for the new prompt
+  - writeUpdateChecklist uses mkdir({ recursive: true }) so it's safe even if .buildpact dir doesn't exist
+---

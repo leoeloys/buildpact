@@ -129,8 +129,8 @@
         "Tests pass"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. constitution-enforcer.ts with extractPrinciples/validateOutput/formatViolationWarning/resolveConstitutionPath. Consent prompt added to handler."
     },
     {
       "id": "US-009",
@@ -144,8 +144,8 @@
         "Tests pass"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. constitution-versioner.ts with diffConstitutionPrinciples/scanDownstreamArtifacts/buildChecklistContent/writeUpdateChecklist. Handler extended to ask reason and generate constitution_update_checklist.md on every edit."
     },
     {
       "id": "US-010",
