@@ -756,8 +756,8 @@
         "Tests pass"
       ],
       "priority": 48,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. community-hub.ts engine with isRegistryName/buildSquadFileUrl/buildValidationBadge/formatRegistryIndex/parseSquadManifest/fetchSquadManifest/downloadManifestFiles/downloadSquadFromHub. runAdd detects registry name vs local path, downloads to temp dir, cleans up. 3 i18n keys (hub_downloading/downloaded/download_failed). 34 new tests (32 engine + 2 handler). 1304 total tests passing."
     },
     {
       "id": "US-049",

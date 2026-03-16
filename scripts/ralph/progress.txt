@@ -31,6 +31,7 @@ Started: 2026-03-15
 - In runAdd tests: use `mockImplementation` not `mockResolvedValueOnce` for confirm/isCancel to avoid queue bleed across tests (clearAllMocks doesn't clear once-queues)
 - Testable time: pass `nowMs = Date.now()` as last param to all time-sensitive pure functions; in tests pass a fixed epoch constant (e.g., `const NOW = 1_700_000_000_000`) for deterministic assertions
 - Hyphenated `CommandId` values (e.g., `'export-web'`) must be quoted in both the type union and the REGISTRY object key: `'export-web': () => import(...)`
+- Injectable fetch pattern: pass `fetchFn: typeof fetch = fetch` as last param to I/O functions that call fetch; tests inject a `vi.fn()` mock — avoids global fetch mocking
 ---
 
 ## Pre-existing completed stories (Epic 1 + Story 2.1)
@@ -730,4 +731,33 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Config YAML comments can trip up `not.toContain()` tests — e.g., `# enabled when mode: agent` contains the substring `mode: agent`; use unambiguous phrases in comments or write targeted assertions
   - migrate-to-agent writes two files: `.buildpact/agent-mode.yaml` (config) and `.buildpact/agent-mode-compatibility.md` (report); both created via mkdir({ recursive: true }) so safe on fresh projects
   - mode: prompt is the safe default — Agent Mode only activates when user explicitly changes to mode: agent
+---
+
+## 2026-03-16 - US-048
+- Created `src/engine/community-hub.ts` with:
+  - `isRegistryName(input)` — detects registry name vs local path (no path separators, no leading dot)
+  - `buildSquadFileUrl(base, squadName, filePath)` — constructs raw GitHub URL for any squad file
+  - `buildValidationBadge(name, passing)` — generates markdown badge for README
+  - `formatRegistryIndex(squads)` — generates full README.md for the community hub with table + install instructions + MIT license section
+  - `parseSquadManifest(json)` — parses manifest.json with required fields validation
+  - `fetchSquadManifest(name, base?, fetch?)` — fetches manifest.json from registry (fetch injectable for testing)
+  - `downloadManifestFiles(manifest, targetDir, base?, fetch?)` — downloads all files listed in manifest with mkdir({ recursive: true })
+  - `downloadSquadFromHub(name, targetDir, base?, fetch?)` — high-level: fetch manifest → download all files
+- Updated `src/commands/squad/handler.ts` runAdd:
+  - Uses `isRegistryName(rawName)` to detect registry name vs local path
+  - For registry names: calls `downloadSquadFromHub` into a temp dir (mkdtemp), then proceeds with validation + install
+  - Cleans up temp dir (`rm({ recursive: true, force: true })`) on all exit paths (download fail, validation fail, security fail, install complete)
+  - For local paths: uses existing `resolve(rawName)` logic unchanged
+- Added 3 i18n keys in EN + PT-BR: `cli.squad.hub_downloading`, `hub_downloaded`, `hub_download_failed`
+- Exported all community-hub functions from `src/engine/index.ts`
+- Created 32 unit tests in `test/unit/engine/community-hub.test.ts` covering all functions
+- Added 2 handler integration tests in `test/unit/commands/squad.test.ts`: registry name calls downloadSquadFromHub; local path does not
+- Files changed: `src/engine/community-hub.ts` (new), `src/engine/index.ts`, `src/commands/squad/handler.ts`, `locales/en.yaml`, `locales/pt-br.yaml`, `test/unit/engine/community-hub.test.ts` (new), `test/unit/commands/squad.test.ts`
+- 1304 total tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - `fetch` is injectable for testing: pass a `fetchFn: typeof fetch` parameter to all I/O functions — avoids global mock pollution and keeps functions testable without mocking global fetch
+  - `isRegistryName` uses path-separator heuristic (no `/`, `\`, `.` prefix) — covers both Unix and Windows paths; `./path`, `/abs/path`, `.hidden`, `path/sub` all return false
+  - Temp dir cleanup must happen on ALL exit paths in the handler: download fail, structure fail, security fail, AND after install (whether success or failure)
+  - Mock community-hub at module level in handler tests using `vi.mock(..., async (importOriginal) => ({ ...original, downloadSquadFromHub: vi.fn() }))` to preserve pure functions while mocking I/O
+  - `formatRegistryIndex` generates a complete README with installation block and MIT license section — follows GitHub community health file conventions
 ---
