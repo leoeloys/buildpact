@@ -831,3 +831,17 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - parseBudgetFromArgs: use parseInt + Math.min(val, 1440) to cap session budget — regex match against /^--experiment-budget=(\d+)$/
   - Budget Guard integration in loop: isCostLimitReached(session.sessionSpendUsd, budgetConfig.sessionLimitUsd) — 0 means unlimited
 ---
+
+## 2026-03-16 - US-054
+- Implemented src/optimize/ratchet.ts with: buildIsolatedBranchName (sanitises to lowercase with hyphens: optimize/{targetType}/{sessionName}/{timestamp}), formatRatchetCommitMessage (optimize(N): description | metric: X.XX → Y.YY), shouldCommit (after > before), decideRatchet (commit or revert decision with message), buildReviewInstructions (human-review markdown with no-auto-merge warning), createIsolatedBranch (git checkout -b with injectable execFn), getRatchetCommitRef (git rev-parse HEAD), runRatchetCommit (git add -A + commit + returns new HEAD ref), runRatchetRevert (git reset --hard to last good state)
+- Added RATCHET_BRANCH_FAILED, RATCHET_COMMIT_FAILED, RATCHET_REVERT_FAILED to src/contracts/errors.ts
+- Created 43 tests in test/unit/optimize/ratchet.test.ts covering all 9 exported functions
+- 1465 total tests passing, zero typecheck errors
+- Files changed: src/optimize/ratchet.ts (new), src/contracts/errors.ts, test/unit/optimize/ratchet.test.ts (new)
+- **Learnings for future iterations:**
+  - Injectable execFn pattern: `execFn: typeof execSync = execSync` as last param — tests pass vi.fn() mock, production uses real execSync without change
+  - buildIsolatedBranchName sanitises each component independently: lowercase → replace non-alphanumeric with `-` → collapse `--` → trim leading/trailing `-`
+  - runRatchetCommit makes 3 execFn calls in order: (1) git add -A, (2) git commit -m, (3) git rev-parse HEAD — tests must mock all 3 with mockReturnValueOnce
+  - decideRatchet is the key decision function: delegates to shouldCommit (after > before), builds MetricResult inline for formatRatchetCommitMessage
+  - All git I/O functions return Result<string, CliError> — never throw; tests mock execFn to throw for error paths
+---
