@@ -171,3 +171,5 @@ error:
   network:
     remote_fetch_failed: "Falha ao buscar recurso remoto '{url}': {reason}"
   not_implemented: "'{feature}' ainda não está implementado. Disponível em {phase}."
+  model:
+    failover_exhausted: "Todos os modelos na cadeia de failover esgotados para a fase '{phase}' — sem mais alternativas disponíveis"

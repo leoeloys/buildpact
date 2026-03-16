@@ -171,3 +171,5 @@ error:
   network:
     remote_fetch_failed: "Failed to fetch remote resource '{url}': {reason}"
   not_implemented: "'{feature}' is not yet implemented. Available in {phase}."
+  model:
+    failover_exhausted: "All models in failover chain exhausted for phase '{phase}' — no more fallbacks available"
