@@ -29,6 +29,7 @@ Started: 2026-03-15
 - Node.js minimum 20.x, 22.x LTS recommended
 - Squad scaffolding: `scaffoldSquad(name, targetDir)` creates 4-tier (T1-T4) agent templates with all 6 layers + voice DNA 5 sections + inline docs + squad.yaml + benchmark/; `validateSquadStructure` validates yaml fields + 6 layers + min 3 examples; `validateSquadSecurity` checks external URLs, executable code, path traversal, prompt injection; `installSquad` copies to .buildpact/squads/<name>/
 - In runAdd tests: use `mockImplementation` not `mockResolvedValueOnce` for confirm/isCancel to avoid queue bleed across tests (clearAllMocks doesn't clear once-queues)
+- Testable time: pass `nowMs = Date.now()` as last param to all time-sensitive pure functions; in tests pass a fixed epoch constant (e.g., `const NOW = 1_700_000_000_000`) for deterministic assertions
 ---
 
 ## Pre-existing completed stories (Epic 1 + Story 2.1)
@@ -526,4 +527,21 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `validateHandoffGraph` only checks presence of `← ` or `→` prefixed handoff entries; missing agents/ dir returns ok (structural check handles that)
   - `--community` flag is a string in args array — filter with `args.filter(a => !a.startsWith('--'))` to separate path from flags
   - Scaffolded templates already include `- ← [Agent]:` and `- → [Agent]:` patterns so handoff graph passes for fresh scaffolds
+---
+
+## 2026-03-16 - US-036
+- Implemented `src/engine/autonomy-manager.ts` with: `nextLevel`/`prevLevel` (level traversal), `filterToWindow` (rolling window filter), `calculateApprovalRate`/`calculateRejectionRate` (rate calculators with configurable window and testable `nowMs`), `getAgentLevel`/`setAgentLevel` (pure store operations), `requiresWriteConfirmation` (L1 → true only), `checkPromotion`/`checkDemotion` (suggestion builders), `scanAgentSuggestions` (full store scan), `readApprovalStore`/`writeApprovalStore`/`recordApproval`/`applyLevelChange` (async I/O to `.buildpact/agent-levels.json`)
+- Added `AGENT_LEVEL_STORE_FAILED` error code to `src/contracts/errors.ts`
+- Added 8 i18n keys under `cli.autonomy.*` and 1 under `error.autonomy.*` in both locales
+- Integrated L1 write confirmation into `src/commands/execute/handler.ts`: reads active squad name + approval store before wave loop; shows `clack.confirm` before each wave when agent is L1; cancels execution on deny
+- Added `readActiveSquadName(projectDir)` helper to execute handler (reads `active_squad` from config.yaml)
+- Created 43 unit tests in `test/unit/engine/autonomy-manager.test.ts` covering all pure functions and I/O
+- 849 tests passing, zero typecheck errors
+- Files changed: `src/engine/autonomy-manager.ts` (new), `src/contracts/errors.ts`, `src/commands/execute/handler.ts`, `locales/en.yaml`, `locales/pt-br.yaml`, `test/unit/engine/autonomy-manager.test.ts` (new)
+- **Learnings for future iterations:**
+  - `nowMs` param on all time-sensitive functions (filterToWindow, calculateApprovalRate, checkPromotion, etc.) is critical for deterministic testing — always pass a fixed epoch in tests
+  - Level store uses agentId key like `software/developer` or squad name `my-squad`; execute handler uses active squad name as agentId (getAgentLevel defaults to L2 so non-tracked squads are always L2)
+  - `checkPromotion` requires both `MIN_RECORDS_FOR_PROMOTION` (5) records AND `PROMOTION_APPROVAL_THRESHOLD` (0.85) rate — prevents premature promotion on sparse data
+  - `scanAgentSuggestions` prefers promotion over demotion for same agent — checks promotion first, skips demotion check if promotion returned
+  - L1 confirmation in execute handler pauses executeSpinner, shows confirm, then restarts spinner — match this pattern if adding similar mid-loop interrupts
 ---
