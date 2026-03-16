@@ -476,3 +476,22 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Security validation uses regex patterns; path traversal check needs `../` or `..\` forms; prompt injection checks "ignore previous instructions" and variants
   - installSquad uses `cp(sourceDir, destDir, { recursive: true })` — requires Node.js 16.7+, available in our Node 20+ minimum
 ---
+
+## 2026-03-16 - US-033
+- Added heuristics quality validation to validateSquadStructure in src/engine/squad-scaffolder.ts:
+  - After detecting `## Heuristics` layer, extracts section content up to next `##` heading
+  - Validates minimum 3 IF/THEN rules: numbered items matching `/^\d+\.\s+(When|If)\b/gm`
+  - Validates at least one VETO condition: checks for `VETO:` keyword in heuristics section
+  - Error messages reference specific agent/layer: `agents/<file>: Heuristics requires...`
+- Added 4 new unit tests in test/unit/engine/squad-scaffolder.test.ts:
+  - Error on fewer than 3 IF/THEN heuristic rules
+  - Error on missing VETO condition
+  - No errors for valid 3+ IF/THEN + VETO
+  - Scaffolded templates pass heuristics validation (regression guard)
+- Files changed: src/engine/squad-scaffolder.ts, test/unit/engine/squad-scaffolder.test.ts
+- 793 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Heuristic rule detection: use `/^\d+\.\s+(When|If)\b/gm` — requires numbered list items starting with When or If
+  - Section extraction: `agentContent.indexOf('## Heuristics')` then `afterHeuristics.search(/^##\s/m)` for next section boundary
+  - The VETO: keyword check only triggers when `## Heuristics` layer is present (skipped if layer missing — layer presence is already checked by the 6-layer loop)
+---
