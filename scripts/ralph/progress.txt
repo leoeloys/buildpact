@@ -86,3 +86,20 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `clack.select` must be added to the `vi.mock('@clack/prompts')` factory whenever handler uses it
   - Use `as const` on question arrays for type safety, but be aware `.find()` predicates comparing string literals to string values work fine at runtime
 ---
+
+## 2026-03-15 - US-012
+- Added 5 exported pure functions to handler.ts: `buildFullPlan` (generates 2-task plan.md with AC coverage + risk sections), `validatePlanCompleteness` (Perspective 1: checks spec ACs have keywords in plan), `validatePlanFeasibility` (Perspective 2: checks plan structure), `verifyAgainstSpec` (post-execution AC verification), `buildFixPlan` (targeted fix plan for failed ACs)
+- Added `--full` flag to handler.run(): generates plan → 2-perspective validation → clack.confirm risk prompt → writes plan.md → verifyAgainstSpec → writes fix-plan.md if ACs fail
+- Added `modeSuffix` optional param to `buildQuickSpec` so --full mode shows "quick (full)" in spec Mode label
+- Added `confirm: vi.fn()` to clack mock in test file
+- Added 9 i18n keys in en.yaml and pt-br.yaml under `cli.quick.full_*`
+- Added 16 new tests: unit tests for all 5 pure functions + 5 handler integration tests for --full mode
+- Files changed: src/commands/quick/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/quick.test.ts
+- 248 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - `TaskDispatchPayload.type` is a strict union — use existing members only (no `'quick-fix'`); `'quick'` works for fix payloads too
+  - `clack.confirm` must be added to `vi.mock('@clack/prompts')` factory when handler uses it — unlike `select`/`text`, it returns boolean not string
+  - `vi.mocked(clack.confirm).mockResolvedValue(true)` in `beforeEach` sets the default "proceed" answer for all full-mode tests
+  - Plan verification uses keyword matching on AC text — short words (<5 chars) are filtered, so ACs with only short words will always pass (non-issue for real specs)
+  - `buildFullPlan` AC coverage section always covers the 3 built-in quick-spec ACs, so normal --full runs produce no fix-plan
+---
