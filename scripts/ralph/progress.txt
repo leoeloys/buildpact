@@ -626,3 +626,20 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - TISS/TUSS billing standard (ANS) is the key Brazilian health plan billing framework — Finance Analyst references must be explicit for test coverage
   - Brazilian healthcare compliance checklist should use `- [ ]` format to match existing test pattern (count ≥20)
 ---
+
+## 2026-03-16 - US-042
+- Created Agent Builder Squad at templates/squads/agent-builder/ with 3 agents
+- agents/agent-designer.md: T1 orchestrator — guides through Identity, Persona, Voice DNA; enforces 6-layer anatomy; blocks role overlap via VETO
+- agents/workflow-architect.md: T2 — designs Heuristics (IF/THEN + VETO), Examples, and Handoff graph; enforces directed graph completeness; graph-first approach
+- agents/squad-tester.md: T3 — validates all agent files against 6-layer anatomy + Voice DNA 5 sections + Anti-Patterns ≥5 + Heuristics ≥3+VETO + Examples ≥3 + Handoffs; issues binary pass/fail verdicts; VETO blocks on any single violation
+- templates/squad-design-worksheet.md: 10+ checklist items covering all 5 design phases (Squad Purpose, Agent Roster, Voice DNA Inputs, Workflow Map, VETO Conditions) with validation checklist
+- squad.yaml: domain: software, 3 agents, 5 pipeline phases, 4 domain_questions (squad_purpose, target_domain, agent_roles, workflow_handoffs)
+- Created test/unit/engine/agent-builder-squad.test.ts with 45 tests — YAML, agent files, Agent Designer gates, Workflow Architect design, Squad Tester validation, templates, validateSquadStructure, validateHandoffGraph
+- 1153 total tests passing, zero typecheck errors
+- Files changed: templates/squads/agent-builder/ (6 new files), test/unit/engine/agent-builder-squad.test.ts (new)
+- **Learnings for future iterations:**
+  - Agent Builder Squad is a "meta" Squad — its domain is the Squad creation process itself; agents reference BuildPact concepts (6-layer, Voice DNA, VETO) as domain knowledge
+  - All 3 agents have mutual handoffs forming a feedback loop: Designer → Architect → Tester → (back to Designer or Architect on failure)
+  - squad-design-worksheet.md needs ≥10 `- [ ]` checklist items to pass the test — count them carefully when writing new templates
+  - Test pattern mirrors clinic-management-squad.test.ts exactly — always use that as the canonical template for new squad test files
+---
