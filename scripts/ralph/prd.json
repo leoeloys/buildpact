@@ -302,8 +302,8 @@
         "Tests pass"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. parseModelProfiles() reads model_profile_* flat keys from config.yaml and merges with built-in defaults. MODEL_CATALOG maps 3 Anthropic models. readActiveProfileTier() reads active tier. resolveModelForOperation() routes ops to models. buildFailoverChain() builds primary+failover list. advanceFailover() advances with FAILOVER_EXHAUSTED error when exhausted. getCurrentModel() gets current. 39 new tests. 403 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-020",

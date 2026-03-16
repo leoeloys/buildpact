@@ -18,6 +18,8 @@ Started: 2026-03-15
 - Test imports from implementation files — not from barrel `index.ts`
 - @clack/prompts API: `spinner.stop()` takes 1 argument; use `log.success()` / `log.warn()` for display
 - Layer dependency order: contracts <- foundation <- engine <- commands <- cli
+- Import from sibling layer: src/engine/ imports contracts as `../contracts/` (NOT `../../contracts/`)
+- noUncheckedIndexedAccess: use `record[key]!` when key is a known enum/union value; wrap const blocks with eslint-disable/enable for clean code
 - Vitest 4.x for testing, mkdtemp for temp dirs, afterEach cleanup
 - TypeScript strict mode, tsdown for build
 - Node.js minimum 20.x, 22.x LTS recommended
@@ -200,6 +202,21 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - assignWaves uses recursive approach with visiting set for cycle detection; safe for any dependency graph
   - splitWavesIfNeeded uses PART_SUFFIXES = ['', 'b', 'c', ...] so first part has no suffix (plan-wave-1.md), subsequent parts get letter suffix (plan-wave-1b.md)
   - Integration test for wave splitting needs a spec with ≥ MAX_TASKS_PER_PLAN_FILE+1 independent tasks (no deps → all in wave 0)
+---
+
+## 2026-03-16 - US-019
+- Added src/engine/model-profile-manager.ts with: MODEL_CATALOG (3 Anthropic models), DEFAULT_PROFILES (quality/balanced/budget tier defaults), parseModelProfiles (parse model_profile_* flat keys from config.yaml string), readActiveProfileTier (async, reads from .buildpact/config.yaml), resolveModelForOperation (routes operation type to model config), buildFailoverChain (primary + failover models list), getCurrentModel, advanceFailover (advances index, FAILOVER_EXHAUSTED error when exhausted)
+- Added FAILOVER_EXHAUSTED error code to src/contracts/errors.ts
+- Added i18n key error.model.failover_exhausted in locales/en.yaml and locales/pt-br.yaml
+- Added 39 unit tests in test/unit/engine/model-profile-manager.test.ts covering all 6 exported functions
+- Files changed: src/engine/model-profile-manager.ts (new), src/contracts/errors.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/model-profile-manager.test.ts (new)
+- 403 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - noUncheckedIndexedAccess requires `!` non-null assertions when accessing Record<K, V> values even when all keys are guaranteed — use `const val = record[key]!` pattern
+  - /* eslint-disable/enable @typescript-eslint/no-non-null-assertion */ block around constant initializer avoids per-line noise
+  - Import paths from src/engine/ to src/contracts/ use `../contracts/` (single parent), not `../../contracts/`
+  - parseModelProfiles uses comma-separated list for failover: `model_profile_quality_failover: claude-sonnet-4-6,claude-haiku-4-5-20251001`
+  - OperationType union uses underscore notation (plan_writing not planWriting) for flat key compatibility: `model_profile_quality_plan_writing: claude-sonnet-4-6`
 ---
 
 ## 2026-03-16 - US-017
