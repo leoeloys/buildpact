@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import * as clack from '@clack/prompts'
 import {
   estimateTokens,
   checkTokenWarning,
@@ -21,6 +22,11 @@ import {
   filterChiefOnly,
   applyProgressiveCompression,
   COMPRESSION_TIER_DESCRIPTIONS,
+  computeSourceHash,
+  parseBundleMetadata,
+  checkBundleStaleness,
+  findLatestBundleForPlatform,
+  STALE_AGE_MS,
 } from '../../../src/commands/export-web/handler.js'
 
 // ---------------------------------------------------------------------------
@@ -725,6 +731,220 @@ describe('buildWebBundle compressionTier notice', () => {
 })
 
 // ---------------------------------------------------------------------------
+// computeSourceHash
+// ---------------------------------------------------------------------------
+
+describe('computeSourceHash', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'bp-hash-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('returns a 64-char hex string', async () => {
+    const hash = await computeSourceHash(tmpDir, undefined)
+    expect(hash).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('returns same hash when files unchanged', async () => {
+    await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), '# Rules')
+    const h1 = await computeSourceHash(tmpDir, undefined)
+    const h2 = await computeSourceHash(tmpDir, undefined)
+    expect(h1).toBe(h2)
+  })
+
+  it('returns different hash when source file changes', async () => {
+    await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), '# Rules v1')
+    const h1 = await computeSourceHash(tmpDir, undefined)
+    await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), '# Rules v2')
+    const h2 = await computeSourceHash(tmpDir, undefined)
+    expect(h1).not.toBe(h2)
+  })
+
+  it('includes squad agent files in hash when squadName provided', async () => {
+    await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), '# Rules')
+    const squadDir = join(tmpDir, '.buildpact', 'squads', 'software')
+    await mkdir(squadDir, { recursive: true })
+
+    const hashWithoutSquad = await computeSourceHash(tmpDir, undefined)
+
+    await writeFile(join(squadDir, 'agent.md'), '# Agent rules')
+    const hashWithSquad = await computeSourceHash(tmpDir, 'software')
+    expect(hashWithoutSquad).not.toBe(hashWithSquad)
+  })
+
+  it('handles missing source files gracefully (returns valid hash)', async () => {
+    // No files written — should still return a valid hex string
+    const hash = await computeSourceHash(tmpDir, 'nonexistent-squad')
+    expect(hash).toMatch(/^[0-9a-f]{64}$/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// parseBundleMetadata
+// ---------------------------------------------------------------------------
+
+describe('parseBundleMetadata', () => {
+  it('parses both generated timestamp and source hash', () => {
+    const content = [
+      '# BuildPact Web Bundle — Claude.ai',
+      '# Generated: 2026-01-01T00:00:00.000Z',
+      '# Source-Hash: abc123def456',
+      '',
+      '## Activation Instructions',
+    ].join('\n')
+    const meta = parseBundleMetadata(content)
+    expect(meta.generatedAt).toBeInstanceOf(Date)
+    expect(meta.generatedAt!.toISOString()).toBe('2026-01-01T00:00:00.000Z')
+    expect(meta.sourceHash).toBe('abc123def456')
+  })
+
+  it('returns null sourceHash when hash line is absent', () => {
+    const content = [
+      '# BuildPact Web Bundle — Claude.ai',
+      '# Generated: 2026-01-01T00:00:00.000Z',
+      '',
+    ].join('\n')
+    const meta = parseBundleMetadata(content)
+    expect(meta.sourceHash).toBeNull()
+    expect(meta.generatedAt).toBeInstanceOf(Date)
+  })
+
+  it('returns null generatedAt when timestamp line is absent', () => {
+    const content = '# Source-Hash: abc123\n## Section'
+    const meta = parseBundleMetadata(content)
+    expect(meta.generatedAt).toBeNull()
+    expect(meta.sourceHash).toBe('abc123')
+  })
+
+  it('returns nulls for empty content', () => {
+    const meta = parseBundleMetadata('')
+    expect(meta.generatedAt).toBeNull()
+    expect(meta.sourceHash).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// checkBundleStaleness
+// ---------------------------------------------------------------------------
+
+describe('checkBundleStaleness', () => {
+  const NOW = 1_700_000_000_000
+
+  it('returns fresh when bundle is recent and hash matches', () => {
+    const recentDate = new Date(NOW - 1000)
+    const result = checkBundleStaleness(recentDate, 'abc123', 'abc123', NOW)
+    expect(result.stale).toBe(false)
+    expect(result.reason).toBe('fresh')
+  })
+
+  it('returns stale with reason age when bundle is older than 7 days', () => {
+    const oldDate = new Date(NOW - STALE_AGE_MS - 1)
+    const result = checkBundleStaleness(oldDate, 'abc123', 'abc123', NOW)
+    expect(result.stale).toBe(true)
+    expect(result.reason).toBe('age')
+  })
+
+  it('returns stale with reason source_changed when hash differs', () => {
+    const recentDate = new Date(NOW - 1000)
+    const result = checkBundleStaleness(recentDate, 'oldhash', 'newhash', NOW)
+    expect(result.stale).toBe(true)
+    expect(result.reason).toBe('source_changed')
+  })
+
+  it('skips age check when generatedAt is null', () => {
+    const result = checkBundleStaleness(null, 'abc123', 'abc123', NOW)
+    expect(result.stale).toBe(false)
+    expect(result.reason).toBe('fresh')
+  })
+
+  it('skips source check when sourceHash is null', () => {
+    const recentDate = new Date(NOW - 1000)
+    const result = checkBundleStaleness(recentDate, null, 'newhash', NOW)
+    expect(result.stale).toBe(false)
+    expect(result.reason).toBe('fresh')
+  })
+
+  it('age check takes priority over source_changed', () => {
+    const oldDate = new Date(NOW - STALE_AGE_MS - 1)
+    const result = checkBundleStaleness(oldDate, 'oldhash', 'newhash', NOW)
+    expect(result.reason).toBe('age')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// findLatestBundleForPlatform
+// ---------------------------------------------------------------------------
+
+describe('findLatestBundleForPlatform', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'bp-bundles-'))
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('returns undefined when bundles directory does not exist', async () => {
+    const result = await findLatestBundleForPlatform(join(tmpDir, 'nonexistent'), 'claude')
+    expect(result).toBeUndefined()
+  })
+
+  it('returns undefined when no matching bundles exist', async () => {
+    await mkdir(tmpDir, { recursive: true })
+    await writeFile(join(tmpDir, 'web-bundle-chatgpt-1000.txt'), 'content')
+    const result = await findLatestBundleForPlatform(tmpDir, 'claude')
+    expect(result).toBeUndefined()
+  })
+
+  it('returns the lexicographically latest matching bundle', async () => {
+    await mkdir(tmpDir, { recursive: true })
+    await writeFile(join(tmpDir, 'web-bundle-claude-1000.txt'), 'old')
+    await writeFile(join(tmpDir, 'web-bundle-claude-2000.txt'), 'new')
+    const result = await findLatestBundleForPlatform(tmpDir, 'claude')
+    expect(result).toContain('web-bundle-claude-2000.txt')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildWebBundle with sourceHash
+// ---------------------------------------------------------------------------
+
+describe('buildWebBundle sourceHash embedding', () => {
+  it('includes Source-Hash header when sourceHash is provided', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+      sourceHash: 'deadbeef1234',
+    })
+    expect(result.content).toContain('# Source-Hash: deadbeef1234')
+  })
+
+  it('omits Source-Hash header when sourceHash is not provided', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+    })
+    expect(result.content).not.toContain('# Source-Hash:')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Handler integration
 // ---------------------------------------------------------------------------
 
@@ -768,5 +988,54 @@ describe('export-web handler', () => {
     const { handler } = await import('../../../src/commands/export-web/handler.js')
     const result = await handler.run([])
     expect(result.ok).toBe(true)
+  })
+
+  it('bundle file contains Source-Hash header', async () => {
+    const { handler } = await import('../../../src/commands/export-web/handler.js')
+    await handler.run([])
+    const { readdir } = await import('node:fs/promises')
+    const bundleDir = join(tmpDir, '.buildpact', 'bundles')
+    const files = await readdir(bundleDir)
+    const bundleFile = files.find((f) => f.startsWith('web-bundle-claude-'))!
+    const content = await readFile(join(bundleDir, bundleFile), 'utf-8')
+    expect(content).toContain('# Source-Hash:')
+  })
+
+  it('warns with stale_age when existing bundle is older than 7 days', async () => {
+    vi.mocked(clack.log.warn).mockClear()
+    // Write a stale bundle (8 days old)
+    const bundleDir = join(tmpDir, '.buildpact', 'bundles')
+    await mkdir(bundleDir, { recursive: true })
+    const staleTs = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+    const staleBundleName = `web-bundle-claude-${Date.now() - 1000}.txt`
+    await writeFile(
+      join(bundleDir, staleBundleName),
+      `# BuildPact Web Bundle — Claude.ai\n# Generated: ${staleTs}\n# Source-Hash: oldhash\n`,
+    )
+
+    const { handler } = await import('../../../src/commands/export-web/handler.js')
+    await handler.run([])
+    expect(vi.mocked(clack.log.warn)).toHaveBeenCalledWith(
+      expect.stringContaining('7 days old'),
+    )
+  })
+
+  it('warns with stale_source when source files have changed', async () => {
+    vi.mocked(clack.log.warn).mockClear()
+    // Write a bundle with a known-different source hash
+    const bundleDir = join(tmpDir, '.buildpact', 'bundles')
+    await mkdir(bundleDir, { recursive: true })
+    const recentTs = new Date(Date.now() - 1000).toISOString()
+    const bundleName = `web-bundle-claude-${Date.now() - 1000}.txt`
+    await writeFile(
+      join(bundleDir, bundleName),
+      `# BuildPact Web Bundle — Claude.ai\n# Generated: ${recentTs}\n# Source-Hash: definitely-different-hash-xyz\n`,
+    )
+
+    const { handler } = await import('../../../src/commands/export-web/handler.js')
+    await handler.run([])
+    expect(vi.mocked(clack.log.warn)).toHaveBeenCalledWith(
+      expect.stringContaining('changed'),
+    )
   })
 })

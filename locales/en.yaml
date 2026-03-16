@@ -278,6 +278,8 @@ cli:
     token_warn: "Token estimate {tokens} exceeds {pct}% of {platform} limit ({limit} tokens)"
     token_over_limit: "Token estimate {tokens} exceeds {platform} limit of {limit} tokens — bundle may be truncated"
     compression_applied: "Bundle compressed (tier: {tier}) to fit within platform token limit"
+    stale_age: "Existing bundle is more than 7 days old — generating a fresh export"
+    stale_source: "Source files have changed since last export — generating a fresh bundle"
     outro: "Paste the .txt file into {platform} to activate your Squad workflow"
 
 domain:

@@ -8,6 +8,7 @@
 import * as clack from '@clack/prompts'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
 import { ok, err, ERROR_CODES } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
 import type { CommandHandler } from '../registry.js'
@@ -288,6 +289,152 @@ export function filterChiefOnly(agents: AgentContent[]): AgentContent[] {
 }
 
 // ---------------------------------------------------------------------------
+// Bundle versioning & staleness detection
+// ---------------------------------------------------------------------------
+
+/** Number of milliseconds in 7 days — bundles older than this are considered stale */
+export const STALE_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Reason why a bundle is considered stale */
+export type StalenessReason = 'age' | 'source_changed' | 'fresh'
+
+/** Result of a staleness check */
+export interface StalenessResult {
+  stale: boolean
+  reason: StalenessReason
+}
+
+/** Metadata parsed from an existing bundle's header lines */
+export interface BundleMetadata {
+  generatedAt: Date | null
+  sourceHash: string | null
+}
+
+/**
+ * Compute a deterministic SHA-256 hash of the source files that feed into a bundle:
+ * constitution.md, project-context.md, and all .md agent files in the active squad.
+ * Files are hashed in sorted order for determinism.
+ * Missing files contribute nothing to the hash.
+ */
+export async function computeSourceHash(
+  projectDir: string,
+  squadName: string | undefined,
+): Promise<string> {
+  const hash = createHash('sha256')
+
+  // Hash constitution.md
+  try {
+    const content = await readFile(join(projectDir, '.buildpact', 'constitution.md'), 'utf-8')
+    hash.update('constitution:' + content)
+  } catch {
+    // Missing — contributes nothing
+  }
+
+  // Hash project-context.md
+  try {
+    const content = await readFile(
+      join(projectDir, '.buildpact', 'project-context.md'),
+      'utf-8',
+    )
+    hash.update('context:' + content)
+  } catch {
+    // Missing — contributes nothing
+  }
+
+  // Hash squad agent .md files (sorted for determinism)
+  if (squadName) {
+    const { readdir } = await import('node:fs/promises')
+    const squadDir = join(projectDir, '.buildpact', 'squads', squadName)
+    try {
+      const files = (await readdir(squadDir)).filter((f) => f.endsWith('.md')).sort()
+      for (const file of files) {
+        try {
+          const content = await readFile(join(squadDir, file), 'utf-8')
+          hash.update(`agent:${file}:${content}`)
+        } catch {
+          // Skip unreadable files
+        }
+      }
+    } catch {
+      // Squad directory missing — contributes nothing
+    }
+  }
+
+  return hash.digest('hex')
+}
+
+/**
+ * Parse generation timestamp and source hash from an existing bundle's header.
+ * Returns null for any field that is missing or invalid.
+ */
+export function parseBundleMetadata(content: string): BundleMetadata {
+  let generatedAt: Date | null = null
+  let sourceHash: string | null = null
+
+  for (const line of content.split('\n')) {
+    if (line.startsWith('# Generated: ')) {
+      const ts = line.slice('# Generated: '.length).trim()
+      const d = new Date(ts)
+      if (!isNaN(d.getTime())) generatedAt = d
+    }
+    if (line.startsWith('# Source-Hash: ')) {
+      const h = line.slice('# Source-Hash: '.length).trim()
+      if (h) sourceHash = h
+    }
+    // Stop scanning once we've found both fields
+    if (generatedAt !== null && sourceHash !== null) break
+  }
+
+  return { generatedAt, sourceHash }
+}
+
+/**
+ * Determine whether an existing bundle is stale.
+ * A bundle is stale when:
+ *   - It was generated more than STALE_AGE_MS ago, OR
+ *   - Its source hash differs from the current computed hash
+ * Age is checked first; source-changed is checked only when age is within limit.
+ * A null generatedAt or null sourceHash means that dimension is skipped (treated as fresh).
+ */
+export function checkBundleStaleness(
+  generatedAt: Date | null,
+  sourceHash: string | null,
+  currentHash: string,
+  nowMs: number = Date.now(),
+): StalenessResult {
+  if (generatedAt !== null && nowMs - generatedAt.getTime() > STALE_AGE_MS) {
+    return { stale: true, reason: 'age' }
+  }
+  if (sourceHash !== null && sourceHash !== currentHash) {
+    return { stale: true, reason: 'source_changed' }
+  }
+  return { stale: false, reason: 'fresh' }
+}
+
+/**
+ * Find the path of the most recently written bundle for a given platform.
+ * Bundle filenames use `web-bundle-<platform>-<timestamp>.txt` format so
+ * lexicographic sort gives chronological order.
+ * Returns undefined when no matching bundle exists.
+ */
+export async function findLatestBundleForPlatform(
+  bundlesDir: string,
+  platform: WebPlatform,
+): Promise<string | undefined> {
+  const { readdir } = await import('node:fs/promises')
+  try {
+    const files = await readdir(bundlesDir)
+    const matching = files
+      .filter((f) => f.startsWith(`web-bundle-${platform}-`) && f.endsWith('.txt'))
+      .sort()
+    const latest = matching[matching.length - 1]
+    return latest !== undefined ? join(bundlesDir, latest) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bundle builder
 // ---------------------------------------------------------------------------
 
@@ -301,6 +448,8 @@ export interface WebBundleInput {
   language: SupportedLanguage
   /** Compression tier applied — when set (and not 'none'), a notice is embedded in the bundle */
   compressionTier?: CompressionTier
+  /** Source file hash — embedded in bundle header for staleness detection */
+  sourceHash?: string
 }
 
 /** Result of assembling a web bundle */
@@ -323,6 +472,7 @@ export function buildWebBundle(input: WebBundleInput): WebBundleResult {
     projectContext,
     language,
     compressionTier,
+    sourceHash,
   } = input
 
   const platformLabel =
@@ -356,10 +506,15 @@ export function buildWebBundle(input: WebBundleInput): WebBundleResult {
 
   const sections: string[] = []
 
-  // Header
+  // Header — timestamp + optional source hash for staleness detection
   sections.push(
     `# BuildPact Web Bundle — ${platformLabel}`,
     `# Generated: ${new Date().toISOString()}`,
+  )
+  if (sourceHash) {
+    sections.push(`# Source-Hash: ${sourceHash}`)
+  }
+  sections.push(
     '',
     '## Activation Instructions',
     activationInstruction,
@@ -542,7 +697,30 @@ export const handler: CommandHandler = {
 
     const agents = squadName ? await loadSquadAgents(projectDir, squadName) : []
 
+    // Compute source hash for versioning/staleness detection
+    const sourceHash = await computeSourceHash(projectDir, squadName)
+
     spinner.stop(i18n.t('cli.export_web.loaded'))
+
+    // Check existing bundle for staleness and warn user
+    const bundlesDir = join(projectDir, '.buildpact', 'bundles')
+    const existingBundlePath = await findLatestBundleForPlatform(bundlesDir, platform)
+    if (existingBundlePath) {
+      try {
+        const existingContent = await readFile(existingBundlePath, 'utf-8')
+        const metadata = parseBundleMetadata(existingContent)
+        const staleness = checkBundleStaleness(metadata.generatedAt, metadata.sourceHash, sourceHash)
+        if (staleness.stale) {
+          clack.log.warn(
+            staleness.reason === 'age'
+              ? i18n.t('cli.export_web.stale_age')
+              : i18n.t('cli.export_web.stale_source'),
+          )
+        }
+      } catch {
+        // Can't read existing bundle — skip staleness check
+      }
+    }
 
     // Build bundle with progressive compression when needed
     const baseInput: WebBundleInput = {
@@ -552,6 +730,7 @@ export const handler: CommandHandler = {
       constitutionEssentials,
       projectContext,
       language: lang,
+      sourceHash,
     }
     const limitTokens = PLATFORM_TOKEN_LIMITS[platform]!
     const { result: bundleResult, tier: compressionTier } = applyProgressiveCompression(
