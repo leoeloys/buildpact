@@ -23,3 +23,11 @@ agents:
     file: agents/qa.md
   tech-writer:
     file: agents/tech-writer.md
+
+# Pipeline phase routing — which agent leads each phase
+phases:
+  specify: pm
+  plan: architect
+  execute: developer
+  verify: qa
+  document: tech-writer
