@@ -14,7 +14,7 @@ import { AuditLogger } from '../foundation/audit.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
 import type { IdeId } from '../foundation/installer.js'
 
-const VERSION = '0.1.0-alpha.4'
+const VERSION = '0.1.0-alpha.5'
 
 async function main(): Promise<void> {
   const [, , command, ...args] = process.argv

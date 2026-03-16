@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { I18nResolver, SupportedLanguage } from '../contracts/i18n.js'
@@ -48,8 +48,10 @@ function parseYaml(content: string): Record<string, string> {
 
 /** Resolve the locales directory (works both in src and dist) */
 function localesDir(): string {
-  // In dist/ the file is at dist/foundation/i18n.js → locales/ is ../../locales
-  // In src/ during tests the file is at src/foundation/i18n.ts → locales/ is ../../locales
+  // tsdown bundles to flat dist/ → locales/ is one level up from dist/
+  // Vitest runs from src/foundation/ → locales/ is two levels up
+  const oneLevelUp = join(__dirname, '..', 'locales')
+  if (existsSync(oneLevelUp)) return oneLevelUp
   return join(__dirname, '..', '..', 'locales')
 }
 

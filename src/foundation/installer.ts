@@ -129,7 +129,7 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
 
     // 5. Generate IDE configs
     for (const ide of ides) {
-      await installIdeConfig(ide, projectDir, installedResources, logger)
+      await installIdeConfig(ide, projectDir, templatesDir, installedResources, logger)
     }
 
     // 6. Install Squad (bundled fallback)
@@ -193,27 +193,31 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
 async function installIdeConfig(
   ide: IdeId,
   projectDir: string,
+  tplDir: string,
   installedResources: string[],
   logger: AuditLogger,
 ): Promise<void> {
   switch (ide) {
     case 'claude-code': {
-      const commandsDir = join(projectDir, '.claude', 'commands')
+      // Commands go in .claude/commands/bp/ so they appear as /bp:specify etc.
+      // This avoids conflicts with Claude Code's native slash commands.
+      const commandsDir = join(projectDir, '.claude', 'commands', 'bp')
       await mkdir(commandsDir, { recursive: true })
-      installedResources.push('.claude/commands')
+      await copyDir(join(tplDir, 'commands'), commandsDir)
+      installedResources.push('.claude/commands/bp')
 
       // CLAUDE.md in project root
       const claudeMd = join(projectDir, 'CLAUDE.md')
       await writeFile(
         claudeMd,
-        `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n`,
+        `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact slash commands are available as /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor.\n`,
         'utf-8',
       )
       installedResources.push('CLAUDE.md')
       await logger.log({
         action: 'install.ide_config',
         agent: 'installer',
-        files: ['.claude/commands', 'CLAUDE.md'],
+        files: ['.claude/commands/bp', 'CLAUDE.md'],
         outcome: 'success',
       })
       break
