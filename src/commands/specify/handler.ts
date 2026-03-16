@@ -385,6 +385,199 @@ export async function runClarificationFlow(
 }
 
 // ---------------------------------------------------------------------------
+// Automation Maturity Assessment (5-stage model)
+// ---------------------------------------------------------------------------
+
+/** The 5 stages of automation maturity */
+export type MaturityStage = 1 | 2 | 3 | 4 | 5
+
+/** Inputs used to score automation maturity */
+export interface MaturityAssessmentInput {
+  frequency: 'multiple_daily' | 'daily' | 'weekly' | 'rarely'
+  predictability: 'always_same' | 'mostly_predictable' | 'varies' | 'highly_variable'
+  humanDecisions: 'none_needed' | 'minor' | 'significant' | 'complex_expertise'
+}
+
+/** Result of the automation maturity assessment */
+export interface MaturityAssessmentResult {
+  stage: MaturityStage
+  name: string
+  score: number
+  justification: string
+  isOverride: boolean
+  originalStage?: MaturityStage
+}
+
+const STAGE_NAMES: Record<MaturityStage, string> = {
+  1: 'Manual',
+  2: 'Documented Skill',
+  3: 'Alias',
+  4: 'Heartbeat Check',
+  5: 'Full Automation',
+}
+
+const STAGE_DESCRIPTIONS: Record<MaturityStage, string> = {
+  1: 'Perform manually each time — suitable for infrequent, high-judgment tasks with variable steps.',
+  2: 'Document as a runbook or step-by-step guide — suitable for reproducible but human-executed processes.',
+  3: 'Wrap in a single command or alias — suitable for frequent, predictable tasks requiring minimal judgment.',
+  4: 'Schedule as an automated heartbeat check — suitable for routine monitoring with no human decisions needed.',
+  5: 'Fully automate end-to-end — suitable for high-frequency, highly predictable, judgment-free tasks.',
+}
+
+/**
+ * Score a set of maturity assessment inputs into a stage recommendation.
+ * Pure function — no side effects.
+ */
+export function scoreMaturity(input: MaturityAssessmentInput): MaturityAssessmentResult {
+  const frequencyScore: Record<MaturityAssessmentInput['frequency'], number> = {
+    multiple_daily: 3,
+    daily: 2,
+    weekly: 1,
+    rarely: 0,
+  }
+  const predictabilityScore: Record<MaturityAssessmentInput['predictability'], number> = {
+    always_same: 3,
+    mostly_predictable: 2,
+    varies: 1,
+    highly_variable: 0,
+  }
+  const humanDecisionsScore: Record<MaturityAssessmentInput['humanDecisions'], number> = {
+    none_needed: 3,
+    minor: 2,
+    significant: 1,
+    complex_expertise: 0,
+  }
+
+  const total =
+    frequencyScore[input.frequency] +
+    predictabilityScore[input.predictability] +
+    humanDecisionsScore[input.humanDecisions]
+
+  let stage: MaturityStage
+  if (total <= 1) stage = 1
+  else if (total <= 3) stage = 2
+  else if (total <= 5) stage = 3
+  else if (total <= 7) stage = 4
+  else stage = 5
+
+  const freqLabel: Record<MaturityAssessmentInput['frequency'], string> = {
+    multiple_daily: 'runs multiple times per day',
+    daily: 'runs daily',
+    weekly: 'runs weekly or less',
+    rarely: 'runs rarely or ad hoc',
+  }
+  const predLabel: Record<MaturityAssessmentInput['predictability'], string> = {
+    always_same: 'steps are always identical',
+    mostly_predictable: 'steps are mostly predictable',
+    varies: 'steps vary based on context',
+    highly_variable: 'steps are highly variable',
+  }
+  const humanLabel: Record<MaturityAssessmentInput['humanDecisions'], string> = {
+    none_needed: 'requires no human decisions',
+    minor: 'requires only minor decisions',
+    significant: 'requires significant human judgment',
+    complex_expertise: 'requires complex expert judgment',
+  }
+
+  const justification =
+    `This task ${freqLabel[input.frequency]}, ${predLabel[input.predictability]}, and ${humanLabel[input.humanDecisions]} (score: ${total}/9). ` +
+    STAGE_DESCRIPTIONS[stage]
+
+  return { stage, name: STAGE_NAMES[stage], score: total, justification, isOverride: false }
+}
+
+/**
+ * Interactive automation maturity assessment.
+ * Asks 3 questions (frequency, predictability, human decisions), scores the result,
+ * displays the recommendation, and optionally lets the user override the stage.
+ * Returns undefined if the user cancels at any point.
+ */
+export async function assessAutomationMaturity(
+  i18n: I18nResolver,
+): Promise<MaturityAssessmentResult | undefined> {
+  clack.log.info(i18n.t('cli.specify.maturity_intro'))
+
+  const frequency = await clack.select<MaturityAssessmentInput['frequency']>({
+    message: i18n.t('cli.specify.maturity_frequency'),
+    options: [
+      { label: 'Multiple times per day', value: 'multiple_daily' },
+      { label: 'Once per day', value: 'daily' },
+      { label: 'Weekly or less frequently', value: 'weekly' },
+      { label: 'Rarely — ad hoc or one-off', value: 'rarely' },
+    ],
+  })
+  if (clack.isCancel(frequency)) return undefined
+
+  const predictability = await clack.select<MaturityAssessmentInput['predictability']>({
+    message: i18n.t('cli.specify.maturity_predictability'),
+    options: [
+      { label: 'Always the same — identical steps every time', value: 'always_same' },
+      { label: 'Mostly predictable — minor variations', value: 'mostly_predictable' },
+      { label: 'Varies based on context or inputs', value: 'varies' },
+      { label: 'Highly variable — different every time', value: 'highly_variable' },
+    ],
+  })
+  if (clack.isCancel(predictability)) return undefined
+
+  const humanDecisions = await clack.select<MaturityAssessmentInput['humanDecisions']>({
+    message: i18n.t('cli.specify.maturity_human_decisions'),
+    options: [
+      { label: 'No decisions needed — purely mechanical', value: 'none_needed' },
+      { label: 'Minor decisions — routine choices', value: 'minor' },
+      { label: 'Significant judgment required', value: 'significant' },
+      { label: 'Complex expertise — cannot be codified', value: 'complex_expertise' },
+    ],
+  })
+  if (clack.isCancel(humanDecisions)) return undefined
+
+  const result = scoreMaturity({
+    frequency: frequency as MaturityAssessmentInput['frequency'],
+    predictability: predictability as MaturityAssessmentInput['predictability'],
+    humanDecisions: humanDecisions as MaturityAssessmentInput['humanDecisions'],
+  })
+
+  clack.log.success(
+    i18n.t('cli.specify.maturity_recommendation', {
+      stage: String(result.stage),
+      name: result.name,
+    }),
+  )
+
+  const override = await clack.select<string>({
+    message: i18n.t('cli.specify.maturity_override_prompt'),
+    options: [
+      { label: i18n.t('cli.specify.maturity_override_keep'), value: 'keep' },
+      { label: i18n.t('cli.specify.maturity_override_change'), value: 'change' },
+    ],
+  })
+  if (clack.isCancel(override)) return undefined
+
+  if (override === 'change') {
+    const overrideStage = await clack.select<number>({
+      message: i18n.t('cli.specify.maturity_override_select'),
+      options: [
+        { label: i18n.t('cli.specify.maturity_stage_1'), value: 1 },
+        { label: i18n.t('cli.specify.maturity_stage_2'), value: 2 },
+        { label: i18n.t('cli.specify.maturity_stage_3'), value: 3 },
+        { label: i18n.t('cli.specify.maturity_stage_4'), value: 4 },
+        { label: i18n.t('cli.specify.maturity_stage_5'), value: 5 },
+      ],
+    })
+    if (clack.isCancel(overrideStage)) return undefined
+    const chosenStage = (overrideStage as number) as MaturityStage
+    return {
+      ...result,
+      stage: chosenStage,
+      name: STAGE_NAMES[chosenStage],
+      isOverride: true,
+      originalStage: result.stage,
+    }
+  }
+
+  return result
+}
+
+// ---------------------------------------------------------------------------
 // Implementation-detail detection
 // ---------------------------------------------------------------------------
 
@@ -536,6 +729,7 @@ export interface SpecInput {
     domain: string
     answers: SquadConstraintAnswer[]
   }
+  maturityAssessment?: MaturityAssessmentResult
 }
 
 /**
@@ -547,7 +741,7 @@ export interface SpecInput {
  * Assumptions, Constitution Self-Assessment.
  */
 export function buildSpecContent(input: SpecInput): string {
-  const { mode, wizardAnswers, rawDescription, constitutionPath, payload, generatedAt, clarifications, squadConstraints } = input
+  const { mode, wizardAnswers, rawDescription, constitutionPath, payload, generatedAt, clarifications, squadConstraints, maturityAssessment } = input
 
   const constitutionLine = constitutionPath
     ? `- **Constitution**: \`${constitutionPath}\` (validated before acceptance)`
@@ -664,6 +858,24 @@ export function buildSpecContent(input: SpecInput): string {
       lines.push(`| \`${c.phrase}\` | ${c.question} | ${c.answer} |`)
     }
     lines.push('')
+  }
+
+  // Automation Maturity Assessment section (only present when assessment was run)
+  if (maturityAssessment) {
+    lines.push(
+      '## Automation Maturity Assessment',
+      '',
+      `**Recommended Stage**: ${maturityAssessment.stage} — ${maturityAssessment.name}`,
+      '',
+      `**Justification**: ${maturityAssessment.justification}`,
+      '',
+    )
+    if (maturityAssessment.isOverride && maturityAssessment.originalStage !== undefined) {
+      lines.push(
+        `> **Override applied**: original recommendation was Stage ${maturityAssessment.originalStage} — ${STAGE_NAMES[maturityAssessment.originalStage]}`,
+        '',
+      )
+    }
   }
 
   // Constitution self-assessment section
@@ -835,6 +1047,14 @@ export const handler: CommandHandler = {
         }
       }
     }
+
+    // Automation Maturity Assessment
+    const maturityResult = await assessAutomationMaturity(i18n)
+    if (maturityResult === undefined) {
+      clack.outro(i18n.t('cli.specify.cancelled'))
+      return ok(undefined)
+    }
+    specInput = { ...specInput, maturityAssessment: maturityResult }
 
     // Build and write the spec
     const specContent = buildSpecContent(specInput)

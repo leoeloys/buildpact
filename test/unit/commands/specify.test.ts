@@ -221,6 +221,14 @@ describe('specify handler (expert mode)', () => {
   })
 
   it('generates spec.md from CLI args in expert mode', async () => {
+    const clack = await import('@clack/prompts')
+    // 4 maturity select calls: frequency, predictability, humanDecisions, override
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('rarely')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('none_needed')
+      .mockResolvedValueOnce('keep')
+
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/specify/handler.js')
@@ -238,6 +246,12 @@ describe('specify handler (expert mode)', () => {
   it('generates spec.md from TUI prompt when no args given', async () => {
     const clack = await import('@clack/prompts')
     vi.mocked(clack.text).mockResolvedValueOnce('add product search feature')
+    // 4 maturity select calls: frequency, predictability, humanDecisions, override
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('weekly')
+      .mockResolvedValueOnce('mostly_predictable')
+      .mockResolvedValueOnce('minor')
+      .mockResolvedValueOnce('keep')
 
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
@@ -258,6 +272,13 @@ describe('specify handler (expert mode)', () => {
 
   it('warns when input contains implementation details', async () => {
     const clack = await import('@clack/prompts')
+    // 4 maturity select calls: frequency, predictability, humanDecisions, override
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('rarely')
+      .mockResolvedValueOnce('highly_variable')
+      .mockResolvedValueOnce('complex_expertise')
+      .mockResolvedValueOnce('keep')
+
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/specify/handler.js')
@@ -267,6 +288,14 @@ describe('specify handler (expert mode)', () => {
   })
 
   it('includes constitution path in spec when constitution file exists', async () => {
+    const clack = await import('@clack/prompts')
+    // 4 maturity select calls: frequency, predictability, humanDecisions, override
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('daily')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('none_needed')
+      .mockResolvedValueOnce('keep')
+
     await writeFile(
       join(tmpDir, '.buildpact', 'constitution.md'),
       '# Project Constitution\n\n## Coding Standards\nUse TypeScript strict mode\n',
@@ -327,6 +356,12 @@ describe('specify handler (beginner mode)', () => {
       .mockResolvedValueOnce('regain access quickly')
       .mockResolvedValueOnce('receive a reset link via email')
       .mockResolvedValueOnce('email within 60 seconds')
+    // 4 maturity select calls: frequency, predictability, humanDecisions, override
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('rarely')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('minor')
+      .mockResolvedValueOnce('keep')
 
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
@@ -580,33 +615,53 @@ describe('specify handler — ambiguity clarification integration', () => {
 
   it('skips clarification when description has no ambiguities', async () => {
     const clack = await import('@clack/prompts')
+    // No ambiguity select calls, but maturity assessment adds 4 select calls
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('rarely')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('none_needed')
+      .mockResolvedValueOnce('keep')
+
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/specify/handler.js')
     const result = await handler.run(['users', 'can', 'reset', 'their', 'password'])
     expect(result.ok).toBe(true)
 
-    // clack.select should not have been called (no ambiguities)
-    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
+    // clack.select called exactly 4 times — maturity assessment only (no ambiguity clarification)
+    expect(vi.mocked(clack.select)).toHaveBeenCalledTimes(4)
   })
 
   it('triggers clarification flow when description contains ambiguous phrase', async () => {
     const clack = await import('@clack/prompts')
     vi.mocked(clack.isCancel).mockImplementation(() => false)
-    vi.mocked(clack.select).mockResolvedValueOnce('Under 1 second')
+    // 1 clarification select + 4 maturity selects = 5 total
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('Under 1 second')  // clarification: quickly
+      .mockResolvedValueOnce('daily')            // maturity: frequency
+      .mockResolvedValueOnce('mostly_predictable') // maturity: predictability
+      .mockResolvedValueOnce('minor')            // maturity: humanDecisions
+      .mockResolvedValueOnce('keep')             // maturity: override
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/specify/handler.js')
     const result = await handler.run(['the', 'page', 'should', 'load', 'quickly'])
     expect(result.ok).toBe(true)
 
-    expect(vi.mocked(clack.select)).toHaveBeenCalledOnce()
+    // 5 calls total: 1 clarification + 4 maturity
+    expect(vi.mocked(clack.select)).toHaveBeenCalledTimes(5)
   })
 
   it('writes clarifications into spec.md when ambiguity resolved', async () => {
     const clack = await import('@clack/prompts')
     vi.mocked(clack.isCancel).mockImplementation(() => false)
-    vi.mocked(clack.select).mockResolvedValueOnce('Under 5 seconds')
+    // 1 clarification select + 4 maturity selects = 5 total
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('Under 5 seconds') // clarification: quickly
+      .mockResolvedValueOnce('daily')            // maturity: frequency
+      .mockResolvedValueOnce('always_same')      // maturity: predictability
+      .mockResolvedValueOnce('none_needed')      // maturity: humanDecisions
+      .mockResolvedValueOnce('keep')             // maturity: override
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/specify/handler.js')
@@ -885,23 +940,34 @@ describe('specify handler — Squad domain integration', () => {
 
   it('skips squad questions when no active squad configured', async () => {
     const clack = await import('@clack/prompts')
+    // No squad select calls, but maturity assessment adds 4 select calls
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('rarely')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('none_needed')
+      .mockResolvedValueOnce('keep')
+
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/specify/handler.js')
     await handler.run(['add', 'user', 'login'])
 
-    // select not called for squad questions (no squad active)
-    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
+    // select called exactly 4 times — maturity assessment only (no squad questions)
+    expect(vi.mocked(clack.select)).toHaveBeenCalledTimes(4)
   })
 
   it('injects domain questions and writes Domain Constraints to spec.md when squad is active', async () => {
     const clack = await import('@clack/prompts')
     vi.mocked(clack.isCancel).mockImplementation(() => false)
-    // 3 squad questions for software domain
+    // 3 squad questions + 4 maturity selects = 7 total
     vi.mocked(clack.select)
-      .mockResolvedValueOnce('Backend (Node.js / Python / Go / Java)')
-      .mockResolvedValueOnce('TypeScript strict mode')
-      .mockResolvedValueOnce('Cloud (AWS / GCP / Azure)')
+      .mockResolvedValueOnce('Backend (Node.js / Python / Go / Java)') // squad: tech_stack
+      .mockResolvedValueOnce('TypeScript strict mode')                   // squad: quality_standards
+      .mockResolvedValueOnce('Cloud (AWS / GCP / Azure)')               // squad: deployment_target
+      .mockResolvedValueOnce('daily')                                    // maturity: frequency
+      .mockResolvedValueOnce('always_same')                              // maturity: predictability
+      .mockResolvedValueOnce('none_needed')                              // maturity: humanDecisions
+      .mockResolvedValueOnce('keep')                                     // maturity: override
 
     // Set up active software squad
     await writeFile(
@@ -938,6 +1004,12 @@ describe('specify handler — Squad domain integration', () => {
       .mockResolvedValueOnce('2')
       .mockResolvedValueOnce('3')
       .mockResolvedValueOnce('1')
+    // maturity assessment still uses clack.select (4 calls)
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('weekly')
+      .mockResolvedValueOnce('varies')
+      .mockResolvedValueOnce('significant')
+      .mockResolvedValueOnce('keep')
 
     await writeFile(
       join(tmpDir, '.buildpact', 'config.yaml'),
@@ -957,9 +1029,284 @@ describe('specify handler — Squad domain integration', () => {
     const result = await handler.run(['add', 'product', 'catalog'])
     expect(result.ok).toBe(true)
 
-    // select should NOT have been called for squad questions in web bundle mode
-    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
-    // text should have been called (for squad questions)
+    // select should have been called for maturity assessment only (4 calls), not squad questions
+    expect(vi.mocked(clack.select)).toHaveBeenCalledTimes(4)
+    // text should have been called (for squad questions in web bundle mode)
     expect(vi.mocked(clack.text)).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// scoreMaturity unit tests (pure function)
+// ---------------------------------------------------------------------------
+
+describe('scoreMaturity', () => {
+  it('returns Stage 1 (Manual) for rarely / highly_variable / complex_expertise', async () => {
+    const { scoreMaturity } = await import('../../../src/commands/specify/handler.js')
+    const result = scoreMaturity({
+      frequency: 'rarely',
+      predictability: 'highly_variable',
+      humanDecisions: 'complex_expertise',
+    })
+    expect(result.stage).toBe(1)
+    expect(result.name).toBe('Manual')
+    expect(result.score).toBe(0)
+    expect(result.isOverride).toBe(false)
+    expect(result.justification).toContain('score: 0/9')
+  })
+
+  it('returns Stage 2 (Documented Skill) for rarely / varies / significant', async () => {
+    const { scoreMaturity } = await import('../../../src/commands/specify/handler.js')
+    // score: 0 + 1 + 1 = 2 → Stage 2
+    const result = scoreMaturity({
+      frequency: 'rarely',
+      predictability: 'varies',
+      humanDecisions: 'significant',
+    })
+    expect(result.stage).toBe(2)
+    expect(result.name).toBe('Documented Skill')
+    expect(result.score).toBe(2)
+    expect(result.justification).toContain('score: 2/9')
+  })
+
+  it('returns Stage 3 (Alias) for rarely / mostly_predictable / minor', async () => {
+    const { scoreMaturity } = await import('../../../src/commands/specify/handler.js')
+    // score: 0 + 2 + 2 = 4 → Stage 3
+    const result = scoreMaturity({
+      frequency: 'rarely',
+      predictability: 'mostly_predictable',
+      humanDecisions: 'minor',
+    })
+    expect(result.stage).toBe(3)
+    expect(result.name).toBe('Alias')
+    expect(result.score).toBe(4)
+  })
+
+  it('returns Stage 4 (Heartbeat Check) for weekly / always_same / none_needed', async () => {
+    const { scoreMaturity } = await import('../../../src/commands/specify/handler.js')
+    // score: 1 + 3 + 3 = 7 → Stage 4
+    const result = scoreMaturity({
+      frequency: 'weekly',
+      predictability: 'always_same',
+      humanDecisions: 'none_needed',
+    })
+    expect(result.stage).toBe(4)
+    expect(result.name).toBe('Heartbeat Check')
+    expect(result.score).toBe(7)
+  })
+
+  it('returns Stage 5 (Full Automation) for multiple_daily / always_same / none_needed', async () => {
+    const { scoreMaturity } = await import('../../../src/commands/specify/handler.js')
+    const result = scoreMaturity({
+      frequency: 'multiple_daily',
+      predictability: 'always_same',
+      humanDecisions: 'none_needed',
+    })
+    expect(result.stage).toBe(5)
+    expect(result.name).toBe('Full Automation')
+    expect(result.score).toBe(9)
+    expect(result.justification).toContain('score: 9/9')
+  })
+
+  it('includes all input factors in justification text', async () => {
+    const { scoreMaturity } = await import('../../../src/commands/specify/handler.js')
+    const result = scoreMaturity({
+      frequency: 'daily',
+      predictability: 'always_same',
+      humanDecisions: 'none_needed',
+    })
+    expect(result.justification).toContain('runs daily')
+    expect(result.justification).toContain('steps are always identical')
+    expect(result.justification).toContain('requires no human decisions')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// assessAutomationMaturity unit tests (interactive)
+// ---------------------------------------------------------------------------
+
+describe('assessAutomationMaturity', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns scored result when user keeps recommendation', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('multiple_daily') // frequency
+      .mockResolvedValueOnce('always_same')    // predictability
+      .mockResolvedValueOnce('none_needed')    // humanDecisions
+      .mockResolvedValueOnce('keep')           // override → keep
+
+    const { assessAutomationMaturity } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const result = await assessAutomationMaturity(i18n)
+    expect(result).not.toBeUndefined()
+    expect(result!.stage).toBe(5)
+    expect(result!.name).toBe('Full Automation')
+    expect(result!.isOverride).toBe(false)
+    expect(result!.originalStage).toBeUndefined()
+  })
+
+  it('returns overridden result when user selects a different stage', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('rarely')         // frequency
+      .mockResolvedValueOnce('highly_variable') // predictability
+      .mockResolvedValueOnce('complex_expertise') // humanDecisions → Stage 1
+      .mockResolvedValueOnce('change')          // override → change
+      .mockResolvedValueOnce(3)                 // override stage → 3
+
+    const { assessAutomationMaturity } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const result = await assessAutomationMaturity(i18n)
+    expect(result).not.toBeUndefined()
+    expect(result!.stage).toBe(3)
+    expect(result!.name).toBe('Alias')
+    expect(result!.isOverride).toBe(true)
+    expect(result!.originalStage).toBe(1)
+  })
+
+  it('returns undefined when user cancels frequency question', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockReturnValueOnce(true)
+    vi.mocked(clack.select).mockResolvedValueOnce(Symbol('cancel') as unknown as string)
+
+    const { assessAutomationMaturity } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const result = await assessAutomationMaturity(i18n)
+    expect(result).toBeUndefined()
+  })
+
+  it('returns undefined when user cancels override question', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel)
+      .mockReturnValueOnce(false) // frequency
+      .mockReturnValueOnce(false) // predictability
+      .mockReturnValueOnce(false) // humanDecisions
+      .mockReturnValueOnce(true)  // override → cancel
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('daily')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('none_needed')
+      .mockResolvedValueOnce(Symbol('cancel') as unknown as string)
+
+    const { assessAutomationMaturity } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+
+    const result = await assessAutomationMaturity(i18n)
+    expect(result).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildSpecContent with maturityAssessment
+// ---------------------------------------------------------------------------
+
+describe('buildSpecContent with maturityAssessment', () => {
+  const basePayload = { taskId: 'test-mat', type: 'specify' }
+  const generatedAt = '2026-03-16T00:00:00.000Z'
+
+  it('includes Automation Maturity Assessment section when maturityAssessment provided', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Automate daily report generation',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'daily-report',
+      maturityAssessment: {
+        stage: 5,
+        name: 'Full Automation',
+        score: 9,
+        justification: 'High frequency, predictable steps, no decisions.',
+        isOverride: false,
+      },
+    })
+
+    expect(content).toContain('## Automation Maturity Assessment')
+    expect(content).toContain('**Recommended Stage**: 5 — Full Automation')
+    expect(content).toContain('**Justification**: High frequency, predictable steps, no decisions.')
+    expect(content).not.toContain('Override applied')
+  })
+
+  it('includes override notice when maturityAssessment.isOverride is true', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Run weekly backup',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'weekly-backup',
+      maturityAssessment: {
+        stage: 3,
+        name: 'Alias',
+        score: 1,
+        justification: 'Low score but user chose a higher stage.',
+        isOverride: true,
+        originalStage: 1,
+      },
+    })
+
+    expect(content).toContain('## Automation Maturity Assessment')
+    expect(content).toContain('**Recommended Stage**: 3 — Alias')
+    expect(content).toContain('Override applied')
+    expect(content).toContain('Stage 1')
+    expect(content).toContain('Manual')
+  })
+
+  it('omits Automation Maturity Assessment section when maturityAssessment not provided', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Add dark mode toggle',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'dark-mode',
+    })
+
+    expect(content).not.toContain('## Automation Maturity Assessment')
+  })
+
+  it('includes maturity section in spec.md output from handler', async () => {
+    const { mkdtemp: mkdtempFn, mkdir: mkdirFn, rm: rmFn, readFile: readFileFn } = await import('node:fs/promises')
+    const { tmpdir: tmpdirFn } = await import('node:os')
+    const { join: joinFn } = await import('node:path')
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('multiple_daily')
+      .mockResolvedValueOnce('always_same')
+      .mockResolvedValueOnce('none_needed')
+      .mockResolvedValueOnce('keep')
+
+    const dir = await mkdtempFn(joinFn(tmpdirFn(), 'buildpact-maturity-'))
+    await mkdirFn(joinFn(dir, '.buildpact'), { recursive: true })
+    vi.spyOn(process, 'cwd').mockReturnValue(dir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    const result = await handler.run(['automate', 'daily', 'report'])
+    expect(result.ok).toBe(true)
+
+    const specPath = joinFn(dir, '.buildpact', 'specs', 'automate-daily-report', 'spec.md')
+    const content = await readFileFn(specPath, 'utf-8')
+    expect(content).toContain('## Automation Maturity Assessment')
+    expect(content).toContain('Full Automation')
+
+    await rmFn(dir, { recursive: true, force: true })
+    vi.restoreAllMocks()
   })
 })
