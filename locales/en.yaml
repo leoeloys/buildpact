@@ -277,6 +277,7 @@ cli:
     done: "Web bundle saved to {path} (~{tokens} tokens, platform: {platform})"
     token_warn: "Token estimate {tokens} exceeds {pct}% of {platform} limit ({limit} tokens)"
     token_over_limit: "Token estimate {tokens} exceeds {platform} limit of {limit} tokens — bundle may be truncated"
+    compression_applied: "Bundle compressed (tier: {tier}) to fit within platform token limit"
     outro: "Paste the .txt file into {platform} to activate your Squad workflow"
 
 domain:

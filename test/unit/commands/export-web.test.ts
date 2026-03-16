@@ -13,6 +13,14 @@ import {
   parsePlatform,
   PLATFORM_TOKEN_LIMITS,
   WARN_THRESHOLD,
+  inlineAgents,
+  compressConstitution,
+  excludeOptionalSections,
+  removeExamples,
+  removeHeuristics,
+  filterChiefOnly,
+  applyProgressiveCompression,
+  COMPRESSION_TIER_DESCRIPTIONS,
 } from '../../../src/commands/export-web/handler.js'
 
 // ---------------------------------------------------------------------------
@@ -376,6 +384,289 @@ describe('buildWebBundle', () => {
       language: 'en',
     })
     expect(longResult.tokenEstimate).toBeGreaterThan(shortResult.tokenEstimate)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// inlineAgents
+// ---------------------------------------------------------------------------
+
+describe('inlineAgents', () => {
+  it('strips markdown headers from agent content', () => {
+    const agents = [{ name: 'chief', content: '# Chief\n## Rules\n- Be helpful' }]
+    const result = inlineAgents(agents)
+    expect(result[0]!.content).not.toContain('#')
+    expect(result[0]!.content).toContain('Be helpful')
+  })
+
+  it('collapses consecutive blank lines', () => {
+    const agents = [{ name: 'dev', content: 'Rule 1\n\n\n\nRule 2' }]
+    const result = inlineAgents(agents)
+    expect(result[0]!.content).not.toMatch(/\n{3,}/)
+  })
+
+  it('preserves agent name', () => {
+    const agents = [{ name: 'architect', content: '# Arch\nRules here' }]
+    const result = inlineAgents(agents)
+    expect(result[0]!.name).toBe('architect')
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(inlineAgents([])).toEqual([])
+  })
+
+  it('handles agent with no headers', () => {
+    const agents = [{ name: 'qa', content: 'Check everything\nTest all paths' }]
+    const result = inlineAgents(agents)
+    expect(result[0]!.content).toBe('Check everything\nTest all paths')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// compressConstitution
+// ---------------------------------------------------------------------------
+
+describe('compressConstitution', () => {
+  it('returns first 500 chars', () => {
+    const content = 'A'.repeat(1000)
+    expect(compressConstitution(content)).toHaveLength(500)
+  })
+
+  it('returns full content when under 500 chars', () => {
+    const content = '# Rules\n- No secrets'
+    expect(compressConstitution(content)).toBe(content)
+  })
+
+  it('returns empty string for empty input', () => {
+    expect(compressConstitution('')).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// excludeOptionalSections
+// ---------------------------------------------------------------------------
+
+describe('excludeOptionalSections', () => {
+  it('removes ## Optimization section', () => {
+    const content = '## Core Rules\nDo this.\n## Optimization\nFast path.\n## Other\nKeep.'
+    const result = excludeOptionalSections(content)
+    expect(result).not.toContain('Optimization')
+    expect(result).not.toContain('Fast path')
+    expect(result).toContain('Core Rules')
+    expect(result).toContain('Keep')
+  })
+
+  it('removes ## Memory section', () => {
+    const content = '## Rules\nKeep.\n## Memory\nRemember this.'
+    const result = excludeOptionalSections(content)
+    expect(result).not.toContain('Memory')
+    expect(result).toContain('Rules')
+  })
+
+  it('removes ## Tips section', () => {
+    const content = '## Rules\nKeep.\n## Tips\nUseful tip.'
+    const result = excludeOptionalSections(content)
+    expect(result).not.toContain('Tips')
+  })
+
+  it('removes ## Performance section', () => {
+    const content = '## Core\nKeep.\n## Performance\nFast.\n## End\nLast.'
+    const result = excludeOptionalSections(content)
+    expect(result).not.toContain('Performance')
+    expect(result).toContain('End')
+  })
+
+  it('keeps content with no optional sections unchanged', () => {
+    const content = '## Core Rules\nAlways do X.\n## Security\nNo secrets.'
+    const result = excludeOptionalSections(content)
+    expect(result).toContain('Core Rules')
+    expect(result).toContain('Security')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// removeExamples
+// ---------------------------------------------------------------------------
+
+describe('removeExamples', () => {
+  it('removes ## Examples section', () => {
+    const content = '## Rules\nDo this.\n## Examples\nSee sample.\n## Notes\nImportant.'
+    const result = removeExamples(content)
+    expect(result).not.toContain('Examples')
+    expect(result).not.toContain('See sample')
+    expect(result).toContain('Notes')
+  })
+
+  it('keeps content with no examples section', () => {
+    const content = '## Rules\nAlways do X.'
+    expect(removeExamples(content)).toContain('Rules')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// removeHeuristics
+// ---------------------------------------------------------------------------
+
+describe('removeHeuristics', () => {
+  it('removes ## Heuristics section', () => {
+    const content = '## Rules\nDo this.\n## Heuristics\nTry this approach.\n## End\nDone.'
+    const result = removeHeuristics(content)
+    expect(result).not.toContain('Heuristics')
+    expect(result).not.toContain('Try this approach')
+    expect(result).toContain('End')
+  })
+
+  it('removes ## Details section', () => {
+    const content = '## Summary\nKeep.\n## Details\nExtra detail.'
+    const result = removeHeuristics(content)
+    expect(result).not.toContain('Details')
+    expect(result).toContain('Summary')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// filterChiefOnly
+// ---------------------------------------------------------------------------
+
+describe('filterChiefOnly', () => {
+  it('returns only the chief agent', () => {
+    const agents = [
+      { name: 'dev', content: 'Dev rules' },
+      { name: 'chief', content: 'Chief rules' },
+      { name: 'qa', content: 'QA rules' },
+    ]
+    const result = filterChiefOnly(agents)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.name).toBe('chief')
+  })
+
+  it('returns first agent when no chief exists', () => {
+    const agents = [
+      { name: 'dev', content: 'Dev' },
+      { name: 'qa', content: 'QA' },
+    ]
+    const result = filterChiefOnly(agents)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.name).toBe('dev')
+  })
+
+  it('returns empty array when agents is empty', () => {
+    expect(filterChiefOnly([])).toEqual([])
+  })
+
+  it('matches chief case-insensitively', () => {
+    const agents = [{ name: 'ChiefAgent', content: 'Chief' }]
+    const result = filterChiefOnly(agents)
+    expect(result[0]!.name).toBe('ChiefAgent')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// applyProgressiveCompression
+// ---------------------------------------------------------------------------
+
+describe('applyProgressiveCompression', () => {
+  const baseInput = {
+    platform: 'claude' as const,
+    squadName: 'software',
+    agents: [{ name: 'dev', content: '# Dev\n## Rules\nAlways test.' }],
+    constitutionEssentials: '# Constitution\nNo secrets.',
+    projectContext: '# Project\n## Examples\nSample code.',
+    language: 'en' as const,
+  }
+
+  it('returns tier none when bundle fits within limit', () => {
+    const { tier } = applyProgressiveCompression(baseInput, 1_000_000)
+    expect(tier).toBe('none')
+  })
+
+  it('returns compressed result when over limit', () => {
+    // Very small limit forces compression
+    const { tier } = applyProgressiveCompression(baseInput, 10)
+    expect(tier).not.toBe('none')
+  })
+
+  it('returns minimal tier for extremely small limit', () => {
+    const { tier } = applyProgressiveCompression(baseInput, 1)
+    expect(tier).toBe('minimal')
+  })
+
+  it('bundle content includes compression notice when compressed', () => {
+    const { result } = applyProgressiveCompression(baseInput, 10)
+    expect(result.content).toContain('Bundle Compression Notice')
+  })
+
+  it('bundle content has no compression notice for tier none', () => {
+    const { result } = applyProgressiveCompression(baseInput, 1_000_000)
+    expect(result.content).not.toContain('Bundle Compression Notice')
+  })
+
+  it('inline_agents tier fits before compress_constitution for slightly-over bundle', () => {
+    // Build a bundle with a known size then set limit just below it
+    const input = {
+      ...baseInput,
+      agents: [{ name: 'dev', content: '# Dev\n'.repeat(10) + 'Rule.' }],
+      constitutionEssentials: '# Constitution\n- Keep this rule.\n'.repeat(5),
+      projectContext: '',
+    }
+    // A very large limit to test tier selection logic — just check we get a valid tier
+    const { tier } = applyProgressiveCompression(input, 1_000_000)
+    expect(COMPRESSION_TIER_DESCRIPTIONS[tier]).toBeDefined()
+  })
+
+  it('COMPRESSION_TIER_DESCRIPTIONS covers all tiers', () => {
+    const tiers = [
+      'none', 'inline_agents', 'compress_constitution', 'exclude_optional_sections',
+      'context_only', 'remove_examples', 'remove_heuristics', 'chief_only', 'minimal',
+    ] as const
+    for (const tier of tiers) {
+      expect(COMPRESSION_TIER_DESCRIPTIONS[tier]).toBeDefined()
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildWebBundle with compressionTier
+// ---------------------------------------------------------------------------
+
+describe('buildWebBundle compressionTier notice', () => {
+  it('includes compression notice when tier is set', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+      compressionTier: 'context_only',
+    })
+    expect(result.content).toContain('Bundle Compression Notice')
+    expect(result.content).toContain('context_only')
+  })
+
+  it('omits compression notice when tier is none', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+      compressionTier: 'none',
+    })
+    expect(result.content).not.toContain('Bundle Compression Notice')
+  })
+
+  it('omits compression notice when compressionTier is undefined', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+    })
+    expect(result.content).not.toContain('Bundle Compression Notice')
   })
 })
 

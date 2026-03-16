@@ -277,6 +277,7 @@ cli:
     done: "Bundle web salvo em {path} (~{tokens} tokens, plataforma: {platform})"
     token_warn: "Estimativa de {tokens} tokens ultrapassa {pct}% do limite do {platform} ({limit} tokens)"
     token_over_limit: "Estimativa de {tokens} tokens ultrapassa o limite do {platform} de {limit} tokens — o bundle pode ser truncado"
+    compression_applied: "Bundle comprimido (nível: {tier}) para caber no limite de tokens da plataforma"
     outro: "Cole o arquivo .txt no {platform} para ativar seu fluxo de trabalho do Squad"
 
 domain:
