@@ -33,3 +33,15 @@ export {
   STUB_COST_PER_TASK_USD,
 } from './budget-guard.js'
 export { inferCommitType, formatCommitMessage, runAtomicCommit } from './atomic-commit.js'
+export {
+  buildFeedbackEntry,
+  appendWithFifoCap,
+  deriveOutcome,
+  formatFeedbackForContext,
+  loadFeedbackFile,
+  writeFeedbackFile,
+  loadRecentFeedbacks,
+  captureSessionFeedback,
+  FEEDBACK_FIFO_CAP,
+  FEEDBACK_RECENT_LIMIT,
+} from './session-feedback.js'

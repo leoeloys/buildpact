@@ -190,6 +190,7 @@ cli:
     has_failures: "{fail} critério(s) falharam, {pass} passaram — spec NÃO VERIFICADA ❌"
     fix_plan_written: "Plano de correção gerado para critérios com falha — execute: /bp:execute {path}"
     report_saved: "Relatório de verificação salvo em {path}"
+    feedback_saved: "Feedback da sessão capturado em .buildpact/memory/feedback/{slug}.json"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"
@@ -244,3 +245,5 @@ error:
     wave_failed: "Execução da wave {wave} falhou — uma ou mais tarefas não foram concluídas com sucesso"
   model:
     failover_exhausted: "Todos os modelos na cadeia de failover esgotados para a fase '{phase}' — sem mais alternativas disponíveis"
+  feedback:
+    write_failed: "Falha ao gravar feedback da sessão para o spec '{slug}'"

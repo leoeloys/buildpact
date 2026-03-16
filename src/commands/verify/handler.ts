@@ -14,6 +14,7 @@ import type { CommandHandler } from '../registry.js'
 import type { SupportedLanguage, I18nResolver } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
+import { buildFeedbackEntry, captureSessionFeedback } from '../../engine/session-feedback.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -362,6 +363,24 @@ export const handler: CommandHandler = {
       })
     }
 
+    // Capture session feedback (Memory Layer Tier 1)
+    const workedAcs = acResults.filter(r => r.status === 'pass').map(r => r.ac)
+    const failedAcs = acResults.filter(r => r.status === 'fail').map(r => r.ac)
+    const feedbackNotes: Record<string, string> = {}
+    for (const entry of acResults) {
+      if (entry.status === 'fail' && entry.note) {
+        feedbackNotes[entry.ac] = entry.note
+      }
+    }
+    const feedbackEntry = buildFeedbackEntry({
+      slug,
+      workedAcs,
+      failedAcs,
+      allPassed,
+      notes: feedbackNotes,
+    })
+    await captureSessionFeedback(projectDir, feedbackEntry)
+
     // Show summary
     if (allPassed) {
       clack.log.success(i18n.t('cli.verify.all_passed', { count: String(passCount) }))
@@ -371,6 +390,8 @@ export const handler: CommandHandler = {
         clack.log.info(i18n.t('cli.verify.fix_plan_written', { path: fixPlanPath }))
       }
     }
+
+    clack.log.info(i18n.t('cli.verify.feedback_saved', { slug }))
 
     clack.outro(i18n.t('cli.verify.report_saved', { path: reportPath }))
 

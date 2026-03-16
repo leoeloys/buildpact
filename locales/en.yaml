@@ -190,6 +190,7 @@ cli:
     has_failures: "{fail} criterion(ia) failed, {pass} passed — spec NOT VERIFIED ❌"
     fix_plan_written: "Fix plan generated for failed criteria — run: /bp:execute {path}"
     report_saved: "Verification report saved to {path}"
+    feedback_saved: "Session feedback captured to .buildpact/memory/feedback/{slug}.json"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"
@@ -244,3 +245,5 @@ error:
     wave_failed: "Wave {wave} execution failed — one or more tasks did not complete successfully"
   model:
     failover_exhausted: "All models in failover chain exhausted for phase '{phase}' — no more fallbacks available"
+  feedback:
+    write_failed: "Failed to write session feedback for spec '{slug}'"
