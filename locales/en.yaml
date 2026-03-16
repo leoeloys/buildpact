@@ -96,6 +96,8 @@ cli:
     clarification_other: "Other (please specify)"
     clarification_other_prompt: "Please describe what you mean"
     clarification_other_placeholder: "Enter your answer in plain language"
+    squad_active: "Active Squad: {name} — injecting {domain} domain questions"
+    squad_web_bundle_placeholder: "Enter a number or type your own answer"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"

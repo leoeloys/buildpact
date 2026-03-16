@@ -619,3 +619,347 @@ describe('specify handler — ambiguity clarification integration', () => {
     expect(content).toContain('Under 5 seconds')
   })
 })
+
+// ---------------------------------------------------------------------------
+// getSquadQuestions unit tests (pure function)
+// ---------------------------------------------------------------------------
+
+describe('getSquadQuestions', () => {
+  it('returns questions for software domain', async () => {
+    const { getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const questions = getSquadQuestions('software')
+    expect(questions.length).toBeGreaterThanOrEqual(3)
+    expect(questions[0].options.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('returns questions for marketing domain', async () => {
+    const { getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const questions = getSquadQuestions('marketing')
+    expect(questions.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('returns questions for health domain', async () => {
+    const { getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const questions = getSquadQuestions('health')
+    expect(questions.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('returns questions for research domain', async () => {
+    const { getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const questions = getSquadQuestions('research')
+    expect(questions.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('returns empty array for unknown domain', async () => {
+    const { getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    expect(getSquadQuestions('unknown-domain')).toEqual([])
+  })
+
+  it('is case-insensitive for domain name', async () => {
+    const { getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    expect(getSquadQuestions('Software')).toEqual(getSquadQuestions('software'))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// readActiveSquad unit tests
+// ---------------------------------------------------------------------------
+
+describe('readActiveSquad', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-squad-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('returns undefined when no active_squad in config', async () => {
+    const { readActiveSquad } = await import('../../../src/commands/specify/handler.js')
+    await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), 'language: en\n', 'utf-8')
+    expect(await readActiveSquad(tmpDir)).toBeUndefined()
+  })
+
+  it('returns undefined when active_squad is "none"', async () => {
+    const { readActiveSquad } = await import('../../../src/commands/specify/handler.js')
+    await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), 'active_squad: none\n', 'utf-8')
+    expect(await readActiveSquad(tmpDir)).toBeUndefined()
+  })
+
+  it('returns undefined when config file is missing', async () => {
+    const { readActiveSquad } = await import('../../../src/commands/specify/handler.js')
+    expect(await readActiveSquad(tmpDir)).toBeUndefined()
+  })
+
+  it('returns squad name and domain when squad.yaml exists', async () => {
+    const { readActiveSquad } = await import('../../../src/commands/specify/handler.js')
+    await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), 'active_squad: software\n', 'utf-8')
+    await mkdir(join(tmpDir, '.buildpact', 'squads', 'software'), { recursive: true })
+    await writeFile(
+      join(tmpDir, '.buildpact', 'squads', 'software', 'squad.yaml'),
+      'name: software\nversion: "0.1.0"\ndomain: software\n',
+      'utf-8',
+    )
+    const result = await readActiveSquad(tmpDir)
+    expect(result).toEqual({ name: 'software', domain: 'software' })
+  })
+
+  it('falls back to squad name as domain when squad.yaml missing domain field', async () => {
+    const { readActiveSquad } = await import('../../../src/commands/specify/handler.js')
+    await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), 'active_squad: marketing\n', 'utf-8')
+    await mkdir(join(tmpDir, '.buildpact', 'squads', 'marketing'), { recursive: true })
+    await writeFile(
+      join(tmpDir, '.buildpact', 'squads', 'marketing', 'squad.yaml'),
+      'name: marketing\nversion: "0.1.0"\n',
+      'utf-8',
+    )
+    const result = await readActiveSquad(tmpDir)
+    expect(result).toEqual({ name: 'marketing', domain: 'marketing' })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildSpecContent with squadConstraints
+// ---------------------------------------------------------------------------
+
+describe('buildSpecContent with squadConstraints', () => {
+  const basePayload = { taskId: 'test-789', type: 'specify' }
+  const generatedAt = '2026-03-16T00:00:00.000Z'
+
+  it('includes Domain Constraints section when squadConstraints provided', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Add user authentication',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'user-auth',
+      squadConstraints: {
+        squadName: 'software',
+        domain: 'software',
+        answers: [
+          { key: 'tech_stack', question: 'What is the primary technology stack?', answer: 'Backend (Node.js / Python / Go / Java)' },
+          { key: 'deployment_target', question: 'What is the deployment target?', answer: 'Cloud (AWS / GCP / Azure)' },
+        ],
+      },
+    })
+
+    expect(content).toContain('## Domain Constraints')
+    expect(content).toContain('Squad: **software**')
+    expect(content).toContain('domain: software')
+    expect(content).toContain('tech_stack')
+    expect(content).toContain('Backend (Node.js / Python / Go / Java)')
+    expect(content).toContain('Cloud (AWS / GCP / Azure)')
+  })
+
+  it('omits Domain Constraints section when no squadConstraints', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Add user authentication',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'user-auth',
+    })
+
+    expect(content).not.toContain('## Domain Constraints')
+  })
+
+  it('omits Domain Constraints section when answers array is empty', async () => {
+    const { buildSpecContent } = await import('../../../src/commands/specify/handler.js')
+    const content = buildSpecContent({
+      mode: 'expert',
+      rawDescription: 'Add user authentication',
+      constitutionPath: undefined,
+      payload: basePayload,
+      generatedAt,
+      slug: 'user-auth',
+      squadConstraints: { squadName: 'unknown', domain: 'unknown', answers: [] },
+    })
+
+    expect(content).not.toContain('## Domain Constraints')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// runSquadFlow unit tests
+// ---------------------------------------------------------------------------
+
+describe('runSquadFlow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns empty array when given no questions', async () => {
+    const { runSquadFlow } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+    const result = await runSquadFlow([], i18n, false)
+    expect(result).toEqual([])
+  })
+
+  it('returns answer when user selects a numbered option in CLI mode', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select).mockResolvedValueOnce('Cloud (AWS / GCP / Azure)')
+
+    const { runSquadFlow, getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+    const questions = [getSquadQuestions('software')[2]] // deployment_target
+
+    const result = await runSquadFlow(questions, i18n, false)
+    expect(result).not.toBeUndefined()
+    expect(result!).toHaveLength(1)
+    expect(result![0].key).toBe('deployment_target')
+    expect(result![0].answer).toBe('Cloud (AWS / GCP / Azure)')
+  })
+
+  it('accepts free-text "Other" answer in CLI mode', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.select).mockResolvedValueOnce('__squad_other__')
+    vi.mocked(clack.text).mockResolvedValueOnce('Custom stack — Elixir / Phoenix')
+
+    const { runSquadFlow, getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+    const questions = [getSquadQuestions('software')[0]] // tech_stack
+
+    const result = await runSquadFlow(questions, i18n, false)
+    expect(result).not.toBeUndefined()
+    expect(result![0].answer).toBe('Custom stack — Elixir / Phoenix')
+  })
+
+  it('accepts text input in web bundle mode', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    vi.mocked(clack.text).mockResolvedValueOnce('1')
+
+    const { runSquadFlow, getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+    const questions = [getSquadQuestions('software')[0]] // tech_stack
+
+    const result = await runSquadFlow(questions, i18n, true)
+    expect(result).not.toBeUndefined()
+    expect(result![0].answer).toBe('1')
+  })
+
+  it('returns undefined when user cancels in CLI mode', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockReturnValueOnce(true)
+    vi.mocked(clack.select).mockResolvedValueOnce(Symbol('cancel') as unknown as string)
+
+    const { runSquadFlow, getSquadQuestions } = await import('../../../src/commands/specify/handler.js')
+    const { createI18n } = await import('../../../src/foundation/i18n.js')
+    const i18n = createI18n('en')
+    const questions = [getSquadQuestions('software')[0]]
+
+    const result = await runSquadFlow(questions, i18n, false)
+    expect(result).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// handler integration tests — Squad domain integration
+// ---------------------------------------------------------------------------
+
+describe('specify handler — Squad domain integration', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-specify-squad-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+    vi.clearAllMocks()
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('skips squad questions when no active squad configured', async () => {
+    const clack = await import('@clack/prompts')
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    await handler.run(['add', 'user', 'login'])
+
+    // select not called for squad questions (no squad active)
+    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
+  })
+
+  it('injects domain questions and writes Domain Constraints to spec.md when squad is active', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    // 3 squad questions for software domain
+    vi.mocked(clack.select)
+      .mockResolvedValueOnce('Backend (Node.js / Python / Go / Java)')
+      .mockResolvedValueOnce('TypeScript strict mode')
+      .mockResolvedValueOnce('Cloud (AWS / GCP / Azure)')
+
+    // Set up active software squad
+    await writeFile(
+      join(tmpDir, '.buildpact', 'config.yaml'),
+      'active_squad: software\nlanguage: en\n',
+      'utf-8',
+    )
+    await mkdir(join(tmpDir, '.buildpact', 'squads', 'software'), { recursive: true })
+    await writeFile(
+      join(tmpDir, '.buildpact', 'squads', 'software', 'squad.yaml'),
+      'name: software\nversion: "0.1.0"\ndomain: software\n',
+      'utf-8',
+    )
+
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    const result = await handler.run(['add', 'user', 'authentication'])
+    expect(result.ok).toBe(true)
+
+    const specPath = join(tmpDir, '.buildpact', 'specs', 'add-user-authentication', 'spec.md')
+    const content = await readFile(specPath, 'utf-8')
+    expect(content).toContain('## Domain Constraints')
+    expect(content).toContain('Squad: **software**')
+    expect(content).toContain('Backend (Node.js / Python / Go / Java)')
+    expect(content).toContain('Cloud (AWS / GCP / Azure)')
+  })
+
+  it('uses clack.text (not select) in web bundle mode', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    // web bundle mode uses clack.text for squad questions — answer 3 questions
+    vi.mocked(clack.text)
+      .mockResolvedValueOnce('2')
+      .mockResolvedValueOnce('3')
+      .mockResolvedValueOnce('1')
+
+    await writeFile(
+      join(tmpDir, '.buildpact', 'config.yaml'),
+      'active_squad: software\nlanguage: en\nmode: web-bundle\n',
+      'utf-8',
+    )
+    await mkdir(join(tmpDir, '.buildpact', 'squads', 'software'), { recursive: true })
+    await writeFile(
+      join(tmpDir, '.buildpact', 'squads', 'software', 'squad.yaml'),
+      'name: software\nversion: "0.1.0"\ndomain: software\n',
+      'utf-8',
+    )
+
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/specify/handler.js')
+    const result = await handler.run(['add', 'product', 'catalog'])
+    expect(result.ok).toBe(true)
+
+    // select should NOT have been called for squad questions in web bundle mode
+    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
+    // text should have been called (for squad questions)
+    expect(vi.mocked(clack.text)).toHaveBeenCalled()
+  })
+})

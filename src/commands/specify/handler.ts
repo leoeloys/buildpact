@@ -4,8 +4,11 @@
  * Beginner mode: guided sequential wizard questions.
  * Expert mode: single natural language prompt.
  * Ambiguity detection triggers a clarification Q&A flow before spec generation.
+ * Active Squad injects domain-specific question templates after main spec gathering.
+ * Web Bundle mode presents squad questions as conversational text prompts.
  * @see FR-401 — Natural Language Specification Capture
  * @see FR-402 — Ambiguity Detection and Clarification Flow
+ * @see FR-403 — Domain-Aware Specification with Squad Integration
  */
 
 import * as clack from '@clack/prompts'
@@ -19,6 +22,222 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { slugify } from '../../foundation/sharding.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
 import { buildTaskPayload } from '../../engine/subagent.js'
+
+// ---------------------------------------------------------------------------
+// Squad domain-aware question templates
+// ---------------------------------------------------------------------------
+
+/** A domain-specific question with numbered options for Squad integration */
+export interface SquadQuestion {
+  key: string
+  question: string
+  options: readonly string[]
+}
+
+/** An answer to a Squad domain-specific question */
+export interface SquadConstraintAnswer {
+  key: string
+  question: string
+  answer: string
+}
+
+/** Active Squad metadata loaded from config + squad.yaml */
+export interface ActiveSquad {
+  name: string
+  domain: string
+}
+
+const OTHER_SQUAD_VALUE = '__squad_other__'
+
+/** Domain-specific question templates keyed by squad domain */
+const DOMAIN_QUESTIONS: Record<string, SquadQuestion[]> = {
+  software: [
+    {
+      key: 'tech_stack',
+      question: 'What is the primary technology stack?',
+      options: ['Frontend (React / Vue / Angular)', 'Backend (Node.js / Python / Go / Java)', 'Full-stack (Next.js / Nuxt)', 'Mobile (iOS / Android / React Native)', 'CLI / Tooling'],
+    },
+    {
+      key: 'quality_standards',
+      question: 'What quality standards apply?',
+      options: ['Unit tests required (≥80% coverage)', 'E2E tests required', 'TypeScript strict mode', 'Linting (ESLint / Prettier)', 'No specific quality gates'],
+    },
+    {
+      key: 'deployment_target',
+      question: 'What is the deployment target?',
+      options: ['Cloud (AWS / GCP / Azure)', 'Self-hosted / on-premises', 'Docker / Kubernetes', 'Serverless (Lambda / Cloud Functions)', 'Not yet determined'],
+    },
+  ],
+  marketing: [
+    {
+      key: 'primary_audience',
+      question: 'Who is the primary audience?',
+      options: ['B2B (businesses)', 'B2C (consumers)', 'Internal (employees)', 'Mixed audience', 'Not yet defined'],
+    },
+    {
+      key: 'key_metric',
+      question: 'What is the key success metric?',
+      options: ['Conversions / sales', 'Traffic / reach', 'Brand awareness', 'Lead generation', 'Retention / engagement'],
+    },
+    {
+      key: 'compliance',
+      question: 'What compliance constraints apply?',
+      options: ['GDPR / LGPD (data privacy)', 'ANVISA / CFM (healthcare marketing)', 'None — standard commercial content', 'Industry-specific regulation'],
+    },
+  ],
+  health: [
+    {
+      key: 'content_type',
+      question: 'What type of health content is involved?',
+      options: ['Patient information / education', 'Clinical workflows', 'Medical device interface', 'Research data', 'None of the above'],
+    },
+    {
+      key: 'compliance_level',
+      question: 'What compliance level applies?',
+      options: ['CFM nº 1.974/2011 (medical marketing)', 'HIPAA / LGPD (patient data)', 'ANVISA (device / drug)', 'No specific regulation'],
+    },
+    {
+      key: 'primary_users',
+      question: 'Who are the primary users?',
+      options: ['Healthcare professionals', 'Patients / caregivers', 'Administrative staff', 'Researchers', 'General public'],
+    },
+  ],
+  research: [
+    {
+      key: 'methodology',
+      question: 'What research methodology applies?',
+      options: ['Systematic review / meta-analysis', 'Experimental / RCT', 'Observational study', 'Survey / questionnaire', 'Data analysis (existing datasets)'],
+    },
+    {
+      key: 'review_protocol',
+      question: 'What review protocol is required?',
+      options: ['PRISMA checklist', 'CONSORT checklist', 'STROBE guidelines', 'No specific protocol required'],
+    },
+    {
+      key: 'statistical_approach',
+      question: 'What statistical approach is needed?',
+      options: ['Descriptive statistics only', 'Inferential testing (t-test / ANOVA)', 'Regression analysis', 'Survival analysis', 'Not yet determined'],
+    },
+  ],
+}
+
+/**
+ * Return domain-specific questions for the given squad domain.
+ * Returns an empty array for unknown domains.
+ */
+export function getSquadQuestions(domain: string): SquadQuestion[] {
+  return DOMAIN_QUESTIONS[domain.toLowerCase()] ?? []
+}
+
+/**
+ * Read the active squad name and domain from config.yaml + squad.yaml.
+ * Returns undefined if no squad is active or files are missing.
+ */
+export async function readActiveSquad(projectDir: string): Promise<ActiveSquad | undefined> {
+  try {
+    const config = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
+    let activeSquadName = ''
+    for (const line of config.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('active_squad:')) {
+        activeSquadName = trimmed.slice('active_squad:'.length).trim().replace(/^["']|["']$/g, '')
+        break
+      }
+    }
+    if (!activeSquadName || activeSquadName === 'none') return undefined
+
+    const squadYaml = await readFile(
+      join(projectDir, '.buildpact', 'squads', activeSquadName, 'squad.yaml'),
+      'utf-8',
+    )
+    let domain = activeSquadName
+    for (const line of squadYaml.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('domain:')) {
+        domain = trimmed.slice('domain:'.length).trim().replace(/^["']|["']$/g, '')
+        break
+      }
+    }
+    return { name: activeSquadName, domain }
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Check if the project is running in Web Bundle mode.
+ * Web Bundle mode is active when config.yaml has `mode: web-bundle`.
+ */
+export async function readWebBundleMode(projectDir: string): Promise<boolean> {
+  try {
+    const config = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
+    for (const line of config.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('mode:')) {
+        const value = trimmed.slice('mode:'.length).trim().replace(/^["']|["']$/g, '')
+        return value === 'web-bundle'
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+/**
+ * Run Squad domain-specific question flow.
+ * CLI mode: clack.select with numbered options + "Other (free text)".
+ * Web Bundle mode: clack.text with numbered options embedded in the message.
+ * Returns undefined if the user cancels.
+ */
+export async function runSquadFlow(
+  questions: SquadQuestion[],
+  i18n: I18nResolver,
+  isWebBundle: boolean,
+): Promise<SquadConstraintAnswer[] | undefined> {
+  if (questions.length === 0) return []
+
+  const answers: SquadConstraintAnswer[] = []
+
+  for (const question of questions) {
+    if (isWebBundle) {
+      const optionsList = [
+        ...question.options.map((opt, idx) => `${idx + 1}. ${opt}`),
+        `${question.options.length + 1}. ${i18n.t('cli.specify.clarification_other')}`,
+      ].join('\n')
+
+      const response = await clack.text({
+        message: `${question.question}\n${optionsList}`,
+        placeholder: i18n.t('cli.specify.squad_web_bundle_placeholder'),
+      })
+      if (clack.isCancel(response) || !response) return undefined
+      answers.push({ key: question.key, question: question.question, answer: String(response) })
+    } else {
+      const selectOptions = [
+        ...question.options.map((opt, idx) => ({ label: `${idx + 1}. ${opt}`, value: opt })),
+        { label: i18n.t('cli.specify.clarification_other'), value: OTHER_SQUAD_VALUE },
+      ]
+
+      const selected = await clack.select({ message: question.question, options: selectOptions })
+      if (clack.isCancel(selected)) return undefined
+
+      let answer: string
+      if (selected === OTHER_SQUAD_VALUE) {
+        const freeText = await clack.text({
+          message: i18n.t('cli.specify.clarification_other_prompt'),
+          placeholder: i18n.t('cli.specify.clarification_other_placeholder'),
+        })
+        if (clack.isCancel(freeText) || !freeText) return undefined
+        answer = String(freeText)
+      } else {
+        answer = String(selected)
+      }
+      answers.push({ key: question.key, question: question.question, answer })
+    }
+  }
+
+  return answers
+}
 
 // ---------------------------------------------------------------------------
 // Ambiguity detection and clarification flow
@@ -312,6 +531,11 @@ export interface SpecInput {
   generatedAt: string
   slug: string
   clarifications?: ClarificationAnswer[]
+  squadConstraints?: {
+    squadName: string
+    domain: string
+    answers: SquadConstraintAnswer[]
+  }
 }
 
 /**
@@ -323,7 +547,7 @@ export interface SpecInput {
  * Assumptions, Constitution Self-Assessment.
  */
 export function buildSpecContent(input: SpecInput): string {
-  const { mode, wizardAnswers, rawDescription, constitutionPath, payload, generatedAt, clarifications } = input
+  const { mode, wizardAnswers, rawDescription, constitutionPath, payload, generatedAt, clarifications, squadConstraints } = input
 
   const constitutionLine = constitutionPath
     ? `- **Constitution**: \`${constitutionPath}\` (validated before acceptance)`
@@ -410,6 +634,22 @@ export function buildSpecContent(input: SpecInput): string {
       '- Implementation details are deferred to the plan phase',
       '',
     )
+  }
+
+  // Squad domain constraints section (only present when an active Squad provided answers)
+  if (squadConstraints && squadConstraints.answers.length > 0) {
+    lines.push(
+      '## Domain Constraints',
+      '',
+      `> Squad: **${squadConstraints.squadName}** (domain: ${squadConstraints.domain})`,
+      '',
+      '| Constraint | Question | Answer |',
+      '|------------|----------|--------|',
+    )
+    for (const a of squadConstraints.answers) {
+      lines.push(`| \`${a.key}\` | ${a.question} | ${a.answer} |`)
+    }
+    lines.push('')
   }
 
   // Clarifications section (only present when ambiguities were resolved)
@@ -570,6 +810,29 @@ export const handler: CommandHandler = {
         generatedAt: new Date().toISOString(),
         slug: featureSlug,
         ...(clarifications !== undefined && { clarifications }),
+      }
+    }
+
+    // Squad domain-aware question injection
+    const activeSquad = await readActiveSquad(projectDir)
+    if (activeSquad) {
+      const isWebBundle = await readWebBundleMode(projectDir)
+      const squadQuestions = getSquadQuestions(activeSquad.domain)
+      if (squadQuestions.length > 0) {
+        clack.log.info(i18n.t('cli.specify.squad_active', { name: activeSquad.name, domain: activeSquad.domain }))
+        const squadAnswers = await runSquadFlow(squadQuestions, i18n, isWebBundle)
+        if (squadAnswers === undefined) {
+          clack.outro(i18n.t('cli.specify.cancelled'))
+          return ok(undefined)
+        }
+        specInput = {
+          ...specInput,
+          squadConstraints: {
+            squadName: activeSquad.name,
+            domain: activeSquad.domain,
+            answers: squadAnswers,
+          },
+        }
       }
     }
 
