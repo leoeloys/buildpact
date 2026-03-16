@@ -191,6 +191,7 @@ cli:
     fix_plan_written: "Plano de correção gerado para critérios com falha — execute: /bp:execute {path}"
     report_saved: "Relatório de verificação salvo em {path}"
     feedback_saved: "Feedback da sessão capturado em .buildpact/memory/feedback/{slug}.json"
+    lessons_distilled: "Lições destiladas: {count} padrão(ões) salvo(s) em .buildpact/memory/lessons/lessons.json"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"
@@ -247,3 +248,5 @@ error:
     failover_exhausted: "Todos os modelos na cadeia de failover esgotados para a fase '{phase}' — sem mais alternativas disponíveis"
   feedback:
     write_failed: "Falha ao gravar feedback da sessão para o spec '{slug}'"
+  lessons:
+    write_failed: "Falha ao gravar arquivo de lições em .buildpact/memory/lessons/"

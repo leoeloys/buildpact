@@ -14,7 +14,8 @@ import type { CommandHandler } from '../registry.js'
 import type { SupportedLanguage, I18nResolver } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
-import { buildFeedbackEntry, captureSessionFeedback } from '../../engine/session-feedback.js'
+import { buildFeedbackEntry, captureSessionFeedback, loadRecentFeedbacks } from '../../engine/session-feedback.js'
+import { captureDistilledLessons } from '../../engine/lessons-distiller.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -380,6 +381,14 @@ export const handler: CommandHandler = {
       notes: feedbackNotes,
     })
     await captureSessionFeedback(projectDir, feedbackEntry)
+
+    // Tier 2: Distill lessons from recent feedback when session threshold is met
+    const feedbackDir = join(projectDir, '.buildpact', 'memory', 'feedback')
+    const recentFeedbacks = await loadRecentFeedbacks(feedbackDir, 50)
+    const lessonsResult = await captureDistilledLessons(projectDir, recentFeedbacks)
+    if (lessonsResult.ok && lessonsResult.value !== undefined) {
+      clack.log.info(i18n.t('cli.verify.lessons_distilled', { count: String(lessonsResult.value.lessons.length) }))
+    }
 
     // Show summary
     if (allPassed) {

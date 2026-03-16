@@ -45,3 +45,18 @@ export {
   FEEDBACK_FIFO_CAP,
   FEEDBACK_RECENT_LIMIT,
 } from './session-feedback.js'
+export {
+  shouldDistill,
+  slugifyAc,
+  buildRecommendation,
+  analyzePatterns,
+  buildLessonEntry,
+  countTotalSessions,
+  distillLessons,
+  formatLessonsForContext,
+  loadLessonsFile,
+  writeLessonsFile,
+  captureDistilledLessons,
+  LESSONS_DISTILL_THRESHOLD,
+  LESSONS_MIN_FAIL_COUNT,
+} from './lessons-distiller.js'
