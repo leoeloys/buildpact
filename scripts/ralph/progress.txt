@@ -27,6 +27,8 @@ Started: 2026-03-15
 - Vitest 4.x for testing, mkdtemp for temp dirs, afterEach cleanup
 - TypeScript strict mode, tsdown for build
 - Node.js minimum 20.x, 22.x LTS recommended
+- Squad scaffolding: `scaffoldSquad(name, targetDir)` creates 4-tier (T1-T4) agent templates with all 6 layers + voice DNA 5 sections + inline docs + squad.yaml + benchmark/; `validateSquadStructure` validates yaml fields + 6 layers + min 3 examples; `validateSquadSecurity` checks external URLs, executable code, path traversal, prompt injection; `installSquad` copies to .buildpact/squads/<name>/
+- In runAdd tests: use `mockImplementation` not `mockResolvedValueOnce` for confirm/isCancel to avoid queue bleed across tests (clearAllMocks doesn't clear once-queues)
 ---
 
 ## Pre-existing completed stories (Epic 1 + Story 2.1)
@@ -456,4 +458,21 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - loadAllDecisions silently returns [] for missing dir — safe on fresh projects; skips unparseable files gracefully
   - formatDecisionsForContext omits alternatives line when alternatives array is empty
   - writeDecisionFile overwrites existing file if same id slug — decisions are stable by title slug
+---
+
+## 2026-03-16 - US-032
+- Implemented src/engine/squad-scaffolder.ts with: scaffoldSquad (generates 4-tier T1-T4 hierarchy with all 6 layers, Voice DNA 5 sections, squad.yaml, benchmark/, inline documentation per layer), validateSquadStructure (required yaml fields + 6-layer anatomy + min 3 examples + Voice DNA 5 sections per agent), validateSquadSecurity (external URLs, bash code blocks, path traversal, prompt injection detection), installSquad (cp squad dir to .buildpact/squads/<name>/)
+- Implemented src/commands/squad/handler.ts with: validateSquadName, runCreate (scaffold + audit log + i18n), runAdd (community warning → structure validation → security validation → install), handler.run dispatching to create/add subcommands
+- Updated src/commands/squad/index.ts to re-export from handler.ts
+- Added SQUAD_INVALID_NAME error code to contracts/errors.ts
+- Added i18n keys (28 keys) under cli.squad.* and error.squad.invalid_name in EN and PT-BR locales
+- Added 40 unit tests across test/unit/engine/squad-scaffolder.test.ts and test/unit/commands/squad.test.ts
+- Files changed: src/engine/squad-scaffolder.ts (new), src/commands/squad/handler.ts (new), src/commands/squad/index.ts, src/contracts/errors.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/engine/squad-scaffolder.test.ts (new), test/unit/commands/squad.test.ts (new)
+- 789 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Squad commands are subcommand-based (squad create/add) — handler.run dispatches on args[0]
+  - validateSquadStructure returns early after first category of errors (yaml missing → return early; agents missing → return early) to avoid confusing cascading errors
+  - For runAdd tests: use mockImplementation (not mockResolvedValueOnce) for confirm to avoid queue bleed since clearAllMocks doesn't clear the once-queue
+  - Security validation uses regex patterns; path traversal check needs `../` or `..\` forms; prompt injection checks "ignore previous instructions" and variants
+  - installSquad uses `cp(sourceDir, destDir, { recursive: true })` — requires Node.js 16.7+, available in our Node 20+ minimum
 ---
