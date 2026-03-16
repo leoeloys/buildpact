@@ -1,8 +1,9 @@
 /**
  * Plan command handler.
  * Spawns parallel research agents (tech stack, codebase, squad domain) in isolated subagent contexts,
- * consolidates findings, and generates a plan.md referencing specific research results.
+ * consolidates findings, and generates a wave-based plan.md referencing specific research results.
  * @see FR-501 — Automated Parallel Research Before Planning
+ * @see FR-502 — Wave-Based Plan Generation
  */
 
 import * as clack from '@clack/prompts'
@@ -48,7 +49,249 @@ export interface ResearchSummary {
 }
 
 // ---------------------------------------------------------------------------
-// Pure functions — exported for unit testing
+// Wave planning types
+// ---------------------------------------------------------------------------
+
+/** A single executable task extracted from the spec */
+export interface PlanTask {
+  id: string
+  title: string
+  dependencies: string[]
+  wave: number
+}
+
+/** A group of tasks that can run in parallel (same wave) */
+export interface WaveGroup {
+  waveNumber: number
+  tasks: PlanTask[]
+}
+
+/** Specification for a single plan file (a wave or part of a wave) */
+export interface PlanFileSpec {
+  filename: string
+  waveNumber: number
+  /** '' for the first part, 'b', 'c', ... for split parts */
+  partSuffix: string
+  tasks: PlanTask[]
+}
+
+// ---------------------------------------------------------------------------
+// Wave planning pure functions — exported for unit testing
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract tasks from the spec's Acceptance Criteria (or Functional Requirements) section.
+ * Each bullet point becomes a PlanTask. Falls back to 3 generic tasks when no AC section found.
+ * Pure function — no side effects.
+ */
+export function extractTasksFromSpec(specContent: string): PlanTask[] {
+  const lines = specContent.split('\n')
+  const tasks: PlanTask[] = []
+  let inSection = false
+  let taskIdx = 0
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^##\s+(Acceptance Criteria|Functional Requirements|FRs?)\b/i.test(trimmed)) {
+      inSection = true
+      continue
+    }
+    if (inSection && /^##\s/.test(trimmed)) {
+      inSection = false
+      continue
+    }
+    if (inSection && /^[-*]\s/.test(trimmed)) {
+      const title = trimmed.slice(2).replace(/^\[[ xX]\]\s*/, '').trim()
+      if (title.length > 3) {
+        taskIdx++
+        tasks.push({ id: `T${taskIdx}`, title, dependencies: [], wave: 0 })
+      }
+    }
+  }
+
+  if (tasks.length === 0) {
+    const firstLine =
+      specContent
+        .split('\n')
+        .find(l => l.trim().length > 0)
+        ?.trim() ?? 'Implement feature'
+    return [
+      { id: 'T1', title: 'Foundation setup', dependencies: [], wave: 0 },
+      {
+        id: 'T2',
+        title: `Core implementation: ${firstLine.slice(0, 60)}`,
+        dependencies: ['T1'],
+        wave: 0,
+      },
+      { id: 'T3', title: 'Verification and tests', dependencies: ['T2'], wave: 0 },
+    ]
+  }
+
+  return tasks
+}
+
+/**
+ * Infer task dependencies from title keywords ("after T1", "requires T2", etc.).
+ * Searches for dependency keyword phrases followed by task ID references.
+ * Pure function — no side effects.
+ */
+export function inferDependencies(tasks: PlanTask[]): PlanTask[] {
+  const AFTER_KEYWORDS = ['after ', 'following ', 'once ', 'requires ', 'depends on ']
+  return tasks.map(task => {
+    const lowerTitle = task.title.toLowerCase()
+    const deps: string[] = []
+
+    for (const kw of AFTER_KEYWORDS) {
+      if (!lowerTitle.includes(kw)) continue
+      for (const other of tasks) {
+        if (other.id !== task.id && lowerTitle.includes(other.id.toLowerCase())) {
+          if (!deps.includes(other.id)) deps.push(other.id)
+        }
+      }
+    }
+
+    return deps.length > 0 ? { ...task, dependencies: deps } : task
+  })
+}
+
+/**
+ * Assign wave numbers to tasks using topological sort.
+ * Tasks with no dependencies → wave 0.
+ * Tasks with dependencies → wave = max(dependency waves) + 1.
+ * Circular dependencies are handled gracefully (cycle guard → wave 0).
+ * Pure function — no side effects.
+ */
+export function assignWaves(tasks: PlanTask[]): PlanTask[] {
+  const waveOf = new Map<string, number>()
+
+  function computeWave(id: string, visiting = new Set<string>()): number {
+    if (waveOf.has(id)) return waveOf.get(id)!
+    if (visiting.has(id)) {
+      waveOf.set(id, 0)
+      return 0
+    }
+    visiting.add(id)
+    const task = tasks.find(t => t.id === id)
+    if (!task || task.dependencies.length === 0) {
+      waveOf.set(id, 0)
+      return 0
+    }
+    const w = Math.max(...task.dependencies.map(d => computeWave(d, new Set(visiting)))) + 1
+    waveOf.set(id, w)
+    return w
+  }
+
+  for (const t of tasks) computeWave(t.id)
+  return tasks.map(t => ({ ...t, wave: waveOf.get(t.id) ?? 0 }))
+}
+
+/**
+ * Group assigned tasks into WaveGroups sorted by wave number.
+ * Independent tasks (same wave number) are grouped together for parallel execution.
+ * Vertical slices are preserved: tasks are not re-sorted by technical layer.
+ * Pure function — no side effects.
+ */
+export function groupIntoWaves(tasks: PlanTask[]): WaveGroup[] {
+  const map = new Map<number, PlanTask[]>()
+  for (const t of tasks) {
+    const existing = map.get(t.wave) ?? []
+    map.set(t.wave, [...existing, t])
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([waveNumber, waveTasks]) => ({ waveNumber, tasks: waveTasks }))
+}
+
+/** Maximum tasks per plan file before auto-split */
+export const MAX_TASKS_PER_PLAN_FILE = 2
+
+const PART_SUFFIXES = ['', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+
+/**
+ * Split wave groups that exceed maxTasksPerFile into multiple PlanFileSpecs.
+ * Wave 1 with 5 tasks and maxTasksPerFile=2 → plan-wave-1.md (T1,T2), plan-wave-1b.md (T3,T4), plan-wave-1c.md (T5).
+ * Pure function — no side effects.
+ */
+export function splitWavesIfNeeded(
+  waves: WaveGroup[],
+  maxTasksPerFile = MAX_TASKS_PER_PLAN_FILE,
+): PlanFileSpec[] {
+  const files: PlanFileSpec[] = []
+
+  for (const wave of waves) {
+    if (wave.tasks.length <= maxTasksPerFile) {
+      files.push({
+        filename: `plan-wave-${wave.waveNumber + 1}.md`,
+        waveNumber: wave.waveNumber,
+        partSuffix: '',
+        tasks: wave.tasks,
+      })
+    } else {
+      let partIdx = 0
+      for (let i = 0; i < wave.tasks.length; i += maxTasksPerFile) {
+        const chunk = wave.tasks.slice(i, i + maxTasksPerFile)
+        const suffix = PART_SUFFIXES[partIdx] ?? String(partIdx + 1)
+        files.push({
+          filename: `plan-wave-${wave.waveNumber + 1}${suffix}.md`,
+          waveNumber: wave.waveNumber,
+          partSuffix: suffix,
+          tasks: chunk,
+        })
+        partIdx++
+      }
+    }
+  }
+
+  return files
+}
+
+/**
+ * Build the markdown content for a single wave plan file.
+ * Pure function — no side effects.
+ */
+export function buildWaveFileContent(
+  fileSpec: PlanFileSpec,
+  research: ResearchSummary,
+  slug: string,
+  generatedAt: string,
+): string {
+  const waveNum = fileSpec.waveNumber + 1
+  const waveLabel = fileSpec.partSuffix
+    ? `Wave ${waveNum}${fileSpec.partSuffix.toUpperCase()}`
+    : `Wave ${waveNum}`
+
+  const taskLines = fileSpec.tasks
+    .map(t => {
+      const depNote =
+        t.dependencies.length > 0 ? ` _(after: ${t.dependencies.join(', ')})_` : ''
+      return `- [ ] [AGENT] ${t.title}${depNote}`
+    })
+    .join('\n')
+
+  const allKeywords = [
+    ...research.techStack.keywords,
+    ...research.codebase.keywords,
+    ...research.squadDomain.keywords,
+  ]
+
+  return [
+    `# Plan — ${slug} — ${waveLabel}`,
+    '',
+    `> Generated: ${generatedAt}`,
+    `> Wave: ${waveLabel} (${fileSpec.tasks.length} task${fileSpec.tasks.length !== 1 ? 's' : ''})`,
+    '',
+    '## Tasks',
+    '',
+    taskLines,
+    '',
+    '## Key References',
+    '',
+    allKeywords.map(kw => `- \`${kw}\``).join('\n'),
+  ].join('\n')
+}
+
+// ---------------------------------------------------------------------------
+// Research pure functions — exported for unit testing
 // ---------------------------------------------------------------------------
 
 /**
@@ -126,8 +369,8 @@ export function consolidateResearch(
 }
 
 /**
- * Build a plan.md document from the spec content and consolidated research summary.
- * The plan references specific findings from each research agent.
+ * Build the main plan.md overview document from the spec content and consolidated research summary.
+ * The Wave Plan section uses actual tasks extracted and wave-grouped from the spec.
  * Pure function — no side effects.
  */
 export function buildPlanContent(
@@ -136,11 +379,30 @@ export function buildPlanContent(
   slug: string,
   generatedAt: string,
 ): string {
+  // Extract tasks and assign waves from spec
+  const rawTasks = extractTasksFromSpec(specContent)
+  const withDeps = inferDependencies(rawTasks)
+  const withWaves = assignWaves(withDeps)
+  const waves = groupIntoWaves(withWaves)
+
   const allKeywords = [
     ...research.techStack.keywords,
     ...research.codebase.keywords,
     ...research.squadDomain.keywords,
   ]
+
+  // Build wave plan sections
+  const waveSections: string[] = ['## Wave Plan', '']
+  for (const wave of waves) {
+    waveSections.push(`### Wave ${wave.waveNumber + 1}`)
+    waveSections.push('')
+    for (const task of wave.tasks) {
+      const depNote =
+        task.dependencies.length > 0 ? ` _(after: ${task.dependencies.join(', ')})_` : ''
+      waveSections.push(`- [ ] [AGENT] ${task.title}${depNote}`)
+    }
+    waveSections.push('')
+  }
 
   const lines: string[] = [
     `# Plan — ${slug}`,
@@ -168,31 +430,11 @@ export function buildPlanContent(
     '',
     '## Spec Summary',
     '',
-    specContent
-      .split('\n')
-      .slice(0, 20)
-      .join('\n'),
+    specContent.split('\n').slice(0, 20).join('\n'),
     '',
     '---',
     '',
-    '## Wave Plan',
-    '',
-    '> Wave planning requires the full pipeline. Run `/bp:execute` to generate and execute waves based on the research above.',
-    '',
-    '### Wave 1 — Foundation',
-    '',
-    '- [ ] [AGENT] Review research findings and confirm tech stack choices',
-    '- [ ] [AGENT] Identify affected files from codebase research',
-    '',
-    '### Wave 2 — Implementation',
-    '',
-    '- [ ] [AGENT] Implement core changes following codebase patterns',
-    '- [ ] [AGENT] Apply domain constraints from Squad research',
-    '',
-    '### Wave 3 — Verification',
-    '',
-    '- [ ] [AGENT] Run typecheck and tests',
-    '- [ ] [AGENT] Verify against spec acceptance criteria',
+    ...waveSections,
   ]
 
   return lines.join('\n')
@@ -305,21 +547,47 @@ export const handler: CommandHandler = {
     clack.log.success(i18n.t('cli.plan.research_codebase', { keywords: codebase.keywords.join(', ') }))
     clack.log.success(i18n.t('cli.plan.research_domain', { keywords: squadDomain.keywords.join(', ') }))
 
-    // Generate plan content
+    // Generate main plan.md (overview with all waves)
     const generatedAt = new Date().toISOString()
     const planContent = buildPlanContent(specContent, research, specSlug, generatedAt)
 
-    // Write plan.md
+    // Compute wave files (auto-split waves > MAX_TASKS_PER_PLAN_FILE tasks)
+    const rawTasks = extractTasksFromSpec(specContent)
+    const withDeps = inferDependencies(rawTasks)
+    const withWaves = assignWaves(withDeps)
+    const waves = groupIntoWaves(withWaves)
+    const planFiles = splitWavesIfNeeded(waves)
+
+    // Write plan directory
     const planDir = join(projectDir, '.buildpact', 'plans', specSlug)
     await mkdir(planDir, { recursive: true })
+
+    // Write main plan.md
     const planPath = join(planDir, 'plan.md')
     await writeFile(planPath, planContent, 'utf-8')
+
+    // Write per-wave files when multiple files are needed
+    const writtenFiles: string[] = [planPath]
+    if (planFiles.length > 1) {
+      clack.log.info(
+        i18n.t('cli.plan.wave_split', {
+          count: String(planFiles.length),
+          max: String(MAX_TASKS_PER_PLAN_FILE),
+        }),
+      )
+      for (const fileSpec of planFiles) {
+        const waveContent = buildWaveFileContent(fileSpec, research, specSlug, generatedAt)
+        const wavePath = join(planDir, fileSpec.filename)
+        await writeFile(wavePath, waveContent, 'utf-8')
+        writtenFiles.push(wavePath)
+      }
+    }
 
     // Audit
     await audit.log({
       action: 'plan.generate',
       agent: 'plan',
-      files: [planPath],
+      files: writtenFiles,
       outcome: 'success',
     })
 

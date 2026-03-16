@@ -123,6 +123,7 @@ cli:
     no_spec_found: "Nenhuma spec encontrada em .buildpact/specs/ — execute /bp:specify primeiro"
     no_spec_outro: "Execute /bp:specify para criar uma spec antes de planejar"
     done: "Plano salvo em {path}"
+    wave_split: "Plano dividido em {count} arquivos de wave (máx {max} tarefas por arquivo)"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

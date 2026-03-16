@@ -31,6 +31,343 @@ vi.mock('../../../src/foundation/audit.js', () => ({
 }))
 
 // ---------------------------------------------------------------------------
+// extractTasksFromSpec unit tests
+// ---------------------------------------------------------------------------
+
+describe('extractTasksFromSpec', () => {
+  it('extracts tasks from Acceptance Criteria section', async () => {
+    const { extractTasksFromSpec } = await import('../../../src/commands/plan/handler.js')
+    const spec = '# Spec\n\n## Acceptance Criteria\n\n- User can log in\n- User can log out\n- Session expires after 1 hour\n'
+    const tasks = extractTasksFromSpec(spec)
+    expect(tasks).toHaveLength(3)
+    expect(tasks[0]?.id).toBe('T1')
+    expect(tasks[0]?.title).toBe('User can log in')
+    expect(tasks[1]?.id).toBe('T2')
+    expect(tasks[2]?.id).toBe('T3')
+  })
+
+  it('extracts tasks from Functional Requirements section', async () => {
+    const { extractTasksFromSpec } = await import('../../../src/commands/plan/handler.js')
+    const spec = '# Spec\n\n## Functional Requirements\n\n- FR1: Accept user input\n- FR2: Validate input\n'
+    const tasks = extractTasksFromSpec(spec)
+    expect(tasks.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('stops collecting at the next ## section', async () => {
+    const { extractTasksFromSpec } = await import('../../../src/commands/plan/handler.js')
+    const spec = '# Spec\n\n## Acceptance Criteria\n\n- Task A\n- Task B\n\n## NFRs\n\n- Not a task\n'
+    const tasks = extractTasksFromSpec(spec)
+    expect(tasks).toHaveLength(2)
+  })
+
+  it('returns 3 fallback tasks when no AC section found', async () => {
+    const { extractTasksFromSpec } = await import('../../../src/commands/plan/handler.js')
+    const tasks = extractTasksFromSpec('# Spec\nSome description without AC section')
+    expect(tasks).toHaveLength(3)
+    expect(tasks[0]?.id).toBe('T1')
+    expect(tasks[2]?.id).toBe('T3')
+  })
+
+  it('all extracted tasks start with wave 0 and empty dependencies', async () => {
+    const { extractTasksFromSpec } = await import('../../../src/commands/plan/handler.js')
+    const spec = '## Acceptance Criteria\n\n- Do this\n- Do that\n'
+    const tasks = extractTasksFromSpec(spec)
+    for (const task of tasks) {
+      expect(task.wave).toBe(0)
+      expect(task.dependencies).toEqual([])
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// inferDependencies unit tests
+// ---------------------------------------------------------------------------
+
+describe('inferDependencies', () => {
+  it('detects "after T1" in title and adds T1 as dependency', async () => {
+    const { inferDependencies } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Foundation setup', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Core implementation after T1 completes', dependencies: [], wave: 0 },
+    ]
+    const result = inferDependencies(tasks)
+    expect(result[1]?.dependencies).toContain('T1')
+  })
+
+  it('detects "requires T1" keyword', async () => {
+    const { inferDependencies } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Setup', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Deploy requires T1', dependencies: [], wave: 0 },
+    ]
+    const result = inferDependencies(tasks)
+    expect(result[1]?.dependencies).toContain('T1')
+  })
+
+  it('returns tasks unchanged when no dependency keywords present', async () => {
+    const { inferDependencies } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Independent task A', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Independent task B', dependencies: [], wave: 0 },
+    ]
+    const result = inferDependencies(tasks)
+    expect(result[0]?.dependencies).toEqual([])
+    expect(result[1]?.dependencies).toEqual([])
+  })
+
+  it('does not add self-reference as dependency', async () => {
+    const { inferDependencies } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [{ id: 'T1', title: 'Task requires T1 (self)', dependencies: [], wave: 0 }]
+    const result = inferDependencies(tasks)
+    expect(result[0]?.dependencies).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// assignWaves unit tests
+// ---------------------------------------------------------------------------
+
+describe('assignWaves', () => {
+  it('assigns wave 0 to tasks with no dependencies', async () => {
+    const { assignWaves } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Task A', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Task B', dependencies: [], wave: 0 },
+    ]
+    const result = assignWaves(tasks)
+    expect(result[0]?.wave).toBe(0)
+    expect(result[1]?.wave).toBe(0)
+  })
+
+  it('assigns wave 1 to task depending on wave-0 task', async () => {
+    const { assignWaves } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Foundation', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Implementation', dependencies: ['T1'], wave: 0 },
+    ]
+    const result = assignWaves(tasks)
+    expect(result[0]?.wave).toBe(0)
+    expect(result[1]?.wave).toBe(1)
+  })
+
+  it('assigns wave 2 to task in a chain T1 → T2 → T3', async () => {
+    const { assignWaves } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Step 1', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Step 2', dependencies: ['T1'], wave: 0 },
+      { id: 'T3', title: 'Step 3', dependencies: ['T2'], wave: 0 },
+    ]
+    const result = assignWaves(tasks)
+    expect(result[0]?.wave).toBe(0)
+    expect(result[1]?.wave).toBe(1)
+    expect(result[2]?.wave).toBe(2)
+  })
+
+  it('handles circular dependencies without throwing', async () => {
+    const { assignWaves } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'A', dependencies: ['T2'], wave: 0 },
+      { id: 'T2', title: 'B', dependencies: ['T1'], wave: 0 },
+    ]
+    expect(() => assignWaves(tasks)).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// groupIntoWaves unit tests
+// ---------------------------------------------------------------------------
+
+describe('groupIntoWaves', () => {
+  it('groups independent tasks into the same wave', async () => {
+    const { groupIntoWaves } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'Task A', dependencies: [], wave: 0 },
+      { id: 'T2', title: 'Task B', dependencies: [], wave: 0 },
+      { id: 'T3', title: 'Task C', dependencies: ['T1', 'T2'], wave: 1 },
+    ]
+    const waves = groupIntoWaves(tasks)
+    expect(waves).toHaveLength(2)
+    expect(waves[0]?.waveNumber).toBe(0)
+    expect(waves[0]?.tasks).toHaveLength(2)
+    expect(waves[1]?.waveNumber).toBe(1)
+    expect(waves[1]?.tasks).toHaveLength(1)
+  })
+
+  it('returns waves sorted by wave number', async () => {
+    const { groupIntoWaves } = await import('../../../src/commands/plan/handler.js')
+    const tasks = [
+      { id: 'T1', title: 'A', dependencies: [], wave: 2 },
+      { id: 'T2', title: 'B', dependencies: [], wave: 0 },
+      { id: 'T3', title: 'C', dependencies: [], wave: 1 },
+    ]
+    const waves = groupIntoWaves(tasks)
+    expect(waves.map(w => w.waveNumber)).toEqual([0, 1, 2])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// splitWavesIfNeeded unit tests
+// ---------------------------------------------------------------------------
+
+describe('splitWavesIfNeeded', () => {
+  it('keeps wave with ≤2 tasks in a single file', async () => {
+    const { splitWavesIfNeeded } = await import('../../../src/commands/plan/handler.js')
+    const waves = [{
+      waveNumber: 0,
+      tasks: [
+        { id: 'T1', title: 'Task A', dependencies: [], wave: 0 },
+        { id: 'T2', title: 'Task B', dependencies: [], wave: 0 },
+      ],
+    }]
+    const files = splitWavesIfNeeded(waves)
+    expect(files).toHaveLength(1)
+    expect(files[0]?.filename).toBe('plan-wave-1.md')
+    expect(files[0]?.partSuffix).toBe('')
+  })
+
+  it('splits wave with 3 tasks into 2 files (2+1)', async () => {
+    const { splitWavesIfNeeded } = await import('../../../src/commands/plan/handler.js')
+    const waves = [{
+      waveNumber: 0,
+      tasks: [
+        { id: 'T1', title: 'A', dependencies: [], wave: 0 },
+        { id: 'T2', title: 'B', dependencies: [], wave: 0 },
+        { id: 'T3', title: 'C', dependencies: [], wave: 0 },
+      ],
+    }]
+    const files = splitWavesIfNeeded(waves)
+    expect(files).toHaveLength(2)
+    expect(files[0]?.filename).toBe('plan-wave-1.md')
+    expect(files[0]?.tasks).toHaveLength(2)
+    expect(files[1]?.filename).toBe('plan-wave-1b.md')
+    expect(files[1]?.tasks).toHaveLength(1)
+  })
+
+  it('splits wave with 4 tasks into 2 files (2+2)', async () => {
+    const { splitWavesIfNeeded } = await import('../../../src/commands/plan/handler.js')
+    const waves = [{
+      waveNumber: 0,
+      tasks: [
+        { id: 'T1', title: 'A', dependencies: [], wave: 0 },
+        { id: 'T2', title: 'B', dependencies: [], wave: 0 },
+        { id: 'T3', title: 'C', dependencies: [], wave: 0 },
+        { id: 'T4', title: 'D', dependencies: [], wave: 0 },
+      ],
+    }]
+    const files = splitWavesIfNeeded(waves)
+    expect(files).toHaveLength(2)
+    expect(files[0]?.tasks).toHaveLength(2)
+    expect(files[1]?.tasks).toHaveLength(2)
+  })
+
+  it('assigns correct part suffixes for split waves', async () => {
+    const { splitWavesIfNeeded } = await import('../../../src/commands/plan/handler.js')
+    const waves = [{
+      waveNumber: 1,
+      tasks: [
+        { id: 'T1', title: 'A', dependencies: [], wave: 1 },
+        { id: 'T2', title: 'B', dependencies: [], wave: 1 },
+        { id: 'T3', title: 'C', dependencies: [], wave: 1 },
+        { id: 'T4', title: 'D', dependencies: [], wave: 1 },
+        { id: 'T5', title: 'E', dependencies: [], wave: 1 },
+      ],
+    }]
+    const files = splitWavesIfNeeded(waves)
+    expect(files[0]?.partSuffix).toBe('')
+    expect(files[1]?.partSuffix).toBe('b')
+    expect(files[2]?.partSuffix).toBe('c')
+  })
+
+  it('generates one file per wave when all waves are small', async () => {
+    const { splitWavesIfNeeded } = await import('../../../src/commands/plan/handler.js')
+    const waves = [
+      { waveNumber: 0, tasks: [{ id: 'T1', title: 'A', dependencies: [], wave: 0 }] },
+      { waveNumber: 1, tasks: [{ id: 'T2', title: 'B', dependencies: ['T1'], wave: 1 }] },
+    ]
+    const files = splitWavesIfNeeded(waves)
+    expect(files).toHaveLength(2)
+    expect(files[0]?.filename).toBe('plan-wave-1.md')
+    expect(files[1]?.filename).toBe('plan-wave-2.md')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildWaveFileContent unit tests
+// ---------------------------------------------------------------------------
+
+describe('buildWaveFileContent', () => {
+  it('includes wave label in the heading', async () => {
+    const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
+    const research = consolidateResearch(
+      buildStubFindings('tech_stack', '# Spec'),
+      buildStubFindings('codebase', '# Spec'),
+      buildStubFindings('squad_domain', '# Spec'),
+    )
+    const fileSpec = {
+      filename: 'plan-wave-1.md',
+      waveNumber: 0,
+      partSuffix: '',
+      tasks: [{ id: 'T1', title: 'Implement login', dependencies: [], wave: 0 }],
+    }
+    const content = buildWaveFileContent(fileSpec, research, 'login-feature', '2026-03-16T00:00:00.000Z')
+    expect(content).toContain('# Plan — login-feature — Wave 1')
+    expect(content).toContain('[AGENT] Implement login')
+  })
+
+  it('shows dependency note when task has dependencies', async () => {
+    const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
+    const research = consolidateResearch(
+      buildStubFindings('tech_stack', '# Spec'),
+      buildStubFindings('codebase', '# Spec'),
+      buildStubFindings('squad_domain', '# Spec'),
+    )
+    const fileSpec = {
+      filename: 'plan-wave-2.md',
+      waveNumber: 1,
+      partSuffix: '',
+      tasks: [{ id: 'T2', title: 'Deploy service', dependencies: ['T1'], wave: 1 }],
+    }
+    const content = buildWaveFileContent(fileSpec, research, 'my-slug', '2026-03-16T00:00:00.000Z')
+    expect(content).toContain('after: T1')
+  })
+
+  it('uses part suffix in wave label for split waves', async () => {
+    const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
+    const research = consolidateResearch(
+      buildStubFindings('tech_stack', '# Spec'),
+      buildStubFindings('codebase', '# Spec'),
+      buildStubFindings('squad_domain', '# Spec'),
+    )
+    const fileSpec = {
+      filename: 'plan-wave-1b.md',
+      waveNumber: 0,
+      partSuffix: 'b',
+      tasks: [{ id: 'T3', title: 'Extra task', dependencies: [], wave: 0 }],
+    }
+    const content = buildWaveFileContent(fileSpec, research, 'my-slug', '2026-03-16T00:00:00.000Z')
+    expect(content).toContain('Wave 1B')
+  })
+
+  it('includes Key References section', async () => {
+    const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
+    const research = consolidateResearch(
+      buildStubFindings('tech_stack', '# Spec'),
+      buildStubFindings('codebase', '# Spec'),
+      buildStubFindings('squad_domain', '# Spec'),
+    )
+    const fileSpec = {
+      filename: 'plan-wave-1.md',
+      waveNumber: 0,
+      partSuffix: '',
+      tasks: [{ id: 'T1', title: 'Task', dependencies: [], wave: 0 }],
+    }
+    const content = buildWaveFileContent(fileSpec, research, 'slug', '2026-03-16T00:00:00.000Z')
+    expect(content).toContain('## Key References')
+    expect(content).toContain('`TypeScript`')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // buildResearchPayload unit tests
 // ---------------------------------------------------------------------------
 
@@ -249,5 +586,38 @@ describe('plan handler integration', () => {
     const { handler } = await import('../../../src/commands/plan/handler.js')
     const result = await handler.run(['/nonexistent/path/spec.md'])
     expect(result.ok).toBe(false)
+  })
+
+  it('writes wave files when spec has more than MAX_TASKS_PER_PLAN_FILE tasks in a single wave', async () => {
+    // Create a spec with 4 independent tasks (all in wave 0, needs splitting 2+2)
+    const specsDir = join(tmpDir, '.buildpact', 'specs', 'wave-split-feature')
+    await mkdir(specsDir, { recursive: true })
+    const spec = [
+      '# Spec — wave-split-feature',
+      '',
+      '## Acceptance Criteria',
+      '',
+      '- Task Alpha: set up database',
+      '- Task Beta: configure environment',
+      '- Task Gamma: implement API routes',
+      '- Task Delta: add integration tests',
+    ].join('\n')
+    await writeFile(join(specsDir, 'spec.md'), spec, 'utf-8')
+
+    const { handler } = await import('../../../src/commands/plan/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    const planDir = join(tmpDir, '.buildpact', 'plans', 'wave-split-feature')
+    const planContent = await readFile(join(planDir, 'plan.md'), 'utf-8')
+    expect(planContent).toContain('## Wave Plan')
+
+    // Should have written wave files for the split
+    const waveFile1 = await readFile(join(planDir, 'plan-wave-1.md'), 'utf-8')
+    expect(waveFile1).toContain('[AGENT]')
+    expect(waveFile1).toContain('Wave 1')
+
+    const waveFile1b = await readFile(join(planDir, 'plan-wave-1b.md'), 'utf-8')
+    expect(waveFile1b).toContain('Wave 1B')
   })
 })
