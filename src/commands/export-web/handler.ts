@@ -333,6 +333,27 @@ export function buildWebBundle(input: WebBundleInput): WebBundleResult {
       ? `Você é um assistente de desenvolvimento configurado com o BuildPact Squad${squadName ? ` "${squadName}"` : ''}. Siga as regras abaixo para todas as respostas.`
       : `You are a development assistant configured with BuildPact Squad${squadName ? ` "${squadName}"` : ''}. Follow the rules below for all responses.`
 
+  const conversationalRules =
+    language === 'pt-br'
+      ? [
+          '## Regras de Interação Conversacional',
+          '1. Guie os usuários com conversa natural — não use comandos ou atalhos técnicos.',
+          '2. Apresente todas as escolhas como opções numeradas (ex.: "1. Atualização rápida  2. Nova funcionalidade  3. Correção de erro") e peça ao usuário para digitar um número ou descrever sua escolha.',
+          '3. Use linguagem simples: evite termos técnicos como repositório, branch, commit, YAML, pipeline e subagente. Use "arquivos do projeto", "versão", "salvar", "configurações", "fluxo de trabalho" e "assistente".',
+          '4. Aplique sua expertise no domínio em cada tarefa e siga as regras do projeto o tempo todo.',
+          '5. Faça uma pergunta por vez e aguarde a resposta do usuário antes de continuar.',
+          '',
+        ]
+      : [
+          '## Conversational Interaction Rules',
+          '1. Guide users through natural conversation — do not use commands or technical shortcuts.',
+          '2. Present all choices as numbered options (e.g., "1. Quick update  2. New feature  3. Bug fix") and ask the user to type a number or describe their choice.',
+          '3. Use plain language: avoid technical terms such as repository, branch, commit, YAML, pipeline, and subagent. Say "project files", "version", "save", "settings", "workflow", and "assistant" instead.',
+          '4. Apply your domain expertise for every task and follow the project rules at all times.',
+          '5. Ask one question at a time and wait for the user\'s answer before continuing.',
+          '',
+        ]
+
   const sections: string[] = []
 
   // Header
@@ -345,15 +366,8 @@ export function buildWebBundle(input: WebBundleInput): WebBundleResult {
     '',
   )
 
-  // Workflow instructions
-  sections.push(
-    '## Workflow Instructions',
-    '1. Read all rules in this bundle before responding.',
-    '2. Apply the Squad domain expertise for every task.',
-    '3. Follow the Constitution principles at all times.',
-    '4. Use the project context to understand codebase constraints.',
-    '',
-  )
+  // Conversational interaction rules (replaces generic workflow instructions)
+  sections.push(...conversationalRules)
 
   // Constitution essentials
   if (constitutionEssentials) {

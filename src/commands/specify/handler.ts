@@ -346,39 +346,55 @@ export function detectAmbiguities(input: string): Ambiguity[] {
 /**
  * Interactive clarification flow — for each detected ambiguity, present
  * ≥3 numbered options plus "Other (free text)" and collect the user's choice.
+ * Web Bundle mode: uses clack.text with numbered options embedded in the message.
  * Returns undefined if the user cancels at any point.
  */
 export async function runClarificationFlow(
   ambiguities: Ambiguity[],
   i18n: I18nResolver,
+  isWebBundle = false,
 ): Promise<ClarificationAnswer[] | undefined> {
   const answers: ClarificationAnswer[] = []
 
   for (const ambiguity of ambiguities) {
-    const selectOptions = [
-      ...ambiguity.options.map((opt, idx) => ({ label: `${idx + 1}. ${opt}`, value: opt })),
-      { label: i18n.t('cli.specify.clarification_other'), value: OTHER_VALUE },
-    ]
+    if (isWebBundle) {
+      const optionsList = [
+        ...ambiguity.options.map((opt, idx) => `${idx + 1}. ${opt}`),
+        `${ambiguity.options.length + 1}. ${i18n.t('cli.specify.clarification_other')}`,
+      ].join('\n')
 
-    const selected = await clack.select({
-      message: ambiguity.question,
-      options: selectOptions,
-    })
-    if (clack.isCancel(selected)) return undefined
-
-    let answer: string
-    if (selected === OTHER_VALUE) {
-      const freeText = await clack.text({
-        message: i18n.t('cli.specify.clarification_other_prompt'),
-        placeholder: i18n.t('cli.specify.clarification_other_placeholder'),
+      const response = await clack.text({
+        message: `${ambiguity.question}\n${optionsList}`,
+        placeholder: i18n.t('cli.specify.squad_web_bundle_placeholder'),
       })
-      if (clack.isCancel(freeText) || !freeText) return undefined
-      answer = String(freeText)
+      if (clack.isCancel(response) || !response) return undefined
+      answers.push({ phrase: ambiguity.phrase, question: ambiguity.question, answer: String(response) })
     } else {
-      answer = String(selected)
-    }
+      const selectOptions = [
+        ...ambiguity.options.map((opt, idx) => ({ label: `${idx + 1}. ${opt}`, value: opt })),
+        { label: i18n.t('cli.specify.clarification_other'), value: OTHER_VALUE },
+      ]
 
-    answers.push({ phrase: ambiguity.phrase, question: ambiguity.question, answer })
+      const selected = await clack.select({
+        message: ambiguity.question,
+        options: selectOptions,
+      })
+      if (clack.isCancel(selected)) return undefined
+
+      let answer: string
+      if (selected === OTHER_VALUE) {
+        const freeText = await clack.text({
+          message: i18n.t('cli.specify.clarification_other_prompt'),
+          placeholder: i18n.t('cli.specify.clarification_other_placeholder'),
+        })
+        if (clack.isCancel(freeText) || !freeText) return undefined
+        answer = String(freeText)
+      } else {
+        answer = String(selected)
+      }
+
+      answers.push({ phrase: ambiguity.phrase, question: ambiguity.question, answer })
+    }
   }
 
   return answers
@@ -486,55 +502,96 @@ export function scoreMaturity(input: MaturityAssessmentInput): MaturityAssessmen
   return { stage, name: STAGE_NAMES[stage], score: total, justification, isOverride: false }
 }
 
+/** Parse a 1-based numeric string choice into a typed option value. Defaults to first option if out of range. */
+function parseWebBundleChoice<T extends string>(response: string, values: readonly T[]): T {
+  const num = parseInt(response.trim(), 10)
+  if (num >= 1 && num <= values.length) return values[num - 1]!
+  return values[0]!
+}
+
 /**
  * Interactive automation maturity assessment.
  * Asks 3 questions (frequency, predictability, human decisions), scores the result,
  * displays the recommendation, and optionally lets the user override the stage.
+ * Web Bundle mode: uses clack.text with numbered options embedded in messages.
  * Returns undefined if the user cancels at any point.
  */
 export async function assessAutomationMaturity(
   i18n: I18nResolver,
+  isWebBundle = false,
 ): Promise<MaturityAssessmentResult | undefined> {
   clack.log.info(i18n.t('cli.specify.maturity_intro'))
 
-  const frequency = await clack.select<MaturityAssessmentInput['frequency']>({
-    message: i18n.t('cli.specify.maturity_frequency'),
-    options: [
-      { label: 'Multiple times per day', value: 'multiple_daily' },
-      { label: 'Once per day', value: 'daily' },
-      { label: 'Weekly or less frequently', value: 'weekly' },
-      { label: 'Rarely — ad hoc or one-off', value: 'rarely' },
-    ],
-  })
-  if (clack.isCancel(frequency)) return undefined
+  const FREQUENCY_VALUES = ['multiple_daily', 'daily', 'weekly', 'rarely'] as const
+  const PREDICTABILITY_VALUES = ['always_same', 'mostly_predictable', 'varies', 'highly_variable'] as const
+  const HUMAN_DECISIONS_VALUES = ['none_needed', 'minor', 'significant', 'complex_expertise'] as const
 
-  const predictability = await clack.select<MaturityAssessmentInput['predictability']>({
-    message: i18n.t('cli.specify.maturity_predictability'),
-    options: [
-      { label: 'Always the same — identical steps every time', value: 'always_same' },
-      { label: 'Mostly predictable — minor variations', value: 'mostly_predictable' },
-      { label: 'Varies based on context or inputs', value: 'varies' },
-      { label: 'Highly variable — different every time', value: 'highly_variable' },
-    ],
-  })
-  if (clack.isCancel(predictability)) return undefined
+  let frequency: MaturityAssessmentInput['frequency']
+  let predictability: MaturityAssessmentInput['predictability']
+  let humanDecisions: MaturityAssessmentInput['humanDecisions']
 
-  const humanDecisions = await clack.select<MaturityAssessmentInput['humanDecisions']>({
-    message: i18n.t('cli.specify.maturity_human_decisions'),
-    options: [
-      { label: 'No decisions needed — purely mechanical', value: 'none_needed' },
-      { label: 'Minor decisions — routine choices', value: 'minor' },
-      { label: 'Significant judgment required', value: 'significant' },
-      { label: 'Complex expertise — cannot be codified', value: 'complex_expertise' },
-    ],
-  })
-  if (clack.isCancel(humanDecisions)) return undefined
+  if (isWebBundle) {
+    const wbPlaceholder = i18n.t('cli.specify.squad_web_bundle_placeholder')
 
-  const result = scoreMaturity({
-    frequency: frequency as MaturityAssessmentInput['frequency'],
-    predictability: predictability as MaturityAssessmentInput['predictability'],
-    humanDecisions: humanDecisions as MaturityAssessmentInput['humanDecisions'],
-  })
+    const freqResp = await clack.text({
+      message: `${i18n.t('cli.specify.maturity_frequency')}\n1. Multiple times per day\n2. Once per day\n3. Weekly or less frequently\n4. Rarely — ad hoc or one-off`,
+      placeholder: wbPlaceholder,
+    })
+    if (clack.isCancel(freqResp) || !freqResp) return undefined
+    frequency = parseWebBundleChoice(String(freqResp), FREQUENCY_VALUES)
+
+    const predResp = await clack.text({
+      message: `${i18n.t('cli.specify.maturity_predictability')}\n1. Always the same — identical steps every time\n2. Mostly predictable — minor variations\n3. Varies based on context or inputs\n4. Highly variable — different every time`,
+      placeholder: wbPlaceholder,
+    })
+    if (clack.isCancel(predResp) || !predResp) return undefined
+    predictability = parseWebBundleChoice(String(predResp), PREDICTABILITY_VALUES)
+
+    const humanResp = await clack.text({
+      message: `${i18n.t('cli.specify.maturity_human_decisions')}\n1. No decisions needed — purely mechanical\n2. Minor decisions — routine choices\n3. Significant judgment required\n4. Complex expertise — cannot be codified`,
+      placeholder: wbPlaceholder,
+    })
+    if (clack.isCancel(humanResp) || !humanResp) return undefined
+    humanDecisions = parseWebBundleChoice(String(humanResp), HUMAN_DECISIONS_VALUES)
+  } else {
+    const freqSel = await clack.select<MaturityAssessmentInput['frequency']>({
+      message: i18n.t('cli.specify.maturity_frequency'),
+      options: [
+        { label: 'Multiple times per day', value: 'multiple_daily' },
+        { label: 'Once per day', value: 'daily' },
+        { label: 'Weekly or less frequently', value: 'weekly' },
+        { label: 'Rarely — ad hoc or one-off', value: 'rarely' },
+      ],
+    })
+    if (clack.isCancel(freqSel)) return undefined
+    frequency = freqSel as MaturityAssessmentInput['frequency']
+
+    const predSel = await clack.select<MaturityAssessmentInput['predictability']>({
+      message: i18n.t('cli.specify.maturity_predictability'),
+      options: [
+        { label: 'Always the same — identical steps every time', value: 'always_same' },
+        { label: 'Mostly predictable — minor variations', value: 'mostly_predictable' },
+        { label: 'Varies based on context or inputs', value: 'varies' },
+        { label: 'Highly variable — different every time', value: 'highly_variable' },
+      ],
+    })
+    if (clack.isCancel(predSel)) return undefined
+    predictability = predSel as MaturityAssessmentInput['predictability']
+
+    const humanSel = await clack.select<MaturityAssessmentInput['humanDecisions']>({
+      message: i18n.t('cli.specify.maturity_human_decisions'),
+      options: [
+        { label: 'No decisions needed — purely mechanical', value: 'none_needed' },
+        { label: 'Minor decisions — routine choices', value: 'minor' },
+        { label: 'Significant judgment required', value: 'significant' },
+        { label: 'Complex expertise — cannot be codified', value: 'complex_expertise' },
+      ],
+    })
+    if (clack.isCancel(humanSel)) return undefined
+    humanDecisions = humanSel as MaturityAssessmentInput['humanDecisions']
+  }
+
+  const result = scoreMaturity({ frequency, predictability, humanDecisions })
 
   clack.log.success(
     i18n.t('cli.specify.maturity_recommendation', {
@@ -542,6 +599,36 @@ export async function assessAutomationMaturity(
       name: result.name,
     }),
   )
+
+  if (isWebBundle) {
+    const wbPlaceholder = i18n.t('cli.specify.squad_web_bundle_placeholder')
+
+    const overrideResp = await clack.text({
+      message: `${i18n.t('cli.specify.maturity_override_prompt')}\n1. ${i18n.t('cli.specify.maturity_override_keep')}\n2. ${i18n.t('cli.specify.maturity_override_change')}`,
+      placeholder: wbPlaceholder,
+    })
+    if (clack.isCancel(overrideResp) || !overrideResp) return undefined
+    const overrideChoice = parseWebBundleChoice(String(overrideResp), ['keep', 'change'] as const)
+
+    if (overrideChoice === 'change') {
+      const stageResp = await clack.text({
+        message: `${i18n.t('cli.specify.maturity_override_select')}\n1. ${i18n.t('cli.specify.maturity_stage_1')}\n2. ${i18n.t('cli.specify.maturity_stage_2')}\n3. ${i18n.t('cli.specify.maturity_stage_3')}\n4. ${i18n.t('cli.specify.maturity_stage_4')}\n5. ${i18n.t('cli.specify.maturity_stage_5')}`,
+        placeholder: wbPlaceholder,
+      })
+      if (clack.isCancel(stageResp) || !stageResp) return undefined
+      const stageNum = parseInt(String(stageResp).trim(), 10)
+      const chosenStage = (stageNum >= 1 && stageNum <= 5 ? stageNum : result.stage) as MaturityStage
+      return {
+        ...result,
+        stage: chosenStage,
+        name: STAGE_NAMES[chosenStage],
+        isOverride: true,
+        originalStage: result.stage,
+      }
+    }
+
+    return result
+  }
 
   const override = await clack.select<string>({
     message: i18n.t('cli.specify.maturity_override_prompt'),
@@ -905,7 +992,10 @@ export const handler: CommandHandler = {
     const i18n = createI18n(lang)
     const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'cli.jsonl'))
 
-    const experienceLevel = await readExperienceLevel(projectDir)
+    const [experienceLevel, isWebBundle] = await Promise.all([
+      readExperienceLevel(projectDir),
+      readWebBundleMode(projectDir),
+    ])
     const isBeginnerMode = experienceLevel === 'beginner'
 
     // Accept description from CLI args
@@ -949,7 +1039,7 @@ export const handler: CommandHandler = {
       let wizardClarifications: ClarificationAnswer[] | undefined
       if (wizardAmbiguities.length > 0) {
         clack.log.info(i18n.t('cli.specify.ambiguity_detected'))
-        const answers = await runClarificationFlow(wizardAmbiguities, i18n)
+        const answers = await runClarificationFlow(wizardAmbiguities, i18n, isWebBundle)
         if (answers === undefined) {
           clack.outro(i18n.t('cli.specify.cancelled'))
           return ok(undefined)
@@ -1006,7 +1096,7 @@ export const handler: CommandHandler = {
       let clarifications: ClarificationAnswer[] | undefined
       if (ambiguities.length > 0) {
         clack.log.info(i18n.t('cli.specify.ambiguity_detected'))
-        const answers = await runClarificationFlow(ambiguities, i18n)
+        const answers = await runClarificationFlow(ambiguities, i18n, isWebBundle)
         if (answers === undefined) {
           clack.outro(i18n.t('cli.specify.cancelled'))
           return ok(undefined)
@@ -1028,7 +1118,6 @@ export const handler: CommandHandler = {
     // Squad domain-aware question injection
     const activeSquad = await readActiveSquad(projectDir)
     if (activeSquad) {
-      const isWebBundle = await readWebBundleMode(projectDir)
       const squadQuestions = getSquadQuestions(activeSquad.domain)
       if (squadQuestions.length > 0) {
         clack.log.info(i18n.t('cli.specify.squad_active', { name: activeSquad.name, domain: activeSquad.domain }))
@@ -1049,7 +1138,7 @@ export const handler: CommandHandler = {
     }
 
     // Automation Maturity Assessment
-    const maturityResult = await assessAutomationMaturity(i18n)
+    const maturityResult = await assessAutomationMaturity(i18n, isWebBundle)
     if (maturityResult === undefined) {
       clack.outro(i18n.t('cli.specify.cancelled'))
       return ok(undefined)

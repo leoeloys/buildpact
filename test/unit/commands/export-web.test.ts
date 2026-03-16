@@ -385,6 +385,60 @@ describe('buildWebBundle', () => {
     })
     expect(longResult.tokenEstimate).toBeGreaterThan(shortResult.tokenEstimate)
   })
+
+  it('includes conversational interaction rules in EN bundle', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+    })
+    expect(result.content).toContain('Conversational Interaction Rules')
+    expect(result.content).toContain('numbered options')
+    expect(result.content).toContain('repository, branch, commit, YAML, pipeline, and subagent')
+  })
+
+  it('includes conversational rules in Portuguese for pt-br bundle (no English fallback)', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'pt-br',
+    })
+    expect(result.content).toContain('Regras de Interação Conversacional')
+    expect(result.content).toContain('opções numeradas')
+    expect(result.content).toContain('repositório, branch, commit, YAML, pipeline e subagente')
+    // Must not fall back to English rules section
+    expect(result.content).not.toContain('Conversational Interaction Rules')
+  })
+
+  it('instructs AI not to use slash commands in EN bundle', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'en',
+    })
+    expect(result.content).toContain('do not use commands or technical shortcuts')
+  })
+
+  it('instructs AI not to use slash commands in PT-BR bundle (Portuguese)', () => {
+    const result = buildWebBundle({
+      platform: 'claude',
+      squadName: undefined,
+      agents: [],
+      constitutionEssentials: '',
+      projectContext: '',
+      language: 'pt-br',
+    })
+    expect(result.content).toContain('não use comandos ou atalhos técnicos')
+  })
 })
 
 // ---------------------------------------------------------------------------

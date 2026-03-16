@@ -996,20 +996,18 @@ describe('specify handler — Squad domain integration', () => {
     expect(content).toContain('Cloud (AWS / GCP / Azure)')
   })
 
-  it('uses clack.text (not select) in web bundle mode', async () => {
+  it('uses clack.text (not select) in web bundle mode for both squad and maturity', async () => {
     const clack = await import('@clack/prompts')
     vi.mocked(clack.isCancel).mockImplementation(() => false)
-    // web bundle mode uses clack.text for squad questions — answer 3 questions
+    // web bundle mode uses clack.text for squad questions (3) + maturity (3 questions + 1 override = 4)
     vi.mocked(clack.text)
-      .mockResolvedValueOnce('2')
-      .mockResolvedValueOnce('3')
-      .mockResolvedValueOnce('1')
-    // maturity assessment still uses clack.select (4 calls)
-    vi.mocked(clack.select)
-      .mockResolvedValueOnce('weekly')
-      .mockResolvedValueOnce('varies')
-      .mockResolvedValueOnce('significant')
-      .mockResolvedValueOnce('keep')
+      .mockResolvedValueOnce('2')   // squad: tech_stack
+      .mockResolvedValueOnce('3')   // squad: quality_standards
+      .mockResolvedValueOnce('1')   // squad: deployment_target
+      .mockResolvedValueOnce('3')   // maturity: frequency
+      .mockResolvedValueOnce('2')   // maturity: predictability
+      .mockResolvedValueOnce('3')   // maturity: humanDecisions
+      .mockResolvedValueOnce('1')   // maturity: override (keep)
 
     await writeFile(
       join(tmpDir, '.buildpact', 'config.yaml'),
@@ -1029,10 +1027,10 @@ describe('specify handler — Squad domain integration', () => {
     const result = await handler.run(['add', 'product', 'catalog'])
     expect(result.ok).toBe(true)
 
-    // select should have been called for maturity assessment only (4 calls), not squad questions
-    expect(vi.mocked(clack.select)).toHaveBeenCalledTimes(4)
-    // text should have been called (for squad questions in web bundle mode)
-    expect(vi.mocked(clack.text)).toHaveBeenCalled()
+    // select should NOT have been called — all interactions use clack.text in web bundle mode
+    expect(vi.mocked(clack.select)).not.toHaveBeenCalled()
+    // text should have been called 7 times (3 squad + 4 maturity)
+    expect(vi.mocked(clack.text)).toHaveBeenCalledTimes(7)
   })
 })
 
