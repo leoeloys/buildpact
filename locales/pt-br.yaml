@@ -213,6 +213,34 @@ cli:
     squad_fix: "Verifique a estrutura do squad.yaml — campos obrigatórios: name, version, domain, description, initial_level"
     summary_healthy: "Todas as verificações passaram — projeto saudável"
     summary_issues: "{fail_count} problema(s) encontrado(s) — veja acima para correção"
+  squad:
+    create_welcome: "BuildPact Squad — Criar Novo Squad"
+    create_scaffolding: "Criando estrutura do Squad '{name}'..."
+    create_done: "Squad '{name}' criado em {path}"
+    create_next_steps: "Próximo: edite os arquivos em agents/ para definir a anatomia de 6 camadas do Squad, depois execute: npx buildpact squad validate {name}"
+    create_outro: "Squad '{name}' pronto — preencha os templates de agentes para dar vida ao seu Squad"
+    create_failed: "Falha ao criar estrutura do Squad '{name}'"
+    create_cancelled: "Criação do Squad cancelada — nenhuma alteração feita"
+    invalid_name: "Nome de Squad inválido '{name}' — use 2-50 caracteres alfanuméricos minúsculos, hífens ou underscores"
+    add_welcome: "BuildPact Squad — Adicionar Squad da Comunidade"
+    add_missing_name: "Uso: buildpact squad add <caminho-do-squad>"
+    community_warning: "Squads da comunidade não são revisados oficialmente — instale apenas de fontes confiáveis"
+    community_confirm: "Prosseguir com a instalação deste Squad da comunidade?"
+    add_validating_structure: "Validando estrutura do squad..."
+    add_structure_ok: "Validação estrutural aprovada"
+    add_structure_errors: "{count} erro(s) estrutural(is) encontrado(s) — squad não instalado"
+    add_validating_security: "Executando verificações de segurança..."
+    add_security_ok: "Verificações de segurança aprovadas"
+    add_security_errors: "{count} problema(s) de segurança encontrado(s) — squad bloqueado"
+    add_installing: "Instalando squad..."
+    add_done: "Squad instalado em {path}"
+    add_install_failed: "Falha ao instalar Squad"
+    add_outro: "Squad '{name}' instalado — ative-o em .buildpact/config.yaml"
+    add_cancelled: "Adição do Squad cancelada — nenhuma alteração feita"
+    add_blocked: "Squad bloqueado — resolva os problemas de segurança antes de instalar"
+    add_validation_failed: "Verificação de validação falhou"
+    unknown_subcommand: "Subcomando de squad desconhecido: '{subcommand}'"
+    usage_hint: "Uso: buildpact squad create <nome> | buildpact squad add <caminho>"
 
 domain:
   software: "Software"
@@ -234,6 +262,7 @@ error:
   squad:
     not_found: "Squad '{name}' não encontrado em .buildpact/squads/"
     validation_failed: "Validação falhou: {count} erro(s) encontrado(s)"
+    invalid_name: "Nome de Squad inválido '{name}' — use 2-50 caracteres alfanuméricos minúsculos, hífens ou underscores"
   ide:
     config_failed: "Falha ao gerar configuração do IDE {ide}: {reason}"
   file:

@@ -213,6 +213,34 @@ cli:
     squad_fix: "Check squad.yaml structure — required fields: name, version, domain, description, initial_level"
     summary_healthy: "All checks passed — project is healthy"
     summary_issues: "{fail_count} issue(s) found — see above for remediation"
+  squad:
+    create_welcome: "BuildPact Squad — Create New Squad"
+    create_scaffolding: "Scaffolding Squad '{name}'..."
+    create_done: "Squad '{name}' created at {path}"
+    create_next_steps: "Next: edit agents/ files to define your Squad's 6-layer anatomy, then run: npx buildpact squad validate {name}"
+    create_outro: "Squad '{name}' ready — fill in the agent templates to bring your Squad to life"
+    create_failed: "Failed to scaffold Squad '{name}'"
+    create_cancelled: "Squad create cancelled — no changes made"
+    invalid_name: "Invalid Squad name '{name}' — use 2-50 lowercase alphanumeric characters, hyphens, or underscores"
+    add_welcome: "BuildPact Squad — Add Community Squad"
+    add_missing_name: "Usage: buildpact squad add <path-to-squad>"
+    community_warning: "Community Squads are not officially reviewed — only install from sources you trust"
+    community_confirm: "Proceed with installing this community Squad?"
+    add_validating_structure: "Validating squad structure..."
+    add_structure_ok: "Structural validation passed"
+    add_structure_errors: "{count} structural error(s) found — squad not installed"
+    add_validating_security: "Running security checks..."
+    add_security_ok: "Security checks passed"
+    add_security_errors: "{count} security issue(s) found — squad blocked"
+    add_installing: "Installing squad..."
+    add_done: "Squad installed to {path}"
+    add_install_failed: "Failed to install Squad"
+    add_outro: "Squad '{name}' installed — activate it in .buildpact/config.yaml"
+    add_cancelled: "Squad add cancelled — no changes made"
+    add_blocked: "Squad blocked — resolve security issues before installing"
+    add_validation_failed: "Validation check failed"
+    unknown_subcommand: "Unknown squad subcommand: '{subcommand}'"
+    usage_hint: "Usage: buildpact squad create <name> | buildpact squad add <path>"
 
 domain:
   software: "Software"
@@ -234,6 +262,7 @@ error:
   squad:
     not_found: "Squad '{name}' not found in .buildpact/squads/"
     validation_failed: "Validation failed: {count} error(s) found"
+    invalid_name: "Invalid Squad name '{name}' — use 2-50 lowercase alphanumeric characters, hyphens, or underscores"
   ide:
     config_failed: "Failed to generate IDE config for {ide}: {reason}"
   file:
