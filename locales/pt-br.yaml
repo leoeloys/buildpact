@@ -188,6 +188,7 @@ cli:
     cancelled: "Verificação cancelada"
     all_passed: "Todos os {count} critérios passaram — spec VERIFICADA ✅"
     has_failures: "{fail} critério(s) falharam, {pass} passaram — spec NÃO VERIFICADA ❌"
+    fix_plan_written: "Plano de correção gerado para critérios com falha — execute: /bp:execute {path}"
     report_saved: "Relatório de verificação salvo em {path}"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"

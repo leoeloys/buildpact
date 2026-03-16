@@ -42,6 +42,12 @@ export interface UatReport {
   allPassed: boolean
 }
 
+/** Fix plan path result */
+export interface FixPlanResult {
+  fixPlanPath: string
+  fixPlanContent: string
+}
+
 // ---------------------------------------------------------------------------
 // Pure functions — exported for unit testing
 // ---------------------------------------------------------------------------
@@ -146,6 +152,38 @@ export function buildAcGuidance(ac: string): string {
   }
 
   return 'Manually verify that the stated outcome is achieved as described.'
+}
+
+/**
+ * Build a targeted UAT fix plan for failed acceptance criteria.
+ * Generates a plan file executable via /bp:execute targeting only failed ACs.
+ * Pure function — no side effects.
+ */
+export function buildVerifyFixPlan(failedEntries: AcVerificationEntry[], slug: string): string {
+  const lines: string[] = [
+    `# UAT Fix Plan — ${slug}`,
+    '',
+    '> Auto-generated from failed acceptance criteria.',
+    '> Run: /bp:execute .buildpact/specs/' + slug + '/fix',
+    '',
+    '## Tasks',
+    '',
+  ]
+
+  for (const entry of failedEntries) {
+    const noteStr = entry.note ? ` (Note: ${entry.note})` : ''
+    lines.push(`- [ ] [AGENT] Fix: ${entry.ac}${noteStr}`)
+  }
+
+  lines.push('')
+  lines.push('## Key References')
+  lines.push('')
+  lines.push(`- Spec slug: ${slug}`)
+  lines.push(`- Failed criteria: ${failedEntries.length}`)
+  lines.push(`- Generated: ${new Date().toISOString()}`)
+  lines.push('')
+
+  return lines.join('\n')
 }
 
 /**
@@ -306,11 +344,32 @@ export const handler: CommandHandler = {
       outcome: allPassed ? 'success' : 'failure',
     })
 
+    // Generate fix plan for failed ACs
+    let fixPlanPath: string | undefined
+    if (failCount > 0) {
+      const failedEntries = acResults.filter(r => r.status === 'fail')
+      const fixPlanContent = buildVerifyFixPlan(failedEntries, slug)
+      const fixDir = join(reportDir, 'fix')
+      await mkdir(fixDir, { recursive: true })
+      fixPlanPath = join(fixDir, 'plan-uat.md')
+      await writeFile(fixPlanPath, fixPlanContent, 'utf-8')
+
+      await audit.log({
+        action: 'verify.fix_plan_written',
+        agent: 'verify-handler',
+        files: [fixPlanPath],
+        outcome: 'success',
+      })
+    }
+
     // Show summary
     if (allPassed) {
       clack.log.success(i18n.t('cli.verify.all_passed', { count: String(passCount) }))
     } else {
       clack.log.warn(i18n.t('cli.verify.has_failures', { fail: String(failCount), pass: String(passCount) }))
+      if (fixPlanPath) {
+        clack.log.info(i18n.t('cli.verify.fix_plan_written', { path: fixPlanPath }))
+      }
     }
 
     clack.outro(i18n.t('cli.verify.report_saved', { path: reportPath }))

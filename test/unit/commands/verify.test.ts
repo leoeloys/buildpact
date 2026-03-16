@@ -7,8 +7,9 @@ import {
   formatUatReport,
   buildAcGuidance,
   findLatestSpecSlug,
+  buildVerifyFixPlan,
 } from '../../../src/commands/verify/handler.js'
-import type { UatReport } from '../../../src/commands/verify/handler.js'
+import type { UatReport, AcVerificationEntry } from '../../../src/commands/verify/handler.js'
 
 vi.mock('@clack/prompts', () => ({
   intro: vi.fn(),
@@ -235,6 +236,60 @@ describe('findLatestSpecSlug', () => {
 })
 
 // ---------------------------------------------------------------------------
+// buildVerifyFixPlan
+// ---------------------------------------------------------------------------
+
+describe('buildVerifyFixPlan', () => {
+  const makeEntry = (ac: string, note?: string): AcVerificationEntry => ({
+    index: 0,
+    ac,
+    status: 'fail',
+    ...(note !== undefined && { note }),
+  })
+
+  it('includes the slug in the title', () => {
+    const plan = buildVerifyFixPlan([makeEntry('Tests pass')], 'my-feature')
+    expect(plan).toContain('my-feature')
+  })
+
+  it('generates one AGENT task per failed AC', () => {
+    const plan = buildVerifyFixPlan([
+      makeEntry('Tests pass'),
+      makeEntry('Typecheck passes'),
+    ], 'my-feature')
+    const agentLines = plan.split('\n').filter(l => l.includes('[AGENT]'))
+    expect(agentLines).toHaveLength(2)
+  })
+
+  it('includes the AC text in the task line', () => {
+    const plan = buildVerifyFixPlan([makeEntry('Tests pass')], 'my-feature')
+    expect(plan).toContain('Fix: Tests pass')
+  })
+
+  it('appends note to task when note is provided', () => {
+    const plan = buildVerifyFixPlan([makeEntry('Tests pass', 'coverage was 0%')], 'my-feature')
+    expect(plan).toContain('coverage was 0%')
+  })
+
+  it('includes /bp:execute run instruction with correct slug', () => {
+    const plan = buildVerifyFixPlan([makeEntry('Tests pass')], 'feat-xyz')
+    expect(plan).toContain('/bp:execute .buildpact/specs/feat-xyz/fix')
+  })
+
+  it('includes failed criteria count in key references', () => {
+    const plan = buildVerifyFixPlan([makeEntry('A'), makeEntry('B')], 'my-feature')
+    expect(plan).toContain('Failed criteria: 2')
+  })
+
+  it('returns empty tasks section when no failed entries', () => {
+    const plan = buildVerifyFixPlan([], 'my-feature')
+    expect(plan).toContain('## Tasks')
+    // No AGENT lines
+    expect(plan).not.toContain('[AGENT]')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // handler integration tests
 // ---------------------------------------------------------------------------
 
@@ -338,5 +393,52 @@ describe('verify handler', () => {
     const report = await readFile(join(specDir, 'verification-report.md'), 'utf-8')
     expect(report).toContain('missing output X')
     expect(report).toContain('NOT VERIFIED')
+  })
+
+  it('writes fix plan to fix/plan-uat.md when ACs fail', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.select).mockResolvedValue('fail')
+    vi.mocked(clack.text).mockResolvedValue('not implemented')
+
+    const specDir = join(tmpDir, '.buildpact', 'specs', 'fix-plan-spec')
+    await mkdir(specDir, { recursive: true })
+    await writeFile(join(specDir, 'spec.md'), '## Acceptance Criteria\n- Feature works\n- Tests pass\n')
+
+    const origCwd = process.cwd
+    process.cwd = () => tmpDir
+    const { handler } = await import('../../../src/commands/verify/handler.js')
+    await handler.run([])
+    process.cwd = origCwd
+
+    const fixPlan = await readFile(join(specDir, 'fix', 'plan-uat.md'), 'utf-8')
+    expect(fixPlan).toContain('UAT Fix Plan')
+    expect(fixPlan).toContain('[AGENT]')
+    expect(fixPlan).toContain('fix-plan-spec')
+  })
+
+  it('does not write fix plan when all ACs pass', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.select).mockResolvedValue('pass')
+
+    const specDir = join(tmpDir, '.buildpact', 'specs', 'all-pass-spec')
+    await mkdir(specDir, { recursive: true })
+    await writeFile(join(specDir, 'spec.md'), '## Acceptance Criteria\n- Feature works\n')
+
+    const origCwd = process.cwd
+    process.cwd = () => tmpDir
+    const { handler } = await import('../../../src/commands/verify/handler.js')
+    const result = await handler.run([])
+    process.cwd = origCwd
+
+    expect(result.ok).toBe(true)
+    // fix dir should not exist
+    let fixExists = false
+    try {
+      await readFile(join(specDir, 'fix', 'plan-uat.md'), 'utf-8')
+      fixExists = true
+    } catch {
+      fixExists = false
+    }
+    expect(fixExists).toBe(false)
   })
 })
