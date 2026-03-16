@@ -1,0 +1,50 @@
+# Clinic Management Squad — Private Beta
+# Internal use only — Brazilian clinic operations, finance, compliance, and patient flow.
+
+name: clinic-management
+version: "0.1.0"
+domain: health
+description: "Clinic management squad — Operations Manager, Finance Analyst, Compliance Checker, Patient Flow Optimizer"
+initial_level: L2
+
+bundle_disclaimers:
+  pt-br: "Este conteúdo foi gerado por IA e deve ser revisado por profissional de saúde qualificado antes do uso."
+  en: "This content was AI-generated and must be reviewed by a qualified healthcare professional before use."
+
+agents:
+  operations-manager:
+    file: agents/operations-manager.md
+  finance-analyst:
+    file: agents/finance-analyst.md
+  compliance-checker:
+    file: agents/compliance-checker.md
+  patient-flow-optimizer:
+    file: agents/patient-flow-optimizer.md
+
+# Pipeline phase routing — which agent leads each phase
+phases:
+  specify: operations-manager
+  plan: operations-manager
+  execute: patient-flow-optimizer
+  verify: compliance-checker
+
+# Compliance gate — runs on all outputs touching patient data or billing
+compliance:
+  gate: ans-cfm-anvisa
+  regulation: "Lei 8.080/90 + CFM CEM 2019 + ANS RN 566/2022 + LGPD Lei 13.709/18"
+  block_on_violation: true
+
+# Domain-aware questions for clinic specification
+domain_questions:
+  - id: clinic_specialty
+    prompt: "What is the clinic's medical specialty? (e.g., cardiology, dermatology, orthopedics, general practice)"
+    required: true
+  - id: patient_volume
+    prompt: "What is the average daily patient volume and operating hours?"
+    required: true
+  - id: health_plan_agreements
+    prompt: "Which health plans (convênios) does the clinic operate with? (ANS-registered plans, TISS standard)"
+    required: true
+  - id: compliance_context
+    prompt: "Are there any active ANVISA, CFM, or ANS compliance requirements or audits in progress?"
+    required: true
