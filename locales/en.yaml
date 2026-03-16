@@ -112,6 +112,22 @@ cli:
     maturity_stage_3: "Stage 3 — Alias (single command or script)"
     maturity_stage_4: "Stage 4 — Heartbeat Check (automated scheduling / monitoring)"
     maturity_stage_5: "Stage 5 — Full Automation (AI-driven, end-to-end)"
+  execute:
+    welcome: "BuildPact Execute — Wave-Parallel Subagent Execution"
+    no_plan_found: "No plan found in .buildpact/plans/ — run /bp:plan first"
+    no_plan_outro: "Run /bp:plan to create a plan before executing"
+    loading_waves: "Loading wave plan files..."
+    waves_loaded: "{count} wave file(s) loaded"
+    no_wave_files: "No wave plan files found in '{dir}' — run /bp:plan to generate wave files"
+    no_wave_outro: "Run /bp:plan to generate wave-based plan files"
+    plan_summary: "Plan '{slug}' — {waves} wave(s), {tasks} task(s) total"
+    executing: "Executing waves — dispatching subagents in parallel per wave..."
+    wave_failed: "Wave {wave} failed — halting execution"
+    execution_failed: "Execution halted due to wave failure"
+    done_summary: "{succeeded} task(s) succeeded, {failed} failed"
+    wave_summary: "Wave {wave}: {passed}/{total} tasks passed ({failed} failed)"
+    task_failed: "  ✗ {title}: {error}"
+    complete: "Execution complete for plan '{slug}'"
   plan:
     welcome: "BuildPact Plan — Automated Parallel Research"
     research_start: "Spawning research agents — tech stack, codebase, domain constraints..."
@@ -186,5 +202,7 @@ error:
   network:
     remote_fetch_failed: "Failed to fetch remote resource '{url}': {reason}"
   not_implemented: "'{feature}' is not yet implemented. Available in {phase}."
+  execute:
+    wave_failed: "Wave {wave} execution failed — one or more tasks did not complete successfully"
   model:
     failover_exhausted: "All models in failover chain exhausted for phase '{phase}' — no more fallbacks available"

@@ -112,6 +112,22 @@ cli:
     maturity_stage_3: "Estágio 3 — Alias (um único comando ou script)"
     maturity_stage_4: "Estágio 4 — Verificação Periódica (agendamento / monitoramento automatizado)"
     maturity_stage_5: "Estágio 5 — Automação Total (orientado por IA, ponta a ponta)"
+  execute:
+    welcome: "BuildPact Execute — Execução Paralela com Subagentes por Wave"
+    no_plan_found: "Nenhum plano encontrado em .buildpact/plans/ — execute /bp:plan primeiro"
+    no_plan_outro: "Execute /bp:plan para criar um plano antes de executar"
+    loading_waves: "Carregando arquivos de wave..."
+    waves_loaded: "{count} arquivo(s) de wave carregado(s)"
+    no_wave_files: "Nenhum arquivo de wave encontrado em '{dir}' — execute /bp:plan para gerar arquivos de wave"
+    no_wave_outro: "Execute /bp:plan para gerar arquivos de plano em waves"
+    plan_summary: "Plano '{slug}' — {waves} wave(s), {tasks} tarefa(s) no total"
+    executing: "Executando waves — despachando subagentes em paralelo por wave..."
+    wave_failed: "Wave {wave} falhou — execução interrompida"
+    execution_failed: "Execução interrompida devido à falha na wave"
+    done_summary: "{succeeded} tarefa(s) concluída(s), {failed} falhou(aram)"
+    wave_summary: "Wave {wave}: {passed}/{total} tarefas passou(aram) ({failed} falhou(aram))"
+    task_failed: "  ✗ {title}: {error}"
+    complete: "Execução concluída para o plano '{slug}'"
   plan:
     welcome: "BuildPact Plan — Pesquisa Paralela Automatizada"
     research_start: "Iniciando agentes de pesquisa — stack tecnológico, base de código, restrições de domínio..."
@@ -186,5 +202,7 @@ error:
   network:
     remote_fetch_failed: "Falha ao buscar recurso remoto '{url}': {reason}"
   not_implemented: "'{feature}' ainda não está implementado. Disponível em {phase}."
+  execute:
+    wave_failed: "Execução da wave {wave} falhou — uma ou mais tarefas não foram concluídas com sucesso"
   model:
     failover_exhausted: "Todos os modelos na cadeia de failover esgotados para a fase '{phase}' — sem mais alternativas disponíveis"
