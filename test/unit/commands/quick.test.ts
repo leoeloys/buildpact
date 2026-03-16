@@ -12,6 +12,7 @@ vi.mock('@clack/prompts', () => ({
   outro: vi.fn(),
   text: vi.fn(),
   select: vi.fn(),
+  confirm: vi.fn(),
   log: {
     success: vi.fn(),
     warn: vi.fn(),
@@ -392,5 +393,221 @@ describe('quick handler --discuss mode', () => {
       expect.stringContaining('feat(quick): add export csv'),
       expect.any(Object),
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Pure function unit tests for --full mode helpers
+// ---------------------------------------------------------------------------
+
+describe('buildFullPlan', () => {
+  it('generates a plan with task sections, AC coverage, and risk assessment', async () => {
+    const { buildFullPlan } = await import('../../../src/commands/quick/handler.js')
+    const plan = buildFullPlan('add search feature', undefined, { taskId: 'abc-123', type: 'quick' }, '2026-01-01T00:00:00.000Z')
+    expect(plan).toContain('# Full Plan — add search feature')
+    expect(plan).toContain('### Task 1:')
+    expect(plan).toContain('### Task 2:')
+    expect(plan).toContain('Acceptance Criteria Coverage')
+    expect(plan).toContain('Risk Assessment')
+    expect(plan).toContain('Mode: quick (full')
+  })
+
+  it('includes constitution path when provided', async () => {
+    const { buildFullPlan } = await import('../../../src/commands/quick/handler.js')
+    const plan = buildFullPlan('fix login bug', '/project/.buildpact/constitution.md', { taskId: 'def-456', type: 'quick' }, '2026-01-01T00:00:00.000Z')
+    expect(plan).toContain('constitution.md')
+    expect(plan).toContain('validated')
+  })
+})
+
+describe('validatePlanCompleteness', () => {
+  it('returns passed:true when all spec ACs have keywords in plan', async () => {
+    const { validatePlanCompleteness } = await import('../../../src/commands/quick/handler.js')
+    const spec = '## ACs\n- [ ] The change is implemented\n- [ ] Tests pass\n'
+    const plan = 'implement change. tests should pass. covered.'
+    const result = validatePlanCompleteness(spec, plan)
+    expect(result.passed).toBe(true)
+    expect(result.issues).toHaveLength(0)
+    expect(result.perspective).toBe('Completeness')
+  })
+
+  it('returns issues when an AC keyword is absent from plan', async () => {
+    const { validatePlanCompleteness } = await import('../../../src/commands/quick/handler.js')
+    const spec = '## ACs\n- [ ] Implement authentication middleware for JWT tokens\n'
+    const plan = 'some unrelated content here only'
+    const result = validatePlanCompleteness(spec, plan)
+    expect(result.passed).toBe(false)
+    expect(result.issues.length).toBeGreaterThan(0)
+  })
+})
+
+describe('validatePlanFeasibility', () => {
+  it('returns passed:true for a well-structured plan', async () => {
+    const { validatePlanFeasibility } = await import('../../../src/commands/quick/handler.js')
+    const plan = '### Task 1: Do something\n\nRisk Assessment\n\nAcceptance Criteria Coverage\n'
+    const result = validatePlanFeasibility(plan)
+    expect(result.passed).toBe(true)
+    expect(result.issues).toHaveLength(0)
+    expect(result.perspective).toBe('Feasibility')
+  })
+
+  it('returns issues when task sections are missing', async () => {
+    const { validatePlanFeasibility } = await import('../../../src/commands/quick/handler.js')
+    const plan = 'no tasks here at all'
+    const result = validatePlanFeasibility(plan)
+    expect(result.passed).toBe(false)
+    expect(result.issues).toContain('Plan contains no defined tasks')
+  })
+
+  it('returns issues when risk assessment is missing', async () => {
+    const { validatePlanFeasibility } = await import('../../../src/commands/quick/handler.js')
+    const plan = '### Task 1: Implement\n\nAcceptance Criteria Coverage\n'
+    const result = validatePlanFeasibility(plan)
+    expect(result.issues.some((i) => i.includes('Risk Assessment'))).toBe(true)
+  })
+})
+
+describe('verifyAgainstSpec', () => {
+  it('returns all ACs as passed when plan covers their keywords', async () => {
+    const { verifyAgainstSpec } = await import('../../../src/commands/quick/handler.js')
+    const spec = '- [ ] Tests should pass and be green\n- [ ] Change must be implemented\n'
+    const plan = 'ensure tests pass. implement change.'
+    const result = verifyAgainstSpec(spec, plan)
+    expect(result.failed).toHaveLength(0)
+    expect(result.passed.length).toBeGreaterThan(0)
+  })
+
+  it('returns failed ACs when plan does not cover their keywords', async () => {
+    const { verifyAgainstSpec } = await import('../../../src/commands/quick/handler.js')
+    const spec = '- [ ] Deploy application to Kubernetes cluster with monitoring\n'
+    const plan = 'write some code and commit'
+    const result = verifyAgainstSpec(spec, plan)
+    expect(result.failed.length).toBeGreaterThan(0)
+    expect(result.passed).toHaveLength(0)
+  })
+})
+
+describe('buildFixPlan', () => {
+  it('generates fix plan listing failed ACs and fix tasks', async () => {
+    const { buildFixPlan } = await import('../../../src/commands/quick/handler.js')
+    const failedACs = ['Deploy to Kubernetes', 'Add monitoring dashboard']
+    const fixPlan = buildFixPlan('update infra', failedACs, { taskId: 'fix-001' }, '2026-01-01T00:00:00.000Z')
+    expect(fixPlan).toContain('# Fix Plan — update infra')
+    expect(fixPlan).toContain('Deploy to Kubernetes')
+    expect(fixPlan).toContain('Add monitoring dashboard')
+    expect(fixPlan).toContain('### Fix Task 1:')
+    expect(fixPlan).toContain('### Fix Task 2:')
+    expect(fixPlan).toContain('targeted fix for failed verification')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// --full mode handler integration tests
+// ---------------------------------------------------------------------------
+
+describe('quick handler --full mode', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'buildpact-full-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+    vi.clearAllMocks()
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.isCancel).mockImplementation(() => false)
+    // Default: user confirms risk (proceeds with execution)
+    vi.mocked(clack.confirm).mockResolvedValue(true)
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+    vi.unstubAllEnvs()
+  })
+
+  it('generates quick-spec.md with mode "quick (full)" when --full given', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    const result = await handler.run(['--full', 'add', 'user', 'profile'])
+    expect(result.ok).toBe(true)
+
+    const specPath = join(tmpDir, '.buildpact', 'specs', 'add-user-profile', 'quick-spec.md')
+    const content = await readFile(specPath, 'utf-8')
+    expect(content).toContain('add user profile')
+    expect(content).toContain('Mode: quick (full)')
+  })
+
+  it('generates plan.md alongside spec in --full mode', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--full', 'add', 'export', 'button'])
+
+    const planPath = join(tmpDir, '.buildpact', 'specs', 'add-export-button', 'plan.md')
+    const content = await readFile(planPath, 'utf-8')
+    expect(content).toContain('# Full Plan — add export button')
+    expect(content).toContain('### Task 1:')
+    expect(content).toContain('Risk Assessment')
+  })
+
+  it('shows risk confirmation prompt before execution', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+    const clack = await import('@clack/prompts')
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--full', 'fix', 'header', 'layout'])
+
+    expect(vi.mocked(clack.confirm)).toHaveBeenCalledOnce()
+  })
+
+  it('aborts without commit when user declines risk confirm', async () => {
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm).mockResolvedValue(false)
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+    const { execSync } = await import('node:child_process')
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    const result = await handler.run(['--full', 'add', 'risky', 'change'])
+    expect(result.ok).toBe(true)
+
+    // No git commit should happen
+    expect(vi.mocked(execSync)).not.toHaveBeenCalledWith(
+      expect.stringContaining('git commit'),
+      expect.any(Object),
+    )
+  })
+
+  it('commits spec and plan when user confirms in --full mode', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+    const { execSync } = await import('node:child_process')
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--full', 'add', 'notifications'])
+
+    expect(vi.mocked(execSync)).toHaveBeenCalledWith(
+      expect.stringContaining('git add'),
+      expect.any(Object),
+    )
+    expect(vi.mocked(execSync)).toHaveBeenCalledWith(
+      expect.stringContaining('feat(quick): add notifications'),
+      expect.any(Object),
+    )
+  })
+
+  it('does not generate fix-plan.md when all ACs pass verification', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/quick/handler.js')
+    await handler.run(['--full', 'add', 'dark', 'mode'])
+
+    const fixPlanPath = join(tmpDir, '.buildpact', 'specs', 'add-dark-mode', 'fix-plan.md')
+    let fixPlanExists = false
+    try {
+      await readFile(fixPlanPath, 'utf-8')
+      fixPlanExists = true
+    } catch {
+      fixPlanExists = false
+    }
+    // The generated plan covers the built-in ACs, so no fix plan expected
+    expect(fixPlanExists).toBe(false)
   })
 })
