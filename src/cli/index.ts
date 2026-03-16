@@ -14,7 +14,7 @@ import { AuditLogger } from '../foundation/audit.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
 import type { IdeId } from '../foundation/installer.js'
 
-const VERSION = '0.1.0-alpha.3'
+const VERSION = '0.1.0-alpha.4'
 
 async function main(): Promise<void> {
   const [, , command, ...args] = process.argv
@@ -50,16 +50,13 @@ async function main(): Promise<void> {
 }
 
 async function runInstallFlow(projectNameArg?: string): Promise<void> {
-  // Audit logger for install flow — writes to CWD until projectDir is known
-  const auditPath = projectNameArg
-    ? join(resolve(process.cwd(), projectNameArg), '.buildpact', 'audit', 'cli.jsonl')
-    : join(process.cwd(), '.buildpact', 'audit', 'cli.jsonl')
+  const auditPath = join(process.cwd(), '.buildpact', 'audit', 'cli.jsonl')
   const audit = new AuditLogger(auditPath)
 
   await audit.log({ action: 'cli.install.flow_start', agent: 'cli', files: [], outcome: 'success' })
   clack.intro(`BuildPact v${VERSION}`)
 
-  // Step 1: Language selection (first prompt — no default)
+  // Step 1: Language selection
   const langChoice = await clack.select({
     message: 'Select your language / Selecione seu idioma',
     options: [
@@ -74,31 +71,61 @@ async function runInstallFlow(projectNameArg?: string): Promise<void> {
   }
 
   const lang = langChoice as SupportedLanguage
-  await audit.log({ action: 'cli.install.language_selected', agent: 'cli', files: [], outcome: 'success' })
   const i18n = createI18n(lang)
 
-  // Step 2: Project name (if not provided as CLI arg)
-  let projectName = projectNameArg
-  if (!projectName) {
-    const nameInput = await clack.text({
-      message: lang === 'en' ? 'Project name:' : 'Nome do projeto:',
-      placeholder: 'my-project',
-      validate(value) {
-        if (!value || value.trim().length === 0) {
-          return lang === 'en' ? 'Project name is required' : 'Nome do projeto é obrigatório'
-        }
-        if (!/^[a-z0-9-_]+$/i.test(value.trim())) {
-          return lang === 'en'
-            ? 'Use only letters, numbers, hyphens, and underscores'
-            : 'Use apenas letras, números, hífens e underscores'
-        }
-      },
+  // Intro note — explain what will be set up
+  clack.note(i18n.t('cli.install.intro_note'), i18n.t('cli.install.intro_title'))
+
+  await audit.log({ action: 'cli.install.language_selected', agent: 'cli', files: [], outcome: 'success' })
+
+  // Step 2: Initialize here or create new folder?
+  let projectName: string
+  let projectDir: string
+
+  if (!projectNameArg) {
+    const locationChoice = await clack.select({
+      message: i18n.t('cli.install.location_question'),
+      options: [
+        {
+          value: 'here',
+          label: i18n.t('cli.install.location_here'),
+          hint: i18n.t('cli.install.location_here_hint'),
+        },
+        {
+          value: 'new',
+          label: i18n.t('cli.install.location_new'),
+          hint: i18n.t('cli.install.location_new_hint'),
+        },
+      ],
     })
-    if (clack.isCancel(nameInput)) {
-      clack.cancel('Installation cancelled.')
+
+    if (clack.isCancel(locationChoice)) {
+      clack.cancel(i18n.t('cli.install.cancelled'))
       process.exit(0)
     }
-    projectName = (nameInput as string).trim()
+
+    if (locationChoice === 'here') {
+      projectDir = resolve(process.cwd())
+      projectName = projectDir.split('/').pop() ?? 'my-project'
+    } else {
+      const nameInput = await clack.text({
+        message: i18n.t('cli.install.project_name_prompt'),
+        placeholder: 'my-project',
+        validate(value) {
+          if (!value || value.trim().length === 0) return i18n.t('cli.install.project_name_required')
+          if (!/^[a-z0-9-_]+$/i.test(value.trim())) return i18n.t('cli.install.project_name_invalid')
+        },
+      })
+      if (clack.isCancel(nameInput)) {
+        clack.cancel(i18n.t('cli.install.cancelled'))
+        process.exit(0)
+      }
+      projectName = (nameInput as string).trim()
+      projectDir = resolve(process.cwd(), projectName)
+    }
+  } else {
+    projectName = projectNameArg
+    projectDir = resolve(process.cwd(), projectName)
   }
 
   await audit.log({ action: 'cli.install.project_named', agent: 'cli', files: [], outcome: 'success' })
@@ -107,17 +134,17 @@ async function runInstallFlow(projectNameArg?: string): Promise<void> {
   const domain = await clack.select({
     message: i18n.t('cli.install.select_domain'),
     options: [
-      { value: 'software', label: i18n.t('domain.software') },
-      { value: 'marketing', label: i18n.t('domain.marketing') },
-      { value: 'health', label: i18n.t('domain.health') },
-      { value: 'research', label: i18n.t('domain.research') },
-      { value: 'management', label: i18n.t('domain.management') },
-      { value: 'custom', label: i18n.t('domain.custom') },
+      { value: 'software', label: i18n.t('domain.software'), hint: i18n.t('domain.software_hint') },
+      { value: 'marketing', label: i18n.t('domain.marketing'), hint: i18n.t('domain.marketing_hint') },
+      { value: 'health', label: i18n.t('domain.health'), hint: i18n.t('domain.health_hint') },
+      { value: 'research', label: i18n.t('domain.research'), hint: i18n.t('domain.research_hint') },
+      { value: 'management', label: i18n.t('domain.management'), hint: i18n.t('domain.management_hint') },
+      { value: 'custom', label: i18n.t('domain.custom'), hint: i18n.t('domain.custom_hint') },
     ],
   })
 
   if (clack.isCancel(domain)) {
-    clack.cancel('Installation cancelled.')
+    clack.cancel(i18n.t('cli.install.cancelled'))
     process.exit(0)
   }
 
@@ -127,16 +154,16 @@ async function runInstallFlow(projectNameArg?: string): Promise<void> {
   const ideChoices = await clack.multiselect({
     message: i18n.t('cli.install.select_ides'),
     options: [
-      { value: 'claude-code', label: 'Claude Code', hint: 'Anthropic' },
-      { value: 'cursor', label: 'Cursor', hint: 'AI-first editor' },
-      { value: 'gemini', label: 'Gemini CLI', hint: 'Google' },
-      { value: 'codex', label: 'Codex', hint: 'OpenAI' },
+      { value: 'claude-code', label: 'Claude Code', hint: i18n.t('ide.claude_code_hint') },
+      { value: 'cursor', label: 'Cursor', hint: i18n.t('ide.cursor_hint') },
+      { value: 'gemini', label: 'Gemini CLI', hint: i18n.t('ide.gemini_hint') },
+      { value: 'codex', label: 'Codex CLI', hint: i18n.t('ide.codex_hint') },
     ],
     required: true,
   })
 
   if (clack.isCancel(ideChoices)) {
-    clack.cancel('Installation cancelled.')
+    clack.cancel(i18n.t('cli.install.cancelled'))
     process.exit(0)
   }
 
@@ -146,27 +173,27 @@ async function runInstallFlow(projectNameArg?: string): Promise<void> {
   const experience = await clack.select({
     message: i18n.t('cli.install.select_experience'),
     options: [
-      { value: 'beginner', label: i18n.t('experience.beginner') },
-      { value: 'intermediate', label: i18n.t('experience.intermediate') },
-      { value: 'expert', label: i18n.t('experience.expert') },
+      { value: 'beginner', label: i18n.t('experience.beginner'), hint: i18n.t('experience.beginner_hint') },
+      { value: 'intermediate', label: i18n.t('experience.intermediate'), hint: i18n.t('experience.intermediate_hint') },
+      { value: 'expert', label: i18n.t('experience.expert'), hint: i18n.t('experience.expert_hint') },
     ],
   })
 
   if (clack.isCancel(experience)) {
-    clack.cancel('Installation cancelled.')
+    clack.cancel(i18n.t('cli.install.cancelled'))
     process.exit(0)
   }
 
   await audit.log({ action: 'cli.install.experience_selected', agent: 'cli', files: [], outcome: 'success' })
 
-  // Step 6: Optional Squad installation
+  // Step 6: Squad installation
   const installSquad = await clack.confirm({
     message: i18n.t('cli.install.install_squad'),
     initialValue: true,
   })
 
   if (clack.isCancel(installSquad)) {
-    clack.cancel('Installation cancelled.')
+    clack.cancel(i18n.t('cli.install.cancelled'))
     process.exit(0)
   }
 
@@ -174,9 +201,8 @@ async function runInstallFlow(projectNameArg?: string): Promise<void> {
 
   // Run installation
   const spinner = clack.spinner()
-  spinner.start(lang === 'en' ? 'Installing BuildPact...' : 'Instalando BuildPact...')
+  spinner.start(i18n.t('cli.install.installing'))
 
-  const projectDir = resolve(process.cwd(), projectName)
   const result = await install({
     projectName,
     language: lang,
@@ -188,28 +214,28 @@ async function runInstallFlow(projectNameArg?: string): Promise<void> {
   })
 
   if (!result.ok) {
-    spinner.stop(lang === 'en' ? 'Installation failed.' : 'Instalação falhou.')
+    spinner.stop(i18n.t('cli.install.failed'))
     await audit.log({ action: 'cli.install.flow_complete', agent: 'cli', files: [], outcome: 'failure', error: result.error.code })
     console.error(`Error: ${result.error.code}`)
+    if (result.error.cause) console.error(`Cause: ${result.error.cause}`)
     process.exit(1)
   }
 
   await audit.log({ action: 'cli.install.flow_complete', agent: 'cli', files: [], outcome: 'success' })
   spinner.stop(i18n.t('cli.install.success', { project_name: projectName }))
 
-  // Report bundled resources
   if (result.value.bundledResources.length > 0) {
-    clack.note(
-      i18n.t('cli.install.fallback_squad'),
-      lang === 'en' ? 'Offline mode' : 'Modo offline',
-    )
+    clack.note(i18n.t('cli.install.fallback_squad'), i18n.t('cli.install.offline_mode'))
   }
 
-  clack.outro(
-    lang === 'en'
-      ? `Done! Run: cd ${projectName} && buildpact specify`
-      : `Pronto! Execute: cd ${projectName} && buildpact specify`,
+  // Next steps note
+  const isHere = projectDir === resolve(process.cwd())
+  clack.note(
+    i18n.t('cli.install.next_steps', { cd_cmd: isHere ? '' : `cd ${projectName}\n` }),
+    i18n.t('cli.install.next_steps_title'),
   )
+
+  clack.outro(i18n.t('cli.install.outro'))
 }
 
 main().catch((error: unknown) => {
