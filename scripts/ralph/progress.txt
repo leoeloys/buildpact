@@ -30,6 +30,7 @@ Started: 2026-03-15
 - Squad scaffolding: `scaffoldSquad(name, targetDir)` creates 4-tier (T1-T4) agent templates with all 6 layers + voice DNA 5 sections + inline docs + squad.yaml + benchmark/; `validateSquadStructure` validates yaml fields + 6 layers + min 3 examples; `validateSquadSecurity` checks external URLs, executable code, path traversal, prompt injection; `installSquad` copies to .buildpact/squads/<name>/
 - In runAdd tests: use `mockImplementation` not `mockResolvedValueOnce` for confirm/isCancel to avoid queue bleed across tests (clearAllMocks doesn't clear once-queues)
 - Testable time: pass `nowMs = Date.now()` as last param to all time-sensitive pure functions; in tests pass a fixed epoch constant (e.g., `const NOW = 1_700_000_000_000`) for deterministic assertions
+- Hyphenated `CommandId` values (e.g., `'export-web'`) must be quoted in both the type union and the REGISTRY object key: `'export-web': () => import(...)`
 ---
 
 ## Pre-existing completed stories (Epic 1 + Story 2.1)
@@ -625,6 +626,22 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Estatuto do Idoso Art. 15 (priority scheduling for 60+ patients) must appear in both Compliance Checker AND Patient Flow Optimizer — tested independently
   - TISS/TUSS billing standard (ANS) is the key Brazilian health plan billing framework — Finance Analyst references must be explicit for test coverage
   - Brazilian healthcare compliance checklist should use `- [ ]` format to match existing test pattern (count ≥20)
+---
+
+## 2026-03-16 - US-043
+- Implemented `src/commands/export-web/handler.ts` with: `estimateTokens` (4-chars/token heuristic), `checkTokenWarning` (overWarn at 80%, overLimit at 100% of platform limit), `parsePlatform` (claude/chatgpt/gemini from args), `loadConstitutionEssentials` (first 2000 chars of constitution.md), `loadProjectContext` (.buildpact/project-context.md), `readActiveSquadName` (reads active_squad from config.yaml), `loadSquadAgents` (reads + compresses all .md files from squad directory), `buildWebBundle` (assembles full bundle with header, workflow instructions, constitution, context, agents), `handler.run()` (orchestrates loading → building → token warning → file write)
+- Registered `export-web` command in `src/commands/registry.ts`
+- Created `src/commands/export-web/index.ts`
+- Added 8 i18n keys under `cli.export_web.*` in both `locales/en.yaml` and `locales/pt-br.yaml`
+- Created 36 unit tests in `test/unit/commands/export-web.test.ts` covering: estimateTokens (4), checkTokenWarning (4), parsePlatform (6), loadConstitutionEssentials (3), loadProjectContext (2), readActiveSquadName (3), loadSquadAgents (4), buildWebBundle (7), handler integration (3)
+- 1189 tests passing, zero typecheck errors
+- Files changed: `src/commands/export-web/handler.ts` (new), `src/commands/export-web/index.ts` (new), `src/commands/registry.ts`, `locales/en.yaml`, `locales/pt-br.yaml`, `test/unit/commands/export-web.test.ts` (new)
+- **Learnings for future iterations:**
+  - Bundle written to `.buildpact/bundles/web-bundle-<platform>-<timestamp>.txt` — directory created with `mkdir({ recursive: true })`
+  - Token estimate: `Math.ceil(text.length / 4)` — 4-char-per-token heuristic; warning at 80% of platform limit
+  - `loadSquadAgents` uses dynamic `import('node:fs/promises')` for `readdir` — all other imports are static at top of file
+  - Platform limits: claude=180K, chatgpt=128K, gemini=1M — `PLATFORM_TOKEN_LIMITS` map is exported for testability
+  - `CommandId` in registry.ts uses string literal type `'export-web'` (with hyphen) — REGISTRY key must be quoted: `'export-web': () => import(...)`
 ---
 
 ## 2026-03-16 - US-042
