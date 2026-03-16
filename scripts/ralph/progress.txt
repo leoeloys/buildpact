@@ -411,3 +411,19 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - buildVerifyFixPlan is a pure function — handler handles mkdir + writeFile; keeps function unit-testable
   - `AcVerificationEntry` type is now exported (needed for buildVerifyFixPlan tests)
 ---
+
+## 2026-03-16 - US-029
+- Implemented `src/engine/session-feedback.ts` with: `deriveOutcome` (passed/failed/partial from counts), `buildFeedbackEntry` (maps UAT result to FeedbackEntry with capturedAt ISO timestamp), `appendWithFifoCap` (immutable FIFO append, default cap=30), `formatFeedbackForContext` (markdown summary for subagent injection), `loadFeedbackFile` (parses JSON or returns empty), `writeFeedbackFile` (mkdir+writeFile), `loadRecentFeedbacks` (sorted by mtime, takes N newest), `captureSessionFeedback` (end-to-end persist to .buildpact/memory/feedback/<slug>.json)
+- Updated `src/engine/index.ts` to export all 8 new functions + 2 constants
+- Updated `src/commands/verify/handler.ts`: imports `buildFeedbackEntry` and `captureSessionFeedback`, calls them after verification loop to persist feedback, logs `cli.verify.feedback_saved` message
+- Added 1 i18n key `feedback_saved` in en.yaml and pt-br.yaml under `cli.verify`; added `error.feedback.write_failed` in both locales
+- Created 32 unit tests in `test/unit/engine/session-feedback.test.ts` covering all functions including I/O with temp dirs
+- 682 tests passing, zero typecheck errors
+- Files changed: `src/engine/session-feedback.ts` (new), `src/engine/index.ts`, `src/commands/verify/handler.ts`, `locales/en.yaml`, `locales/pt-br.yaml`, `test/unit/engine/session-feedback.test.ts` (new)
+- **Learnings for future iterations:**
+  - Session feedback stored as per-slug JSON file: `.buildpact/memory/feedback/<slug>.json` with `{ slug, entries: FeedbackEntry[] }`
+  - FIFO cap enforced by `appendWithFifoCap`: takes last N after appending — oldest entries drop off the front
+  - `loadRecentFeedbacks` sorts by mtime ascending then slices last N — newest files are last in returned array
+  - `captureSessionFeedback` is safe to call on fresh projects — `loadFeedbackFile` silently returns empty on missing file
+  - `formatFeedbackForContext` returns empty string for empty array — safe to call unconditionally before subagent dispatch
+---
