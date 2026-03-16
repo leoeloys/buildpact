@@ -1,0 +1,122 @@
+{
+  "_comment": "Medical Schema JSON-LD Templates — BuildPact Medical Marketing Squad",
+  "_usage": "Copy the relevant template to your HTML <head> as a <script type='application/ld+json'> block. Replace ALL [PLACEHOLDER] values.",
+
+  "MedicalOrganization": {
+    "@context": "https://schema.org",
+    "@type": "MedicalOrganization",
+    "name": "[CLINIC_NAME]",
+    "url": "[CLINIC_URL]",
+    "logo": "[LOGO_URL]",
+    "telephone": "[PHONE_NUMBER]",
+    "email": "[EMAIL_ADDRESS]",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "[STREET_ADDRESS]",
+      "addressLocality": "[CITY]",
+      "addressRegion": "[STATE_UF]",
+      "postalCode": "[CEP]",
+      "addressCountry": "BR"
+    },
+    "medicalSpecialty": "[MEDICAL_SPECIALTY]",
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "opens": "08:00",
+        "closes": "18:00"
+      }
+    ],
+    "sameAs": [
+      "[GOOGLE_BUSINESS_URL]",
+      "[INSTAGRAM_URL]"
+    ]
+  },
+
+  "Physician": {
+    "@context": "https://schema.org",
+    "@type": "Physician",
+    "name": "[PHYSICIAN_FULL_NAME]",
+    "url": "[PHYSICIAN_PROFILE_URL]",
+    "image": "[PHYSICIAN_PHOTO_URL]",
+    "jobTitle": "[SPECIALTY_TITLE]",
+    "description": "[FACTUAL_BIO_NO_CLAIMS]",
+    "hasCredential": {
+      "@type": "EducationalOccupationalCredential",
+      "credentialCategory": "Medical License",
+      "recognizedBy": {
+        "@type": "Organization",
+        "name": "Conselho Federal de Medicina",
+        "url": "https://www.cfm.org.br"
+      },
+      "identifier": "CRM [UF] [NUMBER]"
+    },
+    "medicalSpecialty": "[MEDICAL_SPECIALTY]",
+    "worksFor": {
+      "@type": "MedicalOrganization",
+      "name": "[CLINIC_NAME]",
+      "url": "[CLINIC_URL]"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "[CITY]",
+      "addressRegion": "[STATE_UF]",
+      "addressCountry": "BR"
+    }
+  },
+
+  "MedicalWebPage": {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    "name": "[PAGE_TITLE]",
+    "url": "[PAGE_URL]",
+    "description": "[PAGE_DESCRIPTION_NO_CLAIMS]",
+    "about": {
+      "@type": "MedicalCondition",
+      "name": "[CONDITION_NAME]"
+    },
+    "author": {
+      "@type": "Physician",
+      "name": "[PHYSICIAN_FULL_NAME]"
+    },
+    "reviewedBy": {
+      "@type": "Physician",
+      "name": "[REVIEWER_PHYSICIAN_NAME]"
+    },
+    "datePublished": "[YYYY-MM-DD]",
+    "dateModified": "[YYYY-MM-DD]",
+    "medicalAudience": {
+      "@type": "MedicalAudience",
+      "audienceType": "Patient"
+    }
+  },
+
+  "FAQPage_Medical": {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "[QUESTION_TEXT]",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "[FACTUAL_ANSWER_NO_CLAIMS]"
+        }
+      }
+    ]
+  },
+
+  "_compliance_notes": {
+    "prohibited": [
+      "Do NOT include guaranteed outcome claims in description fields",
+      "Do NOT use superlatives (melhor, único, mais experiente) in name or description",
+      "Do NOT include patient testimonials in any Schema field",
+      "Do NOT use before/after language in description"
+    ],
+    "required": [
+      "Always include CRM registration number in Physician identifier",
+      "Always use factual, verifiable descriptions only",
+      "Always include dateModified to signal content currency"
+    ]
+  }
+}

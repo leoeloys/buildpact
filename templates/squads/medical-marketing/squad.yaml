@@ -1,0 +1,35 @@
+# Medical Marketing Squad — CFM-Compliant (Private)
+# Internal use only — enforces Brazilian medical advertising regulations.
+
+name: medical-marketing
+version: "0.1.0"
+domain: health
+description: "Medical marketing squad — Strategist, Copywriter, Designer, Analytics — CFM/ANVISA compliant"
+initial_level: L2
+
+bundle_disclaimers:
+  pt-br: "Este conteúdo foi gerado por IA e deve ser revisado por profissional de saúde antes do uso."
+  en: "This content was AI-generated and must be reviewed by a healthcare professional before use."
+
+agents:
+  strategist:
+    file: agents/strategist.md
+  copywriter:
+    file: agents/copywriter.md
+  designer:
+    file: agents/designer.md
+  analytics:
+    file: agents/analytics.md
+
+# Pipeline phase routing — which agent leads each phase
+phases:
+  specify: strategist
+  plan: strategist
+  execute: copywriter
+  verify: analytics
+
+# Compliance gate — runs on all copywriter output
+compliance:
+  gate: cfm-anvisa
+  regulation: "CFM nº 1.974/2011 + ANVISA RDC nº 96/2008"
+  block_on_violation: true
