@@ -495,3 +495,19 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Section extraction: `agentContent.indexOf('## Heuristics')` then `afterHeuristics.search(/^##\s/m)` for next section boundary
   - The VETO: keyword check only triggers when `## Heuristics` layer is present (skipped if layer missing — layer presence is already checked by the 6-layer loop)
 ---
+
+## 2026-03-16 - US-034
+- Added Anti-Patterns min 5 prohibited/required pairs validation to `validateSquadStructure` in `src/engine/squad-scaffolder.ts`
+- Counts ✘ Unicode character occurrences within the Anti-Patterns subsection (up to next `###` heading)
+- Error message: `agents/<file>: Anti-Patterns requires minimum 5 prohibited/required pairs (found N)`
+- Updated `validAgentContent` fixture in `test/unit/engine/squad-scaffolder.test.ts` from 3 pairs to 5 pairs
+- Added 3 new tests: reports error for <5 pairs, passes for exactly 5 pairs, scaffolded templates pass
+- Created `docs/voice-dna-guide.md` — step-by-step guide for all 5 Voice DNA sections with examples
+- Files changed: `src/engine/squad-scaffolder.ts`, `test/unit/engine/squad-scaffolder.test.ts`, `docs/voice-dna-guide.md`
+- **Learnings for future iterations:**
+  - Anti-Patterns section ends at next `###` heading — use `afterAntiPatterns.search(/^###\s/m)` to slice it
+  - ✘ (U+2718) is already used as the prohibited marker in templates — count ✘ occurrences for pair validation
+  - When updating `validAgentContent` shared fixture, all downstream tests using `.some()` still pass since they only check presence of their specific error
+  - docs/ directory already exists at project root — documentation guides go there
+  - Voice DNA validation order in squad-scaffolder.ts: (1) 5-section check → (2) Anti-Patterns min pairs → (3) Examples min 3 → (4) Heuristics min 3 IF/THEN + VETO
+---
