@@ -29,6 +29,15 @@ cli:
     reason_prompt: "Por que você está fazendo essa alteração?"
     reason_placeholder: "ex: Atualizado para alinhar com novos requisitos de conformidade"
     checklist_generated: "Lista de verificação de atualização salva em .buildpact/constitution_update_checklist.md"
+  quick:
+    welcome: "BuildPact Quick — Execução Sem Cerimônia"
+    prompt_description: "Descreva a mudança que você quer fazer"
+    placeholder_description: "ex: Adicionar botão de modo escuro na página de configurações"
+    constitution_validated: "Constituição encontrada — spec inclui caminho da constituição para validação"
+    committed: "Commit realizado: {message}"
+    git_warn: "Não foi possível criar o commit Git — spec salva, faça o commit manualmente se necessário"
+    done: "Quick spec salva em {path} (tipo: {type})"
+    cancelled: "Comando quick cancelado — nenhuma alteração feita"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

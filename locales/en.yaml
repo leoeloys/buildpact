@@ -29,6 +29,15 @@ cli:
     reason_prompt: "Why are you making this change?"
     reason_placeholder: "e.g. Updated to align with new compliance requirements"
     checklist_generated: "Update checklist saved to .buildpact/constitution_update_checklist.md"
+  quick:
+    welcome: "BuildPact Quick — Zero-Ceremony Execution"
+    prompt_description: "Describe the change you want to make"
+    placeholder_description: "e.g. Add dark mode toggle to settings page"
+    constitution_validated: "Constitution found — spec includes constitution path for validation"
+    committed: "Committed: {message}"
+    git_warn: "Could not create Git commit — spec saved, commit manually if needed"
+    done: "Quick spec saved to {path} (type: {type})"
+    cancelled: "Quick command cancelled — no changes made"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"
