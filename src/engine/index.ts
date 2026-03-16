@@ -23,5 +23,13 @@ export {
   createRecoverySession,
   executeRollback,
 } from './recovery.js'
-export { checkBudget } from './budget-guard.js'
+export {
+  checkBudget,
+  readBudgetConfig,
+  readDailySpend,
+  updateDailySpend,
+  writeBudgetLimit,
+  formatCostSummary,
+  STUB_COST_PER_TASK_USD,
+} from './budget-guard.js'
 export { inferCommitType, formatCommitMessage, runAtomicCommit } from './atomic-commit.js'

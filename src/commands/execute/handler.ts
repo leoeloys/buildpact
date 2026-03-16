@@ -25,6 +25,15 @@ import {
   formatWaveVerificationReport,
   buildWaveFixPlan,
 } from '../../engine/wave-verifier.js'
+import {
+  readBudgetConfig,
+  readDailySpend,
+  updateDailySpend,
+  writeBudgetLimit,
+  checkBudget,
+  formatCostSummary,
+  STUB_COST_PER_TASK_USD,
+} from '../../engine/budget-guard.js'
 
 // ---------------------------------------------------------------------------
 // Plan discovery — pure functions exported for unit testing
@@ -233,6 +242,12 @@ export const handler: CommandHandler = {
       clack.log.warn(i18n.t('cli.execute.no_spec_for_verification'))
     }
 
+    // Load budget config and daily spend baseline (FR-705)
+    const budgetConfig = await readBudgetConfig(projectDir)
+    const dailySpendBaseline = await readDailySpend(projectDir)
+    let sessionSpendUsd = 0
+    let phaseSpendUsd = 0
+
     // Execute waves sequentially with goal-backward verification after each wave
     const executeSpinner = clack.spinner()
     executeSpinner.start(i18n.t('cli.execute.executing'))
@@ -242,9 +257,64 @@ export const handler: CommandHandler = {
     let verificationFailed = false
 
     for (const waveTasks of waveGroups) {
+      // Budget guard — check before dispatching any AI calls for this wave (FR-705)
+      const budgetCheck = checkBudget({
+        config: budgetConfig,
+        sessionSpendUsd,
+        phaseSpendUsd,
+        dailySpendUsd: dailySpendBaseline + sessionSpendUsd,
+      })
+      if (budgetCheck.ok && !budgetCheck.value.allowed) {
+        executeSpinner.stop(i18n.t('cli.execute.budget_exceeded', { type: budgetCheck.value.limitType ?? 'unknown', limit: budgetCheck.value.limitUsd.toFixed(2) }))
+        const summary = formatCostSummary({ config: budgetConfig, sessionSpendUsd, phaseSpendUsd, dailySpendUsd: dailySpendBaseline + sessionSpendUsd })
+        clack.log.warn(i18n.t('cli.execute.budget_summary') + '\n' + summary)
+
+        const action = await clack.select({
+          message: i18n.t('cli.execute.budget_action_prompt'),
+          options: [
+            { value: 'increase', label: i18n.t('cli.execute.budget_increase_limit') },
+            { value: 'profile', label: i18n.t('cli.execute.budget_switch_profile') },
+            { value: 'stop', label: i18n.t('cli.execute.budget_stop_preserve') },
+          ],
+        })
+
+        if (clack.isCancel(action) || action === 'stop') {
+          clack.log.warn(i18n.t('cli.execute.budget_stopped'))
+          break
+        }
+
+        if (action === 'increase') {
+          const newLimitRaw = await clack.text({
+            message: i18n.t('cli.execute.budget_limit_prompt'),
+            placeholder: '5.00',
+          })
+          if (!clack.isCancel(newLimitRaw)) {
+            const newLimit = parseFloat(String(newLimitRaw)) || budgetCheck.value.limitUsd * 2
+            await writeBudgetLimit(projectDir, budgetCheck.value.limitType!, newLimit)
+            if (budgetCheck.value.limitType === 'session') budgetConfig.sessionLimitUsd = newLimit
+            else if (budgetCheck.value.limitType === 'phase') budgetConfig.phaseLimitUsd = newLimit
+            else budgetConfig.dailyLimitUsd = newLimit
+            clack.log.success(i18n.t('cli.execute.budget_limit_increased', { limit: newLimit.toFixed(2) }))
+          }
+        } else if (action === 'profile') {
+          // Profile switching stub — budget profile applies cheaper model (full impl in model-profile-manager)
+          budgetConfig.sessionLimitUsd = budgetConfig.sessionLimitUsd > 0 ? budgetConfig.sessionLimitUsd * 2 : 0
+          budgetConfig.phaseLimitUsd = budgetConfig.phaseLimitUsd > 0 ? budgetConfig.phaseLimitUsd * 2 : 0
+          budgetConfig.dailyLimitUsd = budgetConfig.dailyLimitUsd > 0 ? budgetConfig.dailyLimitUsd * 2 : 0
+          clack.log.success(i18n.t('cli.execute.budget_profile_switched'))
+        }
+
+        executeSpinner.start(i18n.t('cli.execute.executing'))
+      }
       const waveNumber = waveTasks[0]?.waveNumber ?? 0
       const waveResult = executeWave(waveTasks)
       waveResults.push(waveResult)
+
+      // Accumulate stub spend for this wave (FR-705)
+      const waveSpend = waveTasks.length * STUB_COST_PER_TASK_USD
+      sessionSpendUsd += waveSpend
+      phaseSpendUsd += waveSpend
+      await updateDailySpend(projectDir, waveSpend)
 
       // Goal-backward verification: always verify ACs when spec is available (FR-751)
       if (specContent) {
