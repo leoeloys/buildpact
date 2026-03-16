@@ -68,3 +68,18 @@ export {
   loadAllDecisions,
   captureDecision,
 } from './decisions-log.js'
+export {
+  inferAgentTier,
+  formatRoleName,
+  formatAgentIndex,
+  createAgentSession,
+  getLoadedAgentIds,
+  releaseAgent,
+  formatLoadedAgentForContext,
+  buildAgentIndex,
+  loadChiefAgent,
+  loadSpecialistAgent,
+  loadAndRegisterAgent,
+  listAvailableAgents,
+  MAX_INDEX_BYTES,
+} from './lazy-agent-loader.js'

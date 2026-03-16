@@ -311,3 +311,6 @@ error:
     write_failed: "Failed to write decision '{id}' to .buildpact/memory/decisions/"
   autonomy:
     store_failed: "Failed to write agent level store to .buildpact/agent-levels.json"
+  agent:
+    load_failed: "Failed to load agent '{path}': {reason}"
+    not_in_index: "Agent '{agentId}' not found in squad '{squad}' index"

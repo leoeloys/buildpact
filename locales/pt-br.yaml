@@ -311,3 +311,6 @@ error:
     write_failed: "Falha ao gravar decisão '{id}' em .buildpact/memory/decisions/"
   autonomy:
     store_failed: "Falha ao gravar store de níveis de agente em .buildpact/agent-levels.json"
+  agent:
+    load_failed: "Falha ao carregar agente '{path}': {reason}"
+    not_in_index: "Agente '{agentId}' não encontrado no índice da squad '{squad}'"
