@@ -9,6 +9,13 @@
 export { buildTaskPayload, validatePayloadSize, serializePayload } from './subagent.js'
 export { loadOrchestratorTemplate, validateOrchestratorFile } from './orchestrator.js'
 export { executeWave } from './wave-executor.js'
-export { recoverSession } from './recovery.js'
+export {
+  selectNextStrategy,
+  isStuckLoop,
+  buildFailureSummary,
+  handleTaskFailure,
+  createRecoverySession,
+  executeRollback,
+} from './recovery.js'
 export { checkBudget } from './budget-guard.js'
 export { inferCommitType, formatCommitMessage, runAtomicCommit } from './atomic-commit.js'

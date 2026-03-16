@@ -192,6 +192,9 @@ experience:
   expert: "Especialista"
 
 error:
+  recovery:
+    session_create_failed: "Falha ao capturar o último commit válido: {reason}"
+    rollback_failed: "Rollback para '{ref}' falhou: {reason}"
   squad:
     not_found: "Squad '{name}' não encontrado em .buildpact/squads/"
     validation_failed: "Validação falhou: {count} erro(s) encontrado(s)"

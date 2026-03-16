@@ -192,6 +192,9 @@ experience:
   expert: "Expert"
 
 error:
+  recovery:
+    session_create_failed: "Failed to capture last good commit: {reason}"
+    rollback_failed: "Rollback to '{ref}' failed: {reason}"
   squad:
     not_found: "Squad '{name}' not found in .buildpact/squads/"
     validation_failed: "Validation failed: {count} error(s) found"
