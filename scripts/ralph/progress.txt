@@ -103,3 +103,35 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Plan verification uses keyword matching on AC text — short words (<5 chars) are filtered, so ACs with only short words will always pass (non-issue for real specs)
   - `buildFullPlan` AC coverage section always covers the 3 built-in quick-spec ACs, so normal --full runs produce no fix-plan
 ---
+
+## 2026-03-16 - US-013
+- Implemented src/commands/specify/handler.ts with: detectImplementationDetails (warns on impl keywords like "function ", "class ", "database schema", etc.), runBeginnerWizard (5 clack.text prompts: persona/goal/motivation/success/constraints), buildSpecContent (generates spec.md with User Story, ACs in Given/When/Then, FRs, NFRs, Assumptions, Constitution Self-Assessment), readExperienceLevel (reads experience: from config.yaml)
+- Updated src/commands/specify/index.ts to re-export from handler.ts
+- Added 18 i18n keys under cli.specify.* in locales/en.yaml and locales/pt-br.yaml
+- Added 18 unit tests in test/unit/commands/specify.test.ts (6 detectImplementationDetails, 5 buildSpecContent, 4 expert handler, 3 beginner handler)
+- Files changed: src/commands/specify/handler.ts (new), src/commands/specify/index.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/specify.test.ts (new)
+- 266 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Beginner mode detected via readExperienceLevel() reading `experience:` field from .buildpact/config.yaml
+  - spec.md filename is always "spec.md" (not "quick-spec.md") — slug comes from goal (beginner) or full description (expert)
+  - Bold markdown in spec content (`**As a**`) means tests must match the bold markers, not plain text
+  - detectImplementationDetails uses case-insensitive substring matching — trailing space in keywords like "function " avoids false positives on "functionality"
+---
+
+## 2026-03-16 - US-014
+- Added Ambiguity interface and AMBIGUITY_PATTERNS (12 patterns: quickly/fast/real-time/easy/simple/secure/scalable/some/several/appropriate/modern/large) to specify/handler.ts
+- Added detectAmbiguities(input: string): Ambiguity[] — case-insensitive substring match, deduped, returns patterns in definition order
+- Added ClarificationAnswer interface and runClarificationFlow(ambiguities, i18n) — iterates ambiguities, uses clack.select with ≥3 numbered options + "__other__" sentinel, falls back to clack.text for free-text; returns undefined on cancel
+- Updated SpecInput interface to include optional clarifications?: ClarificationAnswer[]
+- Updated buildSpecContent to render ## Clarifications markdown table when clarifications are present
+- Updated handler.run() in both beginner and expert branches: detects ambiguities post-input, calls runClarificationFlow if any found, conditionally spreads clarifications into SpecInput using exactOptionalPropertyTypes-safe spread pattern
+- Added 4 i18n keys in en.yaml and pt-br.yaml under cli.specify: ambiguity_detected, clarification_other, clarification_other_prompt, clarification_other_placeholder
+- Added 17 new tests: 6 detectAmbiguities, 5 runClarificationFlow, 3 buildSpecContent, 3 handler integration
+- Files changed: src/commands/specify/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/specify.test.ts
+- 283 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - exactOptionalPropertyTypes: true requires conditional spread `...(val !== undefined && { key: val })` for optional fields — assigning `key: val` where val is `T | undefined` fails even if field is typed as `T?`
+  - __other__ sentinel string for clack.select "Other" option — compare `selected === OTHER_VALUE` before using the value
+  - detectAmbiguities short-circuit on `seen` Set prevents duplicate clarification questions when phrase appears multiple times in input
+  - `clack.select` must be in the vi.mock factory for specify tests — was already there from US-013 setup
+---

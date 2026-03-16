@@ -208,8 +208,8 @@
         "Tests pass"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. detectImplementationDetails warns on implementation keywords. Beginner wizard (5 questions: persona/goal/motivation/success/constraints) generates structured spec.md with User Story, ACs in Given/When/Then, FRs, NFRs, Assumptions, Constitution Self-Assessment. Expert mode accepts NL input from args or TUI. Spec saved to .buildpact/specs/<slug>/spec.md. 18 tests (6 detectImplementationDetails, 5 buildSpecContent, 4 expert handler, 3 beginner handler). 266 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-014",
@@ -224,8 +224,8 @@
         "Tests pass"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. detectAmbiguities() with 12 pattern rules (quickly/fast/real-time/easy/simple/secure/scalable/some/several/appropriate/modern/large). runClarificationFlow() presents ≥3 numbered options + 'Other (free text)' per ambiguity via clack.select/text. Answers embedded in spec.md under '## Clarifications' table. Flow skipped when no ambiguities detected. 283 tests passing, zero typecheck errors."
     },
     {
       "id": "US-015",
