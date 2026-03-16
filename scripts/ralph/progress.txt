@@ -775,6 +775,17 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - CiSummaryReport.checks[0] is always structural-validation and checks[1] is always security-validation — consumers can rely on this order
 ---
 
+## 2026-03-16 - US-051
+- Created docs/decisions/ADR-001-autoResearch-isolation.md following MADR template
+- Documents: problem (experiment loop needs isolation), 3 alternatives (isolated branch / same-branch stash / separate clone), chosen option A (dedicated `optimize/{target-type}/{session-name}/{timestamp}` branch), positive/negative consequences, 4 open questions (cleanup policy, merge guidance, CI integration, concurrent session locking)
+- No code changes — documentation-only story; 1368 tests still passing, zero typecheck errors
+- Files changed: docs/decisions/ADR-001-autoResearch-isolation.md (new)
+- **Learnings for future iterations:**
+  - US-051 has no "Typecheck passes" / "Tests pass" ACs — documentation-only; still run checks to confirm nothing regressed
+  - ADR-001 is referenced by ADR-000 Links section as "(pending)" — creating it closes that reference
+  - Open Questions section in MADR is not part of the template but expected by US-051 ACs — add it after the Links section
+---
+
 ## 2026-03-16 - US-050
 - Created `CONTRIBUTING.md` — bilingual (EN + PT-BR) with 8 numbered steps in each language covering fork/clone, env setup, issue picking, branching, implementation, quality checks, commit convention, and PR opening
 - Created `docs/decisions/TEMPLATE-MADR.md` — MADR ADR template with Status/Context/Drivers/Options/Outcome/Pros-Cons/Links sections

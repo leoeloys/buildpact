@@ -802,8 +802,8 @@
         "Deviations require ADR update and re-approval"
       ],
       "priority": 51,
-      "passes": false,
-      "notes": "Pre-requisite for all other Epic 12 stories"
+      "passes": true,
+      "notes": "Completed. ADR-001-autoResearch-isolation.md with 3 options (isolated branch / same branch stash / separate clone), chosen Option A (isolated Git branch per session: optimize/{target-type}/{session-name}/{timestamp}), 4 open questions, links to ADR-000 and Epic 12 stories."
     },
     {
       "id": "US-052",
