@@ -161,8 +161,8 @@
         "Tests pass"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. handler.ts with inferCommitType/buildQuickSpec/runGit. Args or TUI prompt → spec saved to .buildpact/specs/<slug>/quick-spec.md → git add + git commit type(quick): description. Constitution path injected when available."
     },
     {
       "id": "US-011",
@@ -177,8 +177,8 @@
         "Tests pass"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. gatherDiscussContext() in handler.ts asks 4 questions (scope, risk, done, constraints) via clack.select with an 'other' free-text fallback. Answers embedded in spec under 'Context from Discussion'. 6 new unit tests. 232 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-012",

@@ -4,6 +4,8 @@ Started: 2026-03-15
 
 ## Codebase Patterns
 - ESM `.js` extension on ALL imports: `import { ok, err } from '../contracts/errors.js'`
+- `execSync` from `node:child_process` for git commands — wrap in try/catch returning Result<string>
+- Mock `node:child_process` with `vi.mock('node:child_process', () => ({ execSync: vi.fn(() => '') }))` in tests that touch git
 - `Result<T, CliError>` for all fallible functions — never `throw`
 - `ERROR_CODES.*` constants in `src/contracts/errors.ts` — add new codes here, never inline strings
 - `ok()` / `err()` helpers — never raw `{ ok: true, value }` objects
@@ -52,4 +54,35 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - scanDownstreamArtifacts silently skips missing specs/plans directories — safe to call even on fresh projects
   - When adding a new clack.text prompt inside an existing edit flow, update ALL tests that mock clack.text in that path to add an extra mockResolvedValueOnce for the new prompt
   - writeUpdateChecklist uses mkdir({ recursive: true }) so it's safe even if .buildpact dir doesn't exist
+---
+
+## 2026-03-15 - US-010
+- Implemented src/commands/quick/handler.ts with: inferCommitType (keyword-based conventional-commit type detection), buildQuickSpec (generates minimal spec markdown), runGit (wraps execSync for git add/commit), readLanguage (reused from constitution pattern)
+- Quick flow: description from CLI args or clack.text prompt → resolveConstitutionPath → buildTaskPayload (type: 'quick') → write .buildpact/specs/<slug>/quick-spec.md → git add + git commit with type(quick): description format
+- Updated src/commands/quick/index.ts to re-export from handler.ts
+- Added 9 i18n keys in locales/en.yaml and locales/pt-br.yaml under cli.quick.*
+- Added 15 unit tests in test/unit/commands/quick.test.ts (inferCommitType x6, handler x9)
+- 226 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - `execSync` returns stdout as string when encoding: 'utf-8' is set in options — use stdio: ['pipe','pipe','pipe'] to capture stderr too
+  - git commit message passed as JSON.stringify(message) to handle special chars safely in shell invocation
+  - Mock `node:child_process` with full module mock (not spy) to reliably intercept execSync — spyOn fails for ESM
+  - `inferCommitType` is exported for direct unit testing — pure function with no side effects
+  - `resolveConstitutionPath` returns `string | undefined` — use undefined check before spreading into payload params
+---
+
+## 2026-03-15 - US-011
+- Added `--discuss` mode to `/bp:quick` handler: `gatherDiscussContext(i18n)` iterates 4 questions (scope, risk, done, constraints) using `clack.select` with numbered options. If user selects 'other', a `clack.text` follow-up is shown.
+- Modified `buildQuickSpec` to accept optional `answers?: DiscussAnswer[]` and append "Context from Discussion" section to spec.
+- Exported `DiscussAnswer` interface and `gatherDiscussContext` function from handler.ts.
+- Added 36 i18n keys under `cli.quick.discuss_*` in both EN and PT-BR locales.
+- Added 6 new tests in `describe('quick handler --discuss mode', ...)` — spec generation, answer text reflection, 'other' free-text, cancel, 4-question count, execution flow.
+- Files changed: src/commands/quick/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/quick.test.ts
+- 232 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - `vi.clearAllMocks()` clears call history but NOT implementations in Vitest v4 — use `mockImplementation` (not `mockResolvedValueOnce`) for reliable cross-test mock setups
+  - Pattern for sequenced mock responses: `let idx = 0; vi.mocked(fn).mockImplementation(async () => responses[idx++] ?? fallback)` — immune to clearAllMocks queue-clearing
+  - Always explicitly call `vi.mocked(clack.isCancel).mockImplementation(() => false)` in `beforeEach` for tests involving `gatherDiscussContext` — factory `() => false` may not survive clearAllMocks in all Vitest versions
+  - `clack.select` must be added to the `vi.mock('@clack/prompts')` factory whenever handler uses it
+  - Use `as const` on question arrays for type safety, but be aware `.find()` predicates comparing string literals to string values work fine at runtime
 ---
