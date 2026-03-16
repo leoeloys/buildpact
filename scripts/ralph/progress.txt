@@ -802,3 +802,17 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - Test file for community/governance goes in `test/unit/community/` — a new sibling directory to `commands/`, `engine/`, `foundation/`
   - good-first-issue labels use inline `Scope: X. Effort: <Nhr. Mentor: @Y` in description — tests use regex count on `Scope:` / `Effort:` / `Mentor:` occurrences
 ---
+
+## 2026-03-16 - US-052
+- Implemented src/commands/optimize/handler.ts with: readExperienceLevel (reads experience_level from config.yaml), countFileLines (counts lines for shard guard), buildProgramMd (generates program.md with goal/constraints/experiment directions/ACs), handler (expert-only + shard guard + writes program.md to .buildpact/optimize/<slug>/)
+- Added TARGET_TOO_LARGE and EXPERT_ONLY error codes to src/contracts/errors.ts
+- Updated src/commands/optimize/index.ts to re-export from handler.ts
+- Added 10 i18n keys under cli.optimize.* in both EN and PT-BR locales
+- Created 15 unit tests in test/unit/commands/optimize.test.ts covering: buildProgramMd (5 tests), countFileLines (2 tests), readExperienceLevel (3 tests), handler integration (5 tests)
+- 1383 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - Use `const originalCwd = process.cwd()` outside beforeEach (module-level constant) to avoid undefined when beforeEach fails mid-way — prevents chdir failure in afterEach
+  - `require()` does not work in Vitest ESM context — never use `vi.mocked(require(...))` pattern; use module-level `vi.mock()` factory instead
+  - experience_level stored as `experience_level: "expert"` in .buildpact/config.yaml — same parsing pattern as language
+  - Line count for shard guard: split('\n').length — a 600-line file has split result of 600 elements (last line without newline), so `> MAX_TARGET_LINES` (>600) blocks at 601+; exactly 600 is allowed
+---
