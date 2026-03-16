@@ -10,6 +10,12 @@ export { buildTaskPayload, validatePayloadSize, serializePayload } from './subag
 export { loadOrchestratorTemplate, validateOrchestratorFile } from './orchestrator.js'
 export { executeWave } from './wave-executor.js'
 export {
+  mapAcsToWave,
+  verifyWaveAcs,
+  formatWaveVerificationReport,
+  buildWaveFixPlan,
+} from './wave-verifier.js'
+export {
   selectNextStrategy,
   isStuckLoop,
   buildFailureSummary,

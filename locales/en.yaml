@@ -129,6 +129,10 @@ cli:
     task_failed: "  ✗ {title}: {error}"
     task_committed: "  ✓ Committed: {message}"
     complete: "Execution complete for plan '{slug}'"
+    no_spec_for_verification: "Spec not found — skipping AC verification (run /bp:specify and /bp:plan to enable goal-backward checks)"
+    verification_passed: "Wave {wave}: {count} AC(s) verified ✓"
+    verification_failed: "Wave {wave} verification failed — {count} AC(s) not satisfied"
+    fix_plan_written: "Fix plan written to '{path}' — run /bp:execute {path} to resolve failed criteria"
   plan:
     welcome: "BuildPact Plan — Automated Parallel Research"
     research_start: "Spawning research agents — tech stack, codebase, domain constraints..."

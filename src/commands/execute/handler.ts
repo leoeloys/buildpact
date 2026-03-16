@@ -6,7 +6,7 @@
  */
 
 import * as clack from '@clack/prompts'
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ok, err, ERROR_CODES } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
@@ -17,9 +17,14 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
 import {
   parseWaveTasksFromPlanFile,
-  executeWaves,
+  executeWave,
 } from '../../engine/wave-executor.js'
 import type { WaveTask, WaveExecutionResult } from '../../engine/wave-executor.js'
+import {
+  verifyWaveAcs,
+  formatWaveVerificationReport,
+  buildWaveFixPlan,
+} from '../../engine/wave-verifier.js'
 
 // ---------------------------------------------------------------------------
 // Plan discovery — pure functions exported for unit testing
@@ -134,6 +139,19 @@ export function formatExecutionSummary(results: WaveExecutionResult[], i18n: I18
 // Config reader
 // ---------------------------------------------------------------------------
 
+/**
+ * Load spec content for a plan slug.
+ * Returns undefined if the spec file is not found.
+ */
+async function loadSpecContent(projectDir: string, planSlug: string): Promise<string | undefined> {
+  try {
+    const specPath = join(projectDir, '.buildpact', 'specs', planSlug, 'spec.md')
+    return await readFile(specPath, 'utf-8')
+  } catch {
+    return undefined
+  }
+}
+
 /** Read language from .buildpact/config.yaml, fallback to 'en' */
 async function readLanguage(projectDir: string): Promise<SupportedLanguage> {
   try {
@@ -209,28 +227,102 @@ export const handler: CommandHandler = {
       }),
     )
 
-    // Execute waves sequentially — within each wave, tasks run in parallel
+    // Load spec content for goal-backward AC verification (FR-751)
+    const specContent = await loadSpecContent(projectDir, planSlug)
+    if (!specContent) {
+      clack.log.warn(i18n.t('cli.execute.no_spec_for_verification'))
+    }
+
+    // Execute waves sequentially with goal-backward verification after each wave
     const executeSpinner = clack.spinner()
     executeSpinner.start(i18n.t('cli.execute.executing'))
 
-    const execResult = executeWaves(waveGroups)
+    const waveResults: WaveExecutionResult[] = []
+    let waveExecutionFailed = false
+    let verificationFailed = false
 
-    if (!execResult.ok) {
-      executeSpinner.stop(i18n.t('cli.execute.wave_failed', { wave: execResult.error.params?.['wave'] ?? '?' }))
-      clack.log.error(i18n.t('cli.execute.execution_failed'))
-      return err(execResult.error)
+    for (const waveTasks of waveGroups) {
+      const waveNumber = waveTasks[0]?.waveNumber ?? 0
+      const waveResult = executeWave(waveTasks)
+      waveResults.push(waveResult)
+
+      // Goal-backward verification: always verify ACs when spec is available (FR-751)
+      if (specContent) {
+        const verReport = verifyWaveAcs(specContent, waveResult)
+
+        // Write verification report for every wave (pass or fail)
+        const reportContent = formatWaveVerificationReport(verReport)
+        await writeFile(
+          join(planDir, `verification-wave-${waveNumber + 1}.md`),
+          reportContent,
+          'utf-8',
+        )
+
+        if (!verReport.allPassed) {
+          verificationFailed = true
+
+          // Write targeted fix plan for failed ACs
+          const failedAcs = verReport.acResults.filter(r => !r.passed).map(r => r.ac)
+          const fixPlanContent = buildWaveFixPlan(failedAcs, waveNumber, planSlug)
+          const fixDir = join(planDir, 'fix')
+          await mkdir(fixDir, { recursive: true })
+          await writeFile(join(fixDir, 'plan-wave-1.md'), fixPlanContent, 'utf-8')
+
+          executeSpinner.stop(
+            i18n.t('cli.execute.verification_failed', {
+              wave: String(waveNumber + 1),
+              count: String(verReport.failCount),
+            }),
+          )
+          clack.log.warn(i18n.t('cli.execute.fix_plan_written', { path: fixDir }))
+          break
+        }
+
+        if (!waveResult.allSucceeded) {
+          // Tasks failed but no mapped ACs — still halt execution
+          waveExecutionFailed = true
+          executeSpinner.stop(
+            i18n.t('cli.execute.wave_failed', { wave: String(waveNumber + 1) }),
+          )
+          clack.log.error(i18n.t('cli.execute.execution_failed'))
+          break
+        }
+
+        clack.log.success(
+          i18n.t('cli.execute.verification_passed', {
+            wave: String(waveNumber + 1),
+            count: String(verReport.passCount),
+          }),
+        )
+      } else {
+        // No spec — fall back to task success/failure check
+        if (!waveResult.allSucceeded) {
+          waveExecutionFailed = true
+          executeSpinner.stop(
+            i18n.t('cli.execute.wave_failed', { wave: String(waveNumber + 1) }),
+          )
+          clack.log.error(i18n.t('cli.execute.execution_failed'))
+          break
+        }
+      }
     }
 
-    const waveResults = execResult.value
-    const totalSucceeded = waveResults.reduce((s, w) => s + w.tasks.filter(t => t.success).length, 0)
-    const totalFailed = waveResults.reduce((s, w) => s + w.tasks.filter(t => !t.success).length, 0)
-
-    executeSpinner.stop(
-      i18n.t('cli.execute.done_summary', {
-        succeeded: String(totalSucceeded),
-        failed: String(totalFailed),
-      }),
-    )
+    if (!waveExecutionFailed && !verificationFailed) {
+      const totalSucceeded = waveResults.reduce(
+        (s, w) => s + w.tasks.filter(t => t.success).length,
+        0,
+      )
+      const totalFailed = waveResults.reduce(
+        (s, w) => s + w.tasks.filter(t => !t.success).length,
+        0,
+      )
+      executeSpinner.stop(
+        i18n.t('cli.execute.done_summary', {
+          succeeded: String(totalSucceeded),
+          failed: String(totalFailed),
+        }),
+      )
+    }
 
     // Report per-wave results
     for (const wave of waveResults) {
@@ -246,12 +338,22 @@ export const handler: CommandHandler = {
     }
 
     // Audit
+    const overallOutcome = waveExecutionFailed || verificationFailed ? 'failure' : 'success'
     await audit.log({
       action: 'execute.run',
       agent: 'execute',
       files: [],
-      outcome: totalFailed === 0 ? 'success' : 'failure',
+      outcome: overallOutcome,
     })
+
+    if (waveExecutionFailed) {
+      return err({
+        code: ERROR_CODES.NOT_IMPLEMENTED,
+        i18nKey: 'error.execute.wave_failed',
+        params: {},
+        phase: 'Epic 6',
+      })
+    }
 
     clack.outro(i18n.t('cli.execute.complete', { slug: planSlug }))
     return ok(undefined)

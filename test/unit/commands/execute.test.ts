@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mkdtemp, writeFile, mkdir } from 'node:fs/promises'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mkdtemp, writeFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
@@ -229,5 +229,138 @@ describe('formatExecutionSummary', () => {
     const summary = formatExecutionSummary(results, mockI18n as Parameters<typeof formatExecutionSummary>[1])
     expect(summary).toContain('Wave 1')
     expect(summary).toContain('Wave 2')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// handler.run() — integration tests
+// ---------------------------------------------------------------------------
+
+vi.mock('../../../src/foundation/audit.js', () => ({
+  AuditLogger: class {
+    log = vi.fn().mockResolvedValue(undefined)
+  },
+}))
+
+describe('handler.run() — goal-backward verification', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'bp-exec-integration-test-'))
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+  })
+
+  afterEach(async () => {
+    vi.restoreAllMocks()
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('completes successfully when wave tasks pass and ACs are satisfied', async () => {
+    const planSlug = 'auth-feature'
+    const planDir = join(tmpDir, '.buildpact', 'plans', planSlug)
+    await mkdir(planDir, { recursive: true })
+    const waveContent = [
+      '# Plan — auth-feature — Wave 1',
+      '',
+      '## Tasks',
+      '',
+      '- [ ] [AGENT] Implement authentication module',
+    ].join('\n')
+    await writeFile(join(planDir, 'plan-wave-1.md'), waveContent)
+
+    const specDir = join(tmpDir, '.buildpact', 'specs', planSlug)
+    await mkdir(specDir, { recursive: true })
+    const specContent = [
+      '# Spec — auth-feature',
+      '',
+      '## Acceptance Criteria',
+      '',
+      '- Authentication module works correctly',
+    ].join('\n')
+    await writeFile(join(specDir, 'spec.md'), specContent)
+
+    const { handler } = await import('../../../src/commands/execute/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+  })
+
+  it('writes verification report file after successful wave', async () => {
+    const planSlug = 'verify-feature'
+    const planDir = join(tmpDir, '.buildpact', 'plans', planSlug)
+    await mkdir(planDir, { recursive: true })
+    const waveContent = [
+      '# Plan — verify-feature — Wave 1',
+      '',
+      '## Tasks',
+      '',
+      '- [ ] [AGENT] Implement authentication service module',
+    ].join('\n')
+    await writeFile(join(planDir, 'plan-wave-1.md'), waveContent)
+
+    const specDir = join(tmpDir, '.buildpact', 'specs', planSlug)
+    await mkdir(specDir, { recursive: true })
+    await writeFile(
+      join(specDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Authentication service module works correctly\n',
+    )
+
+    const { handler } = await import('../../../src/commands/execute/handler.js')
+    await handler.run([])
+
+    // Verification report should be written
+    const reportPath = join(planDir, 'verification-wave-1.md')
+    const reportContent = await readFile(reportPath, 'utf-8')
+    expect(reportContent).toContain('Wave 1 Goal-Backward Verification')
+  })
+
+  it('writes fix plan when wave ACs fail due to task failure', async () => {
+    const planSlug = 'fix-plan-feature'
+    const planDir = join(tmpDir, '.buildpact', 'plans', planSlug)
+    await mkdir(planDir, { recursive: true })
+
+    // Create a wave file that will fail (oversized payload causes task failure)
+    const hugeContent = 'x'.repeat(25 * 1024)
+    const waveContent = [
+      '# Plan — fix-plan-feature — Wave 1',
+      '',
+      '## Tasks',
+      '',
+      `- [ ] [AGENT] Implement authentication module`,
+      '',
+      `<!-- ${hugeContent} -->`,
+    ].join('\n')
+    await writeFile(join(planDir, 'plan-wave-1.md'), waveContent)
+
+    const specDir = join(tmpDir, '.buildpact', 'specs', planSlug)
+    await mkdir(specDir, { recursive: true })
+    await writeFile(
+      join(specDir, 'spec.md'),
+      '# Spec\n\n## Acceptance Criteria\n\n- Authentication module must be implemented correctly\n',
+    )
+
+    const { handler } = await import('../../../src/commands/execute/handler.js')
+    await handler.run([])
+
+    // Fix plan should be written under planDir/fix/
+    const fixPlanPath = join(planDir, 'fix', 'plan-wave-1.md')
+    const fixContent = await readFile(fixPlanPath, 'utf-8')
+    expect(fixContent).toContain('# Fix Plan')
+    expect(fixContent).toContain('[AGENT] Fix:')
+  })
+
+  it('returns ok without verification when no spec exists', async () => {
+    const planSlug = 'no-spec-feature'
+    const planDir = join(tmpDir, '.buildpact', 'plans', planSlug)
+    await mkdir(planDir, { recursive: true })
+    await writeFile(
+      join(planDir, 'plan-wave-1.md'),
+      '## Tasks\n\n- [ ] [AGENT] Implement something',
+    )
+
+    // No spec file — should still execute but skip verification
+
+    const { handler } = await import('../../../src/commands/execute/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
   })
 })
