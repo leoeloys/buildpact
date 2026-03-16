@@ -388,3 +388,26 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - clack.log.step() and clack.log.message() need to be in the vi.mock factory for tests to work
   - Verified spec marked with HTML comment `<!-- verified: ... -->` appended to spec.md — non-destructive, preserves original content
 ---
+
+## 2026-03-16 - US-028
+- Implemented automatic fix plan generation in `src/commands/verify/handler.ts`:
+  - Added `buildVerifyFixPlan(failedEntries, slug)` pure function — generates executable plan targeting only failed ACs
+  - Fix plan uses `[AGENT]` task format compatible with `/bp:execute`
+  - Fix plan written to `.buildpact/specs/<slug>/fix/plan-uat.md` when any ACs fail
+  - Handler shows fix plan path via `cli.verify.fix_plan_written` i18n key after failures
+  - No fix plan written when all ACs pass
+- Added 1 i18n key `fix_plan_written` in both en.yaml and pt-br.yaml
+- Added `FixPlanResult` interface export to handler.ts
+- Created 7 unit tests for `buildVerifyFixPlan` + 2 handler integration tests (fix plan written on fail / not written on pass)
+- 650 tests passing, zero typecheck errors
+- Files changed:
+  - `src/commands/verify/handler.ts`
+  - `locales/en.yaml`
+  - `locales/pt-br.yaml`
+  - `test/unit/commands/verify.test.ts`
+- **Learnings for future iterations:**
+  - Fix plan format: `[AGENT] Fix: <ac text> (Note: <note>)` — same `[AGENT]` prefix as wave-verifier's buildWaveFixPlan
+  - Fix plan lives at `<specDir>/fix/plan-uat.md` — user runs `/bp:execute .buildpact/specs/<slug>/fix`
+  - buildVerifyFixPlan is a pure function — handler handles mkdir + writeFile; keeps function unit-testable
+  - `AcVerificationEntry` type is now exported (needed for buildVerifyFixPlan tests)
+---
