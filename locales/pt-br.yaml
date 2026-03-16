@@ -192,6 +192,16 @@ cli:
     report_saved: "Relatório de verificação salvo em {path}"
     feedback_saved: "Feedback da sessão capturado em .buildpact/memory/feedback/{slug}.json"
     lessons_distilled: "Lições destiladas: {count} padrão(ões) salvo(s) em .buildpact/memory/lessons/lessons.json"
+  optimize:
+    welcome: "BuildPact Optimize — Loop de Experimentação AutoResearch"
+    expert_only: "Este comando está disponível apenas para o nível de experiência Expert — atualize experience_level em .buildpact/config.yaml"
+    expert_only_outro: "Defina experience_level como 'expert' em .buildpact/config.yaml para desbloquear /bp:optimize"
+    missing_target: "Nenhum arquivo alvo especificado — uso: /bp:optimize <caminho/para/arquivo>"
+    missing_target_outro: "Forneça um caminho de arquivo alvo, ex: /bp:optimize src/engine/meu-modulo.ts"
+    shard_first: "O alvo '{target}' tem {lines} linhas (máximo {max}) — fragmentar primeiro com /bp:specify e executar /bp:optimize em cada fragmento"
+    shard_first_outro: "Execute /bp:specify para fragmentar arquivos grandes antes de otimizar"
+    program_written: "Arquivo de programa salvo em {path}"
+    done: "Programa AutoResearch pronto — alvo: {target} | programa: {path}"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

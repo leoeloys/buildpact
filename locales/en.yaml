@@ -192,6 +192,16 @@ cli:
     report_saved: "Verification report saved to {path}"
     feedback_saved: "Session feedback captured to .buildpact/memory/feedback/{slug}.json"
     lessons_distilled: "Lessons distilled: {count} pattern(s) saved to .buildpact/memory/lessons/lessons.json"
+  optimize:
+    welcome: "BuildPact Optimize — AutoResearch Experimentation Loop"
+    expert_only: "This command is only available at the Expert experience level — update experience_level in .buildpact/config.yaml"
+    expert_only_outro: "Set experience_level to 'expert' in .buildpact/config.yaml to unlock /bp:optimize"
+    missing_target: "No target file specified — usage: /bp:optimize <path/to/file>"
+    missing_target_outro: "Provide a target file path, e.g. /bp:optimize src/engine/my-module.ts"
+    shard_first: "Target '{target}' has {lines} lines (max {max}) — shard it first with /bp:specify then run /bp:optimize on each shard"
+    shard_first_outro: "Run /bp:specify to shard large files before optimizing"
+    program_written: "Program file saved to {path}"
+    done: "AutoResearch program ready — target: {target} | program: {path}"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"
