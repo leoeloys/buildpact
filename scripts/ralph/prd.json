@@ -866,8 +866,8 @@
         "Tests pass"
       ],
       "priority": 55,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. src/optimize/domain-metrics.ts with SOFTWARE_METRICS (6)/MARKETING_METRICS (4) catalogs, getMetricsForDomain, findMetricById, selectEvaluatorModel (evaluator≠generator), collectSoftwareMetricStub, collectMarketingMetricStub, collectCustomMetric (injectable execFn), computeMetricDelta, classifyMetricDirection, compareMetricSamples, formatMetricChange/TableRow/Report. 52 new tests, 1517 total passing."
     },
     {
       "id": "US-056",

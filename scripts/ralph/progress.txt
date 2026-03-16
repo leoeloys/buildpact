@@ -845,3 +845,26 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - decideRatchet is the key decision function: delegates to shouldCommit (after > before), builds MetricResult inline for formatRatchetCommitMessage
   - All git I/O functions return Result<string, CliError> — never throw; tests mock execFn to throw for error paths
 ---
+
+## 2026-03-16 - US-055
+- Implemented src/optimize/domain-metrics.ts with:
+  - SOFTWARE_METRICS catalog (6): test_pass_rate, bundle_size, lighthouse_score, build_time, coverage, type_check
+  - MARKETING_METRICS catalog (4): readability_score, compliance_pass_rate, keyword_density, cta_clarity
+  - getMetricsForDomain(domain): returns built-in catalog for software/marketing, empty for custom
+  - findMetricById(id): looks up any built-in metric by id
+  - selectEvaluatorModel(generatorModel): returns a DIFFERENT model from known catalog — ensures evaluator ≠ generator for marketing CTA clarity
+  - collectSoftwareMetricStub / collectMarketingMetricStub: Alpha stubs with synthetic values; nowMs injected for testability
+  - collectCustomMetric(config, nowMs, execFn): runs executable via injectable execFn, parses stdout as float, returns Result<MetricSample>
+  - computeMetricDelta / classifyMetricDirection / compareMetricSamples: delta math respecting polarity (higher_is_better / lower_is_better)
+  - formatMetricChange: human-readable "Name: X → Y (+Z) [direction]"
+  - formatMetricTableRow: markdown pipe-delimited row with emoji status
+  - formatMetricReport: full markdown table or placeholder when empty
+- Files changed: src/optimize/domain-metrics.ts (new), test/unit/optimize/domain-metrics.test.ts (new)
+- 52 new tests, 1517 total passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - MetricPolarity ('higher_is_better' | 'lower_is_better') determines whether positive delta = improvement or regression
+  - selectEvaluatorModel uses first model in KNOWN_MODELS that != generator; falls back to index [1] for truly unknown generators
+  - collectCustomMetric: parse with parseFloat + Number.isFinite check; NaN ("not a number"), Infinity, and empty string all fail the guard
+  - ExecFn type alias `(command: string) => string` enables clean injection; tests pass `() => '42.5\n'` without any vi.mock setup
+  - Stub values are synthetic but realistic (test pass rate 95%, coverage 78.5%, etc.) — tests assert value > 0, not exact values, to stay stub-agnostic
+---
