@@ -26,6 +26,9 @@ cli:
     edit_consent_denied: "Constitution edit cancelled — no changes made"
     violation_warning: "Constitution violation [{principle}]: \"{rule}\""
     violation_warning_beginner: "Warning: The output doesn't follow a rule in \"{principle}\": \"{rule}\". Please review."
+    reason_prompt: "Why are you making this change?"
+    reason_placeholder: "e.g. Updated to align with new compliance requirements"
+    checklist_generated: "Update checklist saved to .buildpact/constitution_update_checklist.md"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"

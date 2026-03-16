@@ -26,6 +26,9 @@ cli:
     edit_consent_denied: "Edição da Constituição cancelada — nenhuma alteração feita"
     violation_warning: "Violação da Constituição [{principle}]: \"{rule}\""
     violation_warning_beginner: "Atenção: A saída não segue a regra \"{rule}\" na seção \"{principle}\". Revise antes de aceitar."
+    reason_prompt: "Por que você está fazendo essa alteração?"
+    reason_placeholder: "ex: Atualizado para alinhar com novos requisitos de conformidade"
+    checklist_generated: "Lista de verificação de atualização salva em .buildpact/constitution_update_checklist.md"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"

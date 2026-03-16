@@ -13,6 +13,11 @@ import type { SupportedLanguage } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { loadConstitution, saveConstitution, constitutionExists } from '../../foundation/constitution.js'
+import {
+  diffConstitutionPrinciples,
+  scanDownstreamArtifacts,
+  writeUpdateChecklist,
+} from '../../engine/constitution-versioner.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -308,18 +313,45 @@ export const handler: CommandHandler = {
     if (updated) {
       const projectName = await readProjectName(projectDir)
       const newContent = buildConstitutionContent(projectName, currentSections, today)
+
+      // Ask for a reason before saving (change tracking)
+      const reasonInput = await clack.text({
+        message: i18n.t('cli.constitution.reason_prompt'),
+        placeholder: i18n.t('cli.constitution.reason_placeholder'),
+      })
+      const reason =
+        clack.isCancel(reasonInput) || !reasonInput ? '' : String(reasonInput)
+
       const saveResult = await saveConstitution(projectDir, newContent)
       if (!saveResult.ok) {
         clack.log.error(i18n.t('error.file.write_failed'))
         return saveResult
       }
 
+      // Generate update checklist (US-009)
+      const changes = diffConstitutionPrinciples(loadResult.value, newContent)
+      const changedNames = changes.map((c) => c.name)
+      const artifacts = await scanDownstreamArtifacts(projectDir, changedNames)
+      const checklistResult = await writeUpdateChecklist(projectDir, {
+        generatedAt: new Date().toISOString(),
+        changes,
+        reason,
+        artifacts,
+      })
+
       await audit.log({
         action: 'constitution.update',
         agent: 'constitution',
-        files: ['.buildpact/constitution.md'],
+        files: [
+          '.buildpact/constitution.md',
+          '.buildpact/constitution_update_checklist.md',
+        ],
         outcome: 'success',
       })
+
+      if (checklistResult.ok) {
+        clack.log.success(i18n.t('cli.constitution.checklist_generated'))
+      }
 
       clack.outro(i18n.t('cli.constitution.saved'))
     } else {

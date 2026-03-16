@@ -80,18 +80,63 @@ describe('constitution handler — mode detection', () => {
 
     const clack = await import('@clack/prompts')
     // Edit mode: first confirm is consent (true), then section select, text edit,
-    // and second confirm is "continue editing?" (false)
+    // reason text, and second confirm is "continue editing?" (false)
     vi.mocked(clack.confirm)
       .mockResolvedValueOnce(true)  // consent granted
       .mockResolvedValueOnce(false) // no more edits
     vi.mocked(clack.select).mockResolvedValueOnce('coding_standards')
-    vi.mocked(clack.text).mockResolvedValueOnce('Use TypeScript strict mode with ESM')
+    vi.mocked(clack.text)
+      .mockResolvedValueOnce('Use TypeScript strict mode with ESM') // section edit
+      .mockResolvedValueOnce('Updated for stricter typing')          // reason prompt
 
     vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
 
     const { handler } = await import('../../../src/commands/constitution/handler.js')
     const result = await handler.run([])
     expect(result.ok).toBe(true)
+  })
+
+  it('generates a constitution_update_checklist.md after edit', async () => {
+    const existing = [
+      '# Project Constitution — Test',
+      '',
+      '## Immutable Principles',
+      '',
+      '### Coding Standards',
+      'Use TypeScript',
+      '',
+      '## Domain-Specific Rules',
+      'N/A',
+      '',
+      '## Version History',
+      '| Date | Change | Reason |',
+      '|------|--------|--------|',
+      '| 2024-01-01 | Initial creation | Project setup |',
+      '',
+    ].join('\n')
+    await writeFile(join(tmpDir, '.buildpact', 'constitution.md'), existing, 'utf-8')
+
+    const clack = await import('@clack/prompts')
+    vi.mocked(clack.confirm)
+      .mockResolvedValueOnce(true)  // consent granted
+      .mockResolvedValueOnce(false) // no more edits
+    vi.mocked(clack.select).mockResolvedValueOnce('coding_standards')
+    vi.mocked(clack.text)
+      .mockResolvedValueOnce('Use TypeScript strict mode') // section edit
+      .mockResolvedValueOnce('Stricter coding rules')      // reason prompt
+
+    vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+    const { handler } = await import('../../../src/commands/constitution/handler.js')
+    const result = await handler.run([])
+    expect(result.ok).toBe(true)
+
+    const checklist = await readFile(
+      join(tmpDir, '.buildpact', 'constitution_update_checklist.md'),
+      'utf-8',
+    )
+    expect(checklist).toContain('Constitution Update Checklist')
+    expect(checklist).toContain('Stricter coding rules')
   })
 
   it('returns ok without changes when user denies consent to edit', async () => {
