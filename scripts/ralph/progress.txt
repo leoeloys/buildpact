@@ -3,6 +3,8 @@ Started: 2026-03-15
 ---
 
 ## Codebase Patterns
+- Active Squad loaded via readActiveSquad(projectDir): reads `active_squad` from config.yaml, then loads `.buildpact/squads/<name>/squad.yaml` for domain — returns undefined if 'none' or files missing
+- Web Bundle mode detected via readWebBundleMode(projectDir): looks for `mode: web-bundle` in config.yaml — changes clack.select → clack.text for conversational flows
 - ESM `.js` extension on ALL imports: `import { ok, err } from '../contracts/errors.js'`
 - `execSync` from `node:child_process` for git commands — wrap in try/catch returning Result<string>
 - Mock `node:child_process` with `vi.mock('node:child_process', () => ({ execSync: vi.fn(() => '') }))` in tests that touch git
@@ -134,4 +136,26 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - __other__ sentinel string for clack.select "Other" option — compare `selected === OTHER_VALUE` before using the value
   - detectAmbiguities short-circuit on `seen` Set prevents duplicate clarification questions when phrase appears multiple times in input
   - `clack.select` must be in the vi.mock factory for specify tests — was already there from US-013 setup
+---
+
+## 2026-03-16 - US-015
+- Added Squad domain-aware question flow to specify/handler.ts:
+  - `SquadQuestion` / `SquadConstraintAnswer` / `ActiveSquad` interfaces
+  - `DOMAIN_QUESTIONS` map: 4 domains (software/marketing/health/research), 3 questions each, ≥3 options per question
+  - `getSquadQuestions(domain)` — pure function, case-insensitive, returns [] for unknown domains
+  - `readActiveSquad(projectDir)` — reads `active_squad` from config.yaml + domain from squad.yaml; undefined if none/missing
+  - `readWebBundleMode(projectDir)` — true when config.yaml has `mode: web-bundle`
+  - `runSquadFlow(questions, i18n, isWebBundle)` — CLI mode uses clack.select with numbered options + Other; web bundle mode uses clack.text with numbered list in message
+- Updated `SpecInput` interface: added optional `squadConstraints?: { squadName, domain, answers }`
+- Updated `buildSpecContent`: adds `## Domain Constraints` table when squadConstraints.answers.length > 0
+- Updated `handler.run()`: after main spec gathering, calls readActiveSquad + runSquadFlow and merges answers into specInput before writing
+- Added 2 i18n keys in en.yaml and pt-br.yaml: `cli.specify.squad_active` and `cli.specify.squad_web_bundle_placeholder`
+- Added 22 new tests: 6 getSquadQuestions, 5 readActiveSquad, 3 buildSpecContent, 5 runSquadFlow, 3 handler integration
+- Files changed: src/commands/specify/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/commands/specify.test.ts
+- 305 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - squadConstraints uses `__squad_other__` sentinel (not `__other__`) to avoid collision with clarification flow other sentinel
+  - web bundle mode uses `mode: web-bundle` in config.yaml — separate from `active_squad` — both can be set independently
+  - Test for "skips squad questions when no active squad": verify clack.select not called — covers both ambiguity flow AND squad flow since no ambiguities in test args AND no squad
+  - readActiveSquad silently returns undefined on any file read error — safe to call on fresh projects
 ---

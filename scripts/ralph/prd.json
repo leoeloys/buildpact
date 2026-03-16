@@ -239,8 +239,8 @@
         "Tests pass"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed. readActiveSquad() reads active_squad from config.yaml + squad.yaml domain. getSquadQuestions() maps 4 domains (software/marketing/health/research) to 3 questions each with ≥3 options. runSquadFlow() uses clack.select (CLI) or clack.text (web bundle mode). readWebBundleMode() checks config mode: web-bundle. SpecInput.squadConstraints embedded in spec.md under ## Domain Constraints. 22 new tests. 305 total tests passing, zero typecheck errors."
     },
     {
       "id": "US-016",
