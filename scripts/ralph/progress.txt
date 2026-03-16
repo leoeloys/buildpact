@@ -591,3 +591,20 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - CFM/ANVISA compliance patterns use Portuguese language markers; English text passes as compliant (by design — this squad is for Brazilian market)
   - Squad templates in templates/squads/<name>/ follow the same structure and validation as software squad — reuse software-squad.test.ts as the canonical test pattern for new squads
 ---
+
+## 2026-03-16 - US-040
+- Created Scientific Research Squad at templates/squads/scientific-research/ with 5 agents
+- Agents: research-lead.md, literature-reviewer.md, data-analyst.md, peer-reviewer.md, latex-writer.md
+- Each agent follows the 6-layer anatomy + 5 Voice DNA sections + ≥5 ✘ Anti-Patterns + ≥3 heuristics + VETO + ≥3 examples + handoffs
+- Created templates/prisma-checklist.md (PRISMA 2020 27-item checklist, 27+ checkbox items) 
+- Created templates/statistical-analysis-plan.md (SAP template with sample size, primary/secondary outcomes, missing data, deviations)
+- squad.yaml includes domain_questions for: research_question, study_design, inclusion_exclusion, statistical_approach
+- Created 58 tests in test/unit/engine/scientific-research-squad.test.ts
+- 1056 tests passing, zero typecheck errors
+- Files changed: templates/squads/scientific-research/ (10 new files), test/unit/engine/scientific-research-squad.test.ts
+- **Learnings for future iterations:**
+  - Squad template structure: squad.yaml + agents/ + templates/ + README.md; benchmark/ is optional
+  - Test pattern mirrors medical-marketing-squad.test.ts exactly — 6 test describe blocks: YAML, agents, domain-specific checks, template checks, validateSquadStructure, validateHandoffGraph
+  - database mentions for Literature Reviewer test: need ≥3 database name matches (PubMed, Embase, Cochrane all mentioned in single agent = 3 hits)
+  - SAP template uses checkbox `- [ ]` format — PRISMA checklist items must be ≥20 for test to pass
+---
