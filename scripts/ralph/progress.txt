@@ -816,3 +816,18 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - experience_level stored as `experience_level: "expert"` in .buildpact/config.yaml — same parsing pattern as language
   - Line count for shard guard: split('\n').length — a 600-line file has split result of 600 elements (last line without newline), so `> MAX_TARGET_LINES` (>600) blocks at 601+; exactly 600 is allowed
 ---
+
+## 2026-03-16 - US-053
+- Implemented src/optimize/experiment-loop.ts with: ExperimentBudget/ExperimentSession interfaces, DEFAULT_EXPERIMENT_MS=5m/DEFAULT_SESSION_MS=30m/MAX_SESSION_MS=24h constants, createExperimentSession (clamps to MAX_SESSION_MS), isExperimentBudgetExhausted/isSessionBudgetExhausted (time checks), startNextExperiment/completeExperiment/stopSession/addSessionSpend (immutable session mutations), isCostLimitReached (0=unlimited), formatDurationMs/formatLoopStatus/buildLoopSummary (formatters), parseBudgetFromArgs (--experiment-budget=N --session-budget=N flags, caps at 1440m)
+- Updated src/commands/optimize/handler.ts: added --loop flag support, parseBudgetFromArgs integration, readBudgetConfig integration, session loop with isSessionBudgetExhausted check, isCostLimitReached Budget Guard integration with clack.select (continue/switch/stop), stub Alpha execution (one no_change iteration), buildLoopSummary display
+- Added 14 i18n keys under cli.optimize.loop_* in both EN and PT-BR locales
+- Created test/unit/optimize/experiment-loop.test.ts with 39 tests covering all pure functions
+- Files changed: src/optimize/experiment-loop.ts (new), src/commands/optimize/handler.ts, locales/en.yaml, locales/pt-br.yaml, test/unit/optimize/experiment-loop.test.ts (new)
+- 1422 tests passing, zero typecheck errors
+- **Learnings for future iterations:**
+  - src/optimize/ is a separate module directory (not src/engine/) — US-054 ratchet.ts should also go here per the AC spec ("Independent TypeScript module at src/optimize/ratchet.ts")
+  - Test directory for src/optimize/ goes in test/unit/optimize/ — needs mkdir first (no auto-creation)
+  - Testable time injection pattern: pass nowMs as last param to all time-sensitive functions — use const NOW = 1_700_000_000_000 in tests
+  - parseBudgetFromArgs: use parseInt + Math.min(val, 1440) to cap session budget — regex match against /^--experiment-budget=(\d+)$/
+  - Budget Guard integration in loop: isCostLimitReached(session.sessionSpendUsd, budgetConfig.sessionLimitUsd) — 0 means unlimited
+---
