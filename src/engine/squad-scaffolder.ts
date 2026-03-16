@@ -479,6 +479,52 @@ export async function validateSquadSecurity(squadDir: string): Promise<Result<Va
 }
 
 /**
+ * Validate handoff graph for all agents in a Squad directory.
+ * Checks that each agent's Handoffs section contains at least one valid entry (← or →).
+ */
+export async function validateHandoffGraph(squadDir: string): Promise<Result<ValidationResult>> {
+  const errors: string[] = []
+
+  const agentsDir = join(squadDir, 'agents')
+  let agentFiles: string[] = []
+  try {
+    const entries = await readdir(agentsDir)
+    agentFiles = entries.filter(f => f.endsWith('.md'))
+  } catch {
+    // No agents dir — structural validation will catch this
+    return ok({ errors })
+  }
+
+  for (const agentFile of agentFiles) {
+    const agentPath = join(agentsDir, agentFile)
+    let agentContent = ''
+    try {
+      agentContent = await readFile(agentPath, 'utf-8')
+    } catch {
+      continue
+    }
+
+    const handoffsStart = agentContent.indexOf('## Handoffs')
+    if (handoffsStart === -1) {
+      // Missing layer — structural validation will catch this
+      continue
+    }
+
+    const afterHandoffs = agentContent.slice(handoffsStart + '## Handoffs'.length)
+    const nextSectionIdx = afterHandoffs.search(/^##\s/m)
+    const handoffsContent = nextSectionIdx === -1 ? afterHandoffs : afterHandoffs.slice(0, nextSectionIdx)
+
+    // Check for at least one valid handoff entry: "- ←" or "- →"
+    const handoffEntries = handoffsContent.match(/^-\s+[←→]/m)
+    if (!handoffEntries) {
+      errors.push(`agents/${agentFile}: Handoffs section has no valid entries — add at least one "- ←" or "- →" entry`)
+    }
+  }
+
+  return ok({ errors })
+}
+
+/**
  * Install a Squad from sourceDir into `projectDir/.buildpact/squads/<name>`.
  */
 export async function installSquad(sourceDir: string, projectDir: string): Promise<Result<string>> {

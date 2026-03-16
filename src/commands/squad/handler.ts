@@ -17,6 +17,7 @@ import {
   scaffoldSquad,
   validateSquadStructure,
   validateSquadSecurity,
+  validateHandoffGraph,
   installSquad,
 } from '../../engine/squad-scaffolder.js'
 
@@ -269,6 +270,153 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
 }
 
 // ---------------------------------------------------------------------------
+// Sub-command: validate
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle `buildpact squad validate <path> [--community]`.
+ * Runs comprehensive structural and security validation with a detailed PASS/FAIL report.
+ */
+export async function runValidate(args: string[], projectDir: string): Promise<Result<undefined>> {
+  const lang = await readLanguage(projectDir)
+  const i18n = createI18n(lang)
+  const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'squad.jsonl'))
+
+  const isCommunity = args.includes('--community')
+  const pathArgs = args.filter(a => !a.startsWith('--'))
+
+  clack.intro(i18n.t('cli.squad.validate_welcome'))
+
+  const rawPath = pathArgs[0]
+  if (!rawPath || rawPath.trim().length === 0) {
+    clack.log.error(i18n.t('cli.squad.validate_missing_path'))
+    clack.outro(i18n.t('cli.squad.validate_cancelled'))
+    return err({
+      code: ERROR_CODES.SQUAD_NOT_FOUND,
+      i18nKey: 'error.squad.not_found',
+      params: { name: rawPath ?? '(none)' },
+    })
+  }
+
+  const squadDir = resolve(rawPath)
+
+  await audit.log({
+    action: 'squad.validate.start',
+    agent: 'squad-command',
+    files: [squadDir],
+    outcome: 'success',
+  })
+
+  const spinner = clack.spinner()
+
+  // --- Structural validation ---
+  spinner.start(i18n.t('cli.squad.validate_checking_structure'))
+  const structureResult = await validateSquadStructure(squadDir)
+  if (!structureResult.ok) {
+    spinner.stop(i18n.t('cli.squad.validate_check_failed'))
+    clack.outro(i18n.t('cli.squad.validate_cancelled'))
+    return err(structureResult.error)
+  }
+  spinner.stop(i18n.t('cli.squad.validate_structure_done'))
+
+  const structErrors = structureResult.value.errors
+  if (structErrors.length === 0) {
+    clack.log.success(i18n.t('cli.squad.validate_structure_pass'))
+  } else {
+    clack.log.error(i18n.t('cli.squad.validate_structure_fail', { count: String(structErrors.length) }))
+    for (const e of structErrors) {
+      clack.log.error(`  ✗ ${e}`)
+    }
+  }
+
+  // --- Handoff graph validation ---
+  spinner.start(i18n.t('cli.squad.validate_checking_handoffs'))
+  const handoffResult = await validateHandoffGraph(squadDir)
+  if (handoffResult.ok) {
+    spinner.stop(i18n.t('cli.squad.validate_handoffs_done'))
+    const handoffErrors = handoffResult.value.errors
+    if (handoffErrors.length === 0) {
+      clack.log.success(i18n.t('cli.squad.validate_handoffs_pass'))
+    } else {
+      clack.log.warn(i18n.t('cli.squad.validate_handoffs_fail', { count: String(handoffErrors.length) }))
+      for (const e of handoffErrors) {
+        clack.log.warn(`  ⚠ ${e}`)
+      }
+    }
+  } else {
+    spinner.stop(i18n.t('cli.squad.validate_check_failed'))
+  }
+
+  const handoffErrors = handoffResult.ok ? handoffResult.value.errors : []
+
+  // --- Security validation (community squads only) ---
+  let securityErrors: string[] = []
+  if (isCommunity) {
+    spinner.start(i18n.t('cli.squad.validate_checking_security'))
+    const securityResult = await validateSquadSecurity(squadDir)
+    if (securityResult.ok) {
+      spinner.stop(i18n.t('cli.squad.validate_security_done'))
+      securityErrors = securityResult.value.errors
+      if (securityErrors.length === 0) {
+        clack.log.success(i18n.t('cli.squad.validate_security_pass'))
+      } else {
+        clack.log.error(i18n.t('cli.squad.validate_security_fail', { count: String(securityErrors.length) }))
+        for (const e of securityErrors) {
+          clack.log.error(`  ✗ ${e}`)
+        }
+      }
+    } else {
+      spinner.stop(i18n.t('cli.squad.validate_check_failed'))
+    }
+  }
+
+  // --- Final summary ---
+  const totalErrors = structErrors.length + handoffErrors.length + securityErrors.length
+
+  if (totalErrors === 0) {
+    await audit.log({
+      action: 'squad.validate.complete',
+      agent: 'squad-command',
+      files: [squadDir],
+      outcome: 'success',
+    })
+    clack.outro(i18n.t('cli.squad.validate_pass'))
+    return ok(undefined)
+  }
+
+  // Community squads blocked if security issues exist
+  if (isCommunity && securityErrors.length > 0) {
+    await audit.log({
+      action: 'squad.validate.blocked',
+      agent: 'squad-command',
+      files: [],
+      outcome: 'failure',
+      error: `${securityErrors.length} security issue(s)`,
+    })
+    clack.outro(i18n.t('cli.squad.validate_blocked'))
+    return err({
+      code: ERROR_CODES.SQUAD_VALIDATION_FAILED,
+      i18nKey: 'error.squad.validation_failed',
+      params: { count: String(securityErrors.length) },
+    })
+  }
+
+  await audit.log({
+    action: 'squad.validate.failed',
+    agent: 'squad-command',
+    files: [],
+    outcome: 'failure',
+    error: `${totalErrors} error(s)`,
+  })
+  clack.outro(i18n.t('cli.squad.validate_fail', { count: String(totalErrors) }))
+  return err({
+    code: ERROR_CODES.SQUAD_VALIDATION_FAILED,
+    i18nKey: 'error.squad.validation_failed',
+    params: { count: String(totalErrors) },
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Command handler
 // ---------------------------------------------------------------------------
 
@@ -284,6 +432,10 @@ export const handler: CommandHandler = {
 
     if (subcommand === 'add') {
       return runAdd(subArgs, projectDir)
+    }
+
+    if (subcommand === 'validate') {
+      return runValidate(subArgs, projectDir)
     }
 
     // Unknown subcommand — show usage hint

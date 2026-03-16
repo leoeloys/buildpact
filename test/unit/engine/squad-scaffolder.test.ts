@@ -6,6 +6,7 @@ import {
   scaffoldSquad,
   validateSquadStructure,
   validateSquadSecurity,
+  validateHandoffGraph,
   installSquad,
 } from '../../../src/engine/squad-scaffolder.js'
 
@@ -465,5 +466,69 @@ describe('installSquad', () => {
     expect(installResult.ok).toBe(true)
     if (!installResult.ok) return
     expect(installResult.value).toContain('.buildpact/squads/my-squad')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// validateHandoffGraph
+// ---------------------------------------------------------------------------
+
+describe('validateHandoffGraph', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'bp-handoff-'))
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('passes for agents with valid handoff entries', async () => {
+    await mkdir(join(tmpDir, 'agents'), { recursive: true })
+    await writeFile(
+      join(tmpDir, 'agents', 'chief.md'),
+      '## Handoffs\n- ← Specialist: when ready\n- → Reviewer: when done\n',
+      'utf-8',
+    )
+    const result = await validateHandoffGraph(tmpDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors).toHaveLength(0)
+  })
+
+  it('reports error for agent with no handoff entries', async () => {
+    await mkdir(join(tmpDir, 'agents'), { recursive: true })
+    await writeFile(
+      join(tmpDir, 'agents', 'specialist.md'),
+      '## Handoffs\n[placeholder — fill in handoffs]\n',
+      'utf-8',
+    )
+    const result = await validateHandoffGraph(tmpDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors).toHaveLength(1)
+    expect(result.value.errors[0]).toContain('specialist.md')
+    expect(result.value.errors[0]).toContain('no valid entries')
+  })
+
+  it('returns empty errors when agents/ directory is missing', async () => {
+    // No agents dir
+    const result = await validateHandoffGraph(tmpDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.errors).toHaveLength(0)
+  })
+
+  it('passes for scaffolded squad agents (they have handoff placeholders that match ← → pattern)', async () => {
+    const scaffoldResult = await scaffoldSquad('test-squad', tmpDir)
+    expect(scaffoldResult.ok).toBe(true)
+    if (!scaffoldResult.ok) return
+    const squadDir = scaffoldResult.value.squadDir
+    const result = await validateHandoffGraph(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    // Scaffolded agents have "- ← [Agent]:" and "- → [Agent]:" in the template
+    expect(result.value.errors).toHaveLength(0)
   })
 })

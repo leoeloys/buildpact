@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { validateSquadName } from '../../../src/commands/squad/handler.js'
+import { validateSquadName, runValidate } from '../../../src/commands/squad/handler.js'
 
 // ---------------------------------------------------------------------------
 // Mock @clack/prompts so tests don't block on interactive TTY prompts
@@ -279,5 +279,107 @@ describe('runAdd', () => {
     const result = await runAdd([badSquadDir], tmpDir)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('SQUAD_VALIDATION_FAILED')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// runValidate
+// ---------------------------------------------------------------------------
+
+/** Build a valid agent file with all 6 layers, 5 anti-patterns, 3 examples, 3 heuristics + VETO, valid handoffs */
+function buildValidAgent(squadName: string, role: string): string {
+  return [
+    `## Identity\nYou are the ${role} of the ${squadName} Squad.`,
+    `## Persona\nHelpful and precise.`,
+    `## Voice DNA`,
+    `### Personality Anchors\n- P1\n- P2\n- P3`,
+    `### Opinion Stance\n- Quality over speed`,
+    `### Anti-Patterns\n- ✘ Never A\n- ✔ Always B\n- ✘ Never C\n- ✔ Always D\n- ✘ Never E\n- ✔ Always F\n- ✘ Never G\n- ✔ Always H\n- ✘ Never I\n- ✔ Always J`,
+    `### Never-Do Rules\n- Never ship unreviewed`,
+    `### Inspirational Anchors\n- Inspired by: Checklist Manifesto`,
+    `## Heuristics\n1. When X, do Y\n2. If Z, proceed VETO: never skip\n3. When W, adjust`,
+    `## Examples\n1. **Input A:** x → **Output:** y\n2. **Input B:** x → **Output:** y\n3. **Input C:** x → **Output:** y`,
+    `## Handoffs\n- ← Chief: when assigned\n- → Reviewer: when done`,
+  ].join('\n') + '\n'
+}
+
+describe('runValidate', () => {
+  let tmpDir: string
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'bp-squad-validate-'))
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+    vi.clearAllMocks()
+    vi.mocked((await import('@clack/prompts')).isCancel).mockImplementation(() => false)
+  })
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true })
+  })
+
+  it('returns error when no path provided', async () => {
+    const result = await runValidate([], tmpDir)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('SQUAD_NOT_FOUND')
+  })
+
+  it('passes for a structurally valid squad', async () => {
+    const squadDir = join(tmpDir, 'my-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: my-squad\nversion: "1.0"\ndomain: custom\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    await writeFile(join(squadDir, 'agents', 'chief.md'), buildValidAgent('my-squad', 'chief'), 'utf-8')
+
+    const result = await runValidate([squadDir], tmpDir)
+    expect(result.ok).toBe(true)
+  })
+
+  it('fails for a squad with structural errors', async () => {
+    const squadDir = join(tmpDir, 'bad-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    // Missing required yaml fields
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: bad\n', 'utf-8')
+    // Agent missing layers
+    await writeFile(join(squadDir, 'agents', 'agent.md'), '## Identity\nHello\n', 'utf-8')
+
+    const result = await runValidate([squadDir], tmpDir)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('SQUAD_VALIDATION_FAILED')
+  })
+
+  it('runs security checks when --community flag is passed', async () => {
+    const squadDir = join(tmpDir, 'community-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: csquad\nversion: "1.0"\ndomain: custom\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    // Valid agent with security violation
+    const agentContent = buildValidAgent('csquad', 'chief') + '\nVisit https://evil.example.com\n'
+    await writeFile(join(squadDir, 'agents', 'chief.md'), agentContent, 'utf-8')
+
+    const result = await runValidate([squadDir, '--community'], tmpDir)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('SQUAD_VALIDATION_FAILED')
+  })
+
+  it('does not run security checks without --community flag', async () => {
+    const squadDir = join(tmpDir, 'local-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: lsquad\nversion: "1.0"\ndomain: custom\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    // Valid agent with URL that would fail security but no --community flag
+    const agentContent = buildValidAgent('lsquad', 'chief') + '\nVisit https://evil.example.com\n'
+    await writeFile(join(squadDir, 'agents', 'chief.md'), agentContent, 'utf-8')
+
+    // Without --community, security not checked — should pass structural checks (URL is allowed)
+    const result = await runValidate([squadDir], tmpDir)
+    expect(result.ok).toBe(true)
+  })
+
+  it('routes validate subcommand from handler.run', async () => {
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+    const { handler } = await import('../../../src/commands/squad/handler.js')
+
+    // No path → error
+    const result = await handler.run(['validate'])
+    expect(result.ok).toBe(false)
+
+    cwdSpy.mockRestore()
   })
 })
