@@ -589,8 +589,8 @@
         "Tests pass"
       ],
       "priority": 37,
-      "passes": false,
-      "notes": "v2.0 milestone scope"
+      "passes": true,
+      "notes": "Completed: lazy-agent-loader.ts with buildAgentIndex/loadChiefAgent/loadSpecialistAgent/releaseAgent/createAgentSession + formatAgentIndex (<=1KB) + 33 tests + docs/prompt-mode-agent-loading-guide.md"
     },
     {
       "id": "US-038",

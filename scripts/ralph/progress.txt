@@ -545,3 +545,20 @@ All 157 tests passing. TypeScript compiles with zero errors.
   - `scanAgentSuggestions` prefers promotion over demotion for same agent — checks promotion first, skips demotion check if promotion returned
   - L1 confirmation in execute handler pauses executeSpinner, shows confirm, then restarts spinner — match this pattern if adding similar mid-loop interrupts
 ---
+
+## 2026-03-16 - US-037
+- Implemented `src/engine/lazy-agent-loader.ts` with: `AgentIndexEntry`/`AgentIndex`/`LoadedAgent`/`AgentSession` interfaces, `buildAgentIndex` (reads squad.yaml, builds ≤1KB index without loading any agent files), `formatAgentIndex` (formats as compact text, truncates at MAX_INDEX_BYTES=1024), `loadChiefAgent` (reads only chief.md — initial Agent Mode load), `loadSpecialistAgent` (on-demand load by agentId from index), `loadAndRegisterAgent` (loads + mutates session.loadedAgents in-place), `releaseAgent` (removes from session Map — unload after completion), `createAgentSession`/`getLoadedAgentIds` (session lifecycle), `formatLoadedAgentForContext` (wraps content in HTML comment with agent id + ISO timestamp), `listAvailableAgents` (scans agents/ for .md files), `inferAgentTier`/`formatRoleName` (pure helpers for standard T1-T4 mapping)
+- Added `AGENT_LOAD_FAILED` error code to `src/contracts/errors.ts`
+- Added i18n keys `error.agent.load_failed` and `error.agent.not_in_index` in both locales
+- Exported all 12 functions + `MAX_INDEX_BYTES` constant from `src/engine/index.ts`
+- Created `docs/prompt-mode-agent-loading-guide.md` — 6-step manual loading protocol, golden rule, per-tier loading guide, anti-patterns table, quick checklist
+- Created 33 unit tests in `test/unit/engine/lazy-agent-loader.test.ts` covering all pure functions and all I/O paths including error cases
+- 882 tests passing, zero typecheck errors
+- Files changed: `src/engine/lazy-agent-loader.ts` (new), `src/engine/index.ts`, `src/contracts/errors.ts`, `locales/en.yaml`, `locales/pt-br.yaml`, `test/unit/engine/lazy-agent-loader.test.ts` (new), `docs/prompt-mode-agent-loading-guide.md` (new)
+- **Learnings for future iterations:**
+  - `buildAgentIndex` parses squad.yaml with string-only parsing (no YAML lib) — `parseAgentsBlock` detects 2-space indent for agentId lines and 4-space indent for `file:` lines
+  - Agent session uses `Map<string, LoadedAgent>` (mutable in-place) — callers share reference; `releaseAgent` mutates and returns the same session for chaining
+  - `formatAgentIndex` truncates to MAX_INDEX_BYTES=1024 bytes to enforce the ≤1KB contract from AC-1
+  - `loadChiefAgent` uses `index.chiefFile` (quick reference set during buildAgentIndex) — avoids re-scanning agents array on every initial load
+  - `loadAndRegisterAgent` wraps `loadSpecialistAgent` + `session.loadedAgents.set()` — convenience for the on-demand handoff pattern
+---
