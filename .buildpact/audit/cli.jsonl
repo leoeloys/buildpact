@@ -1,0 +1,7 @@
+{"ts":"2026-03-16T23:07:29.613Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-16T23:07:29.635Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-03-16T23:07:40.261Z","action":"cli.install.flow_start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-16T23:18:10.083Z","action":"cli.install.flow_start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-16T23:18:15.389Z","action":"cli.install.flow_start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-16T23:22:33.555Z","action":"cli.install.flow_start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-16T23:28:53.591Z","action":"cli.install.flow_start","agent":"cli","files":[],"outcome":"success"}
