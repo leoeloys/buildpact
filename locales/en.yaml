@@ -491,6 +491,26 @@ cli:
     stale_source: "Source files have changed since last export — generating a fresh bundle"
     outro: "Paste the .txt file into {platform} to activate your Squad workflow"
 
+  diagnose:
+    welcome: "BuildPact Diagnose — Project Analysis"
+    scanning: "Scanning project structure…"
+    scan_done: "Scan complete"
+    analyzing: "Analyzing documents, code, quality, and progress…"
+    analysis_done: "Analysis complete"
+    summary_title: "Diagnostic Summary"
+    docs_found: "{count} document(s) found (PRDs, specs, plans, architecture)"
+    phases: "{done}/{total} phases complete"
+    requirements: "{count} requirement(s) tracked"
+    source_files: "source files"
+    test_files: "test files"
+    recommendations_title: "Recommendations"
+    quality_title: "Quality Signals"
+    report_saved: "Full diagnostic report saved to {path}"
+    next_specify: "No specs found — run /bp:specify to capture your first requirement"
+    next_continue: "Work in progress detected — run /bp:execute to continue"
+    next_plan: "Ready for planning — run /bp:plan to create execution plan"
+    outro: "Run the suggested command above, or /bp:diagnose anytime to re-analyze"
+
   hub:
     welcome: "BuildPact Hub — Community Squad Discovery"
     searching: "Searching community hub..."

@@ -491,6 +491,26 @@ cli:
     stale_source: "Arquivos fonte foram alterados desde a última exportação — gerando novo bundle"
     outro: "Cole o arquivo .txt no {platform} para ativar seu fluxo de trabalho do Squad"
 
+  diagnose:
+    welcome: "BuildPact Diagnose — Análise do Projeto"
+    scanning: "Escaneando estrutura do projeto…"
+    scan_done: "Scan completo"
+    analyzing: "Analisando documentos, código, qualidade e progresso…"
+    analysis_done: "Análise completa"
+    summary_title: "Resumo do Diagnóstico"
+    docs_found: "{count} documento(s) encontrado(s) (PRDs, specs, planos, arquitetura)"
+    phases: "{done}/{total} fases completas"
+    requirements: "{count} requisito(s) rastreado(s)"
+    source_files: "arquivos fonte"
+    test_files: "arquivos de teste"
+    recommendations_title: "Recomendações"
+    quality_title: "Sinais de Qualidade"
+    report_saved: "Relatório diagnóstico completo salvo em {path}"
+    next_specify: "Nenhuma spec encontrada — execute /bp:specify para capturar seu primeiro requisito"
+    next_continue: "Trabalho em andamento detectado — execute /bp:execute para continuar"
+    next_plan: "Pronto para planejar — execute /bp:plan para criar plano de execução"
+    outro: "Execute o comando sugerido acima, ou /bp:diagnose a qualquer momento para re-analisar"
+
   hub:
     welcome: "BuildPact Hub — Descoberta de Squads da Comunidade"
     searching: "Pesquisando hub da comunidade..."

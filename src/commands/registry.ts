@@ -29,6 +29,7 @@ export type CommandId =
   | 'investigate'
   | 'orchestrate'
   | 'audit'
+  | 'diagnose'
 
 /** A command handler that processes CLI arguments */
 export interface CommandHandler {
@@ -67,6 +68,7 @@ const REGISTRY: Record<CommandId, CommandFactory> = {
   investigate:        () => import('./investigate/index.js').then(m => m.handler),
   orchestrate:        () => import('./orchestrate/index.js').then(m => m.handler),
   audit:              () => import('./audit/index.js').then(m => m.handler),
+  diagnose:           () => import('./diagnose/index.js').then(m => m.handler),
 }
 
 /**
