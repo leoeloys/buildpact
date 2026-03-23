@@ -1,6 +1,10 @@
 /**
- * Upgrade command handler — migrate project schema to current CLI version.
- * Runs sequential migrations and updates config.yaml with new schema version.
+ * Upgrade command handler — checks GitHub for CLI updates, then migrates project schema.
+ *
+ * Flow:
+ * 1. Check GitHub for newer CLI version → pull + rebuild if found
+ * 2. Migrate project schema to current CLI version
+ *
  * @module commands/upgrade
  */
 
@@ -10,6 +14,12 @@ import { createI18n } from '../../foundation/i18n.js'
 import { readProjectSchema } from '../../foundation/version-guard.js'
 import { CURRENT_SCHEMA_VERSION } from '../../foundation/version-guard.js'
 import { listPendingMigrations, runMigrations } from '../../foundation/migrator.js'
+import {
+  findRepoRoot,
+  readCurrentVersion,
+  checkRemoteForUpdates,
+  pullAndRebuild,
+} from '../../foundation/self-updater.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { ok, err } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
@@ -18,11 +28,12 @@ import type { SupportedLanguage } from '../../contracts/i18n.js'
 export async function runUpgrade(args: string[]): Promise<Result<void>> {
   const projectDir = process.cwd()
   const dryRun = args.includes('--dry-run')
+  const skipSelfUpdate = args.includes('--skip-self-update')
   const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'upgrade.jsonl'))
 
-  clack.intro('BuildPact — Project Upgrade')
+  clack.intro('BuildPact — Upgrade')
 
-  // Detect language from existing config (quick read)
+  // Detect language from existing config
   let lang: SupportedLanguage = 'en'
   try {
     const { readFile } = await import('node:fs/promises')
@@ -33,7 +44,60 @@ export async function runUpgrade(args: string[]): Promise<Result<void>> {
 
   const i18n = createI18n(lang)
 
-  // Read current schema
+  // ─── Step 1: Self-update CLI from GitHub ───────────────────────────
+  if (!skipSelfUpdate) {
+    const repoRoot = findRepoRoot()
+
+    if (repoRoot) {
+      const currentVersion = readCurrentVersion(repoRoot)
+      clack.log.info(i18n.t('cli.upgrade.current_cli_version', { version: currentVersion }))
+
+      const spinner = clack.spinner()
+      spinner.start(i18n.t('cli.upgrade.checking_remote'))
+
+      const remoteCheck = checkRemoteForUpdates(repoRoot)
+
+      if (!remoteCheck.ok) {
+        spinner.stop(i18n.t('cli.upgrade.remote_check_failed'))
+        clack.log.warn(i18n.t('cli.upgrade.remote_offline'))
+      } else if (remoteCheck.value.behind === 0) {
+        spinner.stop(i18n.t('cli.upgrade.cli_up_to_date'))
+      } else {
+        spinner.stop(i18n.t('cli.upgrade.cli_update_available', {
+          count: String(remoteCheck.value.behind),
+        }))
+
+        if (dryRun) {
+          clack.log.info(i18n.t('cli.upgrade.dry_run_notice'))
+        } else {
+          const confirmUpdate = await clack.confirm({
+            message: i18n.t('cli.upgrade.confirm_cli_update'),
+          })
+
+          if (!clack.isCancel(confirmUpdate) && confirmUpdate) {
+            const updateSpinner = clack.spinner()
+            updateSpinner.start(i18n.t('cli.upgrade.pulling'))
+
+            const updateResult = pullAndRebuild(repoRoot)
+
+            if (updateResult.ok) {
+              updateSpinner.stop(i18n.t('cli.upgrade.cli_updated', {
+                from: updateResult.value.previousVersion,
+                to: updateResult.value.newVersion,
+              }))
+            } else {
+              updateSpinner.stop(i18n.t('cli.upgrade.pull_failed'))
+              clack.log.warn(updateResult.error.params?.reason ?? 'Pull failed')
+            }
+          }
+        }
+      }
+    } else {
+      clack.log.info(i18n.t('cli.upgrade.not_in_repo'))
+    }
+  }
+
+  // ─── Step 2: Migrate project schema ────────────────────────────────
   const spinner = clack.spinner()
   spinner.start(i18n.t('cli.upgrade.reading_schema'))
 
@@ -47,7 +111,6 @@ export async function runUpgrade(args: string[]): Promise<Result<void>> {
     try {
       const { access } = await import('node:fs/promises')
       await access(join(projectDir, '.buildpact', 'config.yaml'))
-      // File exists but no schema — treat as schema 0
       clack.log.warn(i18n.t('cli.upgrade.no_schema'))
     } catch {
       clack.log.error(i18n.t('cli.upgrade.no_project'))

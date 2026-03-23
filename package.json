@@ -8,7 +8,7 @@
     "node": ">=20.0.0"
   },
   "bin": {
-    "buildpact": "./dist/index.mjs"
+    "buildpact": "./dist/cli/index.mjs"
   },
   "files": [
     "dist",

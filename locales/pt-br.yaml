@@ -404,6 +404,17 @@ cli:
     running: "Executando migrações…"
     success: "Atualizado de schema v{from} para v{to}"
     migration_failed: "Migração falhou"
+    current_cli_version: "Versão atual do CLI: {version}"
+    checking_remote: "Verificando GitHub por atualizações…"
+    remote_check_failed: "Não foi possível verificar o remoto"
+    remote_offline: "Não foi possível acessar o GitHub — pulando verificação de atualização"
+    cli_up_to_date: "CLI está atualizado"
+    cli_update_available: "{count} novo(s) commit(s) disponível(is) no remoto"
+    confirm_cli_update: "Baixar últimas alterações e reconstruir?"
+    pulling: "Baixando e reconstruindo…"
+    cli_updated: "CLI atualizado: {from} → {to}"
+    pull_failed: "Falha ao baixar atualizações"
+    not_in_repo: "Não está em um repositório git — pulando auto-atualização do CLI"
 
   version_guard:
     upgrade_available: "Schema do projeto v{project} pode ser atualizado para v{cli}. Execute 'buildpact upgrade'."
@@ -628,6 +639,7 @@ error:
   upgrade:
     migration_failed: "Migração v{from} → v{to} falhou"
     no_project: "Nenhum projeto BuildPact encontrado — execute 'buildpact init' ou 'buildpact adopt' primeiro"
+    pull_failed: "Falha ao baixar atualizações do remoto: {reason}"
 
 warn:
   webhook:

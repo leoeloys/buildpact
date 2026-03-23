@@ -404,6 +404,17 @@ cli:
     running: "Running migrations…"
     success: "Upgraded from schema v{from} to v{to}"
     migration_failed: "Migration failed"
+    current_cli_version: "Current CLI version: {version}"
+    checking_remote: "Checking GitHub for updates…"
+    remote_check_failed: "Could not check remote"
+    remote_offline: "Could not reach GitHub — skipping CLI update check"
+    cli_up_to_date: "CLI is up to date"
+    cli_update_available: "{count} new commit(s) available on remote"
+    confirm_cli_update: "Pull latest changes and rebuild?"
+    pulling: "Pulling and rebuilding…"
+    cli_updated: "CLI updated: {from} → {to}"
+    pull_failed: "Failed to pull updates"
+    not_in_repo: "Not running from a git repo — skipping CLI self-update"
 
   version_guard:
     upgrade_available: "Project schema v{project} can be upgraded to v{cli}. Run 'buildpact upgrade'."
@@ -628,6 +639,7 @@ error:
   upgrade:
     migration_failed: "Migration v{from} → v{to} failed"
     no_project: "No BuildPact project found — run 'buildpact init' or 'buildpact adopt' first"
+    pull_failed: "Failed to pull updates from remote: {reason}"
 
 warn:
   webhook:

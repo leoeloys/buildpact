@@ -37,10 +37,26 @@ export interface MigrationSummary {
 }
 
 // ---------------------------------------------------------------------------
-// CLI version constant (kept in sync with package.json manually in alpha)
+// CLI version — read from package.json at runtime
 // ---------------------------------------------------------------------------
 
-const CLI_VERSION = '0.1.0-alpha.5'
+/** Read CLI version from package.json (walks up from this file to find it) */
+function getCliVersion(): string {
+  try {
+    const { readFileSync } = require('node:fs')
+    const { resolve, dirname } = require('node:path')
+    // Walk up from dist or src to find package.json
+    let dir = __dirname ?? dirname(new URL(import.meta.url).pathname)
+    for (let i = 0; i < 5; i++) {
+      try {
+        const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf-8'))
+        if (pkg.name === 'buildpact') return pkg.version ?? '2.0.0'
+      } catch { /* keep walking up */ }
+      dir = resolve(dir, '..')
+    }
+  } catch { /* fallback */ }
+  return '2.0.0'
+}
 
 // ---------------------------------------------------------------------------
 // Migration registry
@@ -61,13 +77,13 @@ export const MIGRATIONS: Migration[] = [
         return { filesCreated: [], filesModified: [], filesDeleted: [], warnings: ['config.yaml not found — skipped'] }
       }
 
-      // Prepend schema fields after the comment header
+      const cliVersion = getCliVersion()
       const lines = content.split('\n')
       const insertIdx = lines.findIndex(l => !l.startsWith('#') && l.trim().length > 0)
       const schemaLines = [
-        `buildpact_schema: ${CURRENT_SCHEMA_VERSION}`,
-        `created_by_cli: "${CLI_VERSION}"`,
-        `last_upgraded_by_cli: "${CLI_VERSION}"`,
+        `buildpact_schema: 1`,
+        `created_by_cli: "${cliVersion}"`,
+        `last_upgraded_by_cli: "${cliVersion}"`,
         '',
       ]
 
@@ -78,6 +94,43 @@ export const MIGRATIONS: Migration[] = [
       }
 
       await writeFile(configPath, lines.join('\n'), 'utf-8')
+      return { filesCreated: [], filesModified: ['.buildpact/config.yaml'], filesDeleted: [], warnings: [] }
+    },
+  },
+  {
+    fromSchema: 1,
+    toSchema: 2,
+    description: 'v2.0 — Agent Mode, RBAC, expansion packs support',
+    async up(projectDir) {
+      const configPath = join(projectDir, '.buildpact', 'config.yaml')
+      let content: string
+      try {
+        content = await readFile(configPath, 'utf-8')
+      } catch {
+        return { filesCreated: [], filesModified: [], filesDeleted: [], warnings: ['config.yaml not found — skipped'] }
+      }
+
+      const cliVersion = getCliVersion()
+
+      // Update schema version
+      content = content.replace(/buildpact_schema:\s*\d+/, `buildpact_schema: 2`)
+      content = content.replace(/last_upgraded_by_cli:\s*"[^"]*"/, `last_upgraded_by_cli: "${cliVersion}"`)
+
+      // Add v2.0 config sections if not present
+      if (!content.includes('agent_mode:')) {
+        content += [
+          '',
+          '# v2.0 — Agent Mode (disabled by default)',
+          'agent_mode: false',
+          '',
+          '# v2.0 — Cross-project learning (opt-in)',
+          'cross_project:',
+          '  enabled: false',
+          '',
+        ].join('\n')
+      }
+
+      await writeFile(configPath, content, 'utf-8')
       return { filesCreated: [], filesModified: ['.buildpact/config.yaml'], filesDeleted: [], warnings: [] }
     },
   },

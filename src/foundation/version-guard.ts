@@ -12,13 +12,13 @@ import { join } from 'node:path'
 // ---------------------------------------------------------------------------
 
 /** The schema version this CLI version writes when creating new projects. */
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 /** Oldest schema this CLI can still read without requiring upgrade first. */
 export const MIN_READABLE_SCHEMA = 0
 
 /** Newest schema this CLI understands. */
-export const MAX_READABLE_SCHEMA = 1
+export const MAX_READABLE_SCHEMA = 2
 
 // ---------------------------------------------------------------------------
 // Types
