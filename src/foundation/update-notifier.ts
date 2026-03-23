@@ -61,13 +61,23 @@ function writeCache(cache: UpdateCache): void {
 
 function findRepoRoot(): string | null {
   try {
-    const root = execSync('git rev-parse --show-toplevel', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
-    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'))
-    if (pkg.name === 'buildpact') return root
-  } catch { /* not in repo */ }
+    // Walk up from this file's location to find the BuildPact repo
+    let dir = dirname(fileURLToPath(import.meta.url))
+    for (let i = 0; i < 10; i++) {
+      try {
+        const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
+        if (pkg.name === 'buildpact') {
+          execSync('git rev-parse --show-toplevel', {
+            cwd: dir, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
+          })
+          return dir
+        }
+      } catch { /* keep walking */ }
+      const parent = dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+  } catch { /* can't resolve */ }
   return null
 }
 

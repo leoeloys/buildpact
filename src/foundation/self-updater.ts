@@ -7,7 +7,8 @@
 
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { ok, err } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 
@@ -34,19 +35,30 @@ export interface UpdateResult {
 
 /**
  * Find the BuildPact repo root by walking up from the CLI binary location.
+ * Uses import.meta.url to find where this file lives, then walks up to find
+ * package.json with name=buildpact that is also a git repo.
  * Returns null if not running from a git repo (e.g. installed via npm global).
  */
 export function findRepoRoot(): string | null {
   try {
-    const root = execSync('git rev-parse --show-toplevel', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
-
-    // Verify it's actually the BuildPact repo
-    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'))
-    if (pkg.name === 'buildpact') return root
-  } catch { /* not in a git repo */ }
+    // Walk up from this file's location to find the BuildPact package root
+    let dir = dirname(fileURLToPath(import.meta.url))
+    for (let i = 0; i < 10; i++) {
+      try {
+        const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
+        if (pkg.name === 'buildpact') {
+          // Verify it's a git repo
+          execSync('git rev-parse --show-toplevel', {
+            cwd: dir, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
+          })
+          return dir
+        }
+      } catch { /* keep walking */ }
+      const parent = dirname(dir)
+      if (parent === dir) break // reached filesystem root
+      dir = parent
+    }
+  } catch { /* can't resolve */ }
   return null
 }
 
