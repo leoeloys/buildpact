@@ -136,9 +136,8 @@ export async function reinstall(projectDir: string): Promise<Result<ReinstallRes
     // config.yaml doesn't exist — skip
   }
 
-  // ─── 2. Update Claude Code slash commands ─────────────────────────
+  // ─── 2. Update all IDE integrations ─────────────────────────────
   let commandsUpdated = 0
-  const claudeDir = join(projectDir, '.claude', 'commands', 'bp')
   let templatesDir: string | null = null
 
   // Find templates dir
@@ -151,41 +150,79 @@ export async function reinstall(projectDir: string): Promise<Result<ReinstallRes
     }
   } catch { /* can't find templates */ }
 
+  const bpCommands = [
+    '/bp:specify', '/bp:plan', '/bp:execute', '/bp:verify', '/bp:quick',
+    '/bp:constitution', '/bp:squad', '/bp:optimize', '/bp:doctor',
+    '/bp:help', '/bp:docs', '/bp:investigate', '/bp:orchestrate',
+    '/bp:export-web', '/bp:memory', '/bp:quality', '/bp:upgrade',
+  ].join(', ')
+
   if (templatesDir) {
-    // Claude Code commands
+    const cmdTemplatesDir = join(templatesDir, 'commands')
+
+    // ── Claude Code: .claude/commands/bp/ + CLAUDE.md ──
     try {
+      const claudeDir = join(projectDir, '.claude', 'commands', 'bp')
       await access(claudeDir)
-      const cmdDir = join(templatesDir, 'commands')
-      const entries = await readdir(cmdDir)
+      const entries = await readdir(cmdTemplatesDir)
       for (const file of entries.filter(f => f.endsWith('.md'))) {
-        await copyFile(join(cmdDir, file), join(claudeDir, file))
+        await copyFile(join(cmdTemplatesDir, file), join(claudeDir, file))
         commandsUpdated++
       }
       filesModified.push('.claude/commands/bp/')
 
-      // Update CLAUDE.md
-      const commands = [
-        '/bp:specify', '/bp:plan', '/bp:execute', '/bp:verify', '/bp:quick',
-        '/bp:constitution', '/bp:squad', '/bp:optimize', '/bp:doctor',
-        '/bp:help', '/bp:docs', '/bp:investigate', '/bp:orchestrate',
-        '/bp:export-web', '/bp:memory', '/bp:quality',
-      ].join(', ')
       await writeFile(
         join(projectDir, 'CLAUDE.md'),
-        `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v${cliVersion} slash commands: ${commands}.\n`,
+        `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v${cliVersion} slash commands: ${bpCommands}.\n`,
         'utf-8',
       )
       filesModified.push('CLAUDE.md')
-    } catch {
-      // No Claude Code integration
-    }
+    } catch { /* no Claude Code integration */ }
 
-    // Cursor rules
+    // ── Cursor: .cursor/rules/ + .cursorrules ──
     try {
-      await access(join(projectDir, '.cursor', 'rules'))
-      // Copy templates to .cursor/rules/ if it exists
+      const cursorRulesDir = join(projectDir, '.cursor', 'rules')
+      await access(cursorRulesDir)
+      // Copy command templates as cursor rules
+      const entries = await readdir(cmdTemplatesDir)
+      for (const file of entries.filter(f => f.endsWith('.md'))) {
+        await copyFile(join(cmdTemplatesDir, file), join(cursorRulesDir, file))
+        commandsUpdated++
+      }
       filesModified.push('.cursor/rules/')
-    } catch { /* no cursor */ }
+
+      await writeFile(
+        join(projectDir, '.cursorrules'),
+        `# BuildPact v${cliVersion} — Cursor Rules\n\nSee .buildpact/constitution.md for project rules.\nBuildPact commands: ${bpCommands}.\n`,
+        'utf-8',
+      )
+      filesModified.push('.cursorrules')
+    } catch { /* no Cursor integration */ }
+
+    // ── Gemini CLI: .gemini/ ──
+    try {
+      const geminiDir = join(projectDir, '.gemini')
+      await access(geminiDir)
+      // Write a Gemini-compatible instructions file
+      await writeFile(
+        join(geminiDir, 'buildpact-commands.md'),
+        `# BuildPact v${cliVersion} Commands\n\nSee .buildpact/constitution.md for project rules.\n\nAvailable commands (run via CLI):\n${bpCommands.split(', ').map(c => `- ${c}`).join('\n')}\n\nRun: buildpact <command> to execute.\n`,
+        'utf-8',
+      )
+      filesModified.push('.gemini/buildpact-commands.md')
+    } catch { /* no Gemini integration */ }
+
+    // ── Codex CLI: .codex/ ──
+    try {
+      const codexDir = join(projectDir, '.codex')
+      await access(codexDir)
+      await writeFile(
+        join(codexDir, 'buildpact-commands.md'),
+        `# BuildPact v${cliVersion} Commands\n\nSee .buildpact/constitution.md for project rules.\n\nAvailable commands (run via CLI):\n${bpCommands.split(', ').map(c => `- ${c}`).join('\n')}\n\nRun: buildpact <command> to execute.\n`,
+        'utf-8',
+      )
+      filesModified.push('.codex/buildpact-commands.md')
+    } catch { /* no Codex integration */ }
   }
 
   // ─── 3. Update bundled squad (if installed) ───────────────────────
