@@ -38,6 +38,12 @@ async function main(): Promise<void> {
   // Check Node.js version early — warn but don't crash
   checkNodeVersion()
 
+  // Background update check (silent, cached, max once per hour)
+  const { checkForUpdates, getUpdateNotice } = await import('../foundation/update-notifier.js')
+  if (process.env.BP_CI !== 'true' && !process.argv.includes('--ci')) {
+    try { checkForUpdates() } catch { /* non-critical */ }
+  }
+
   // Detect --ci flag: may appear before or after the command name
   const rawArgs = process.argv.slice(2)
   const ciActive = rawArgs.includes('--ci') || process.env.BP_CI === 'true'
@@ -99,6 +105,11 @@ async function main(): Promise<void> {
       process.exit(1)
     }
     const cmdResult = await result.value.run(args)
+
+    // Show update notice after any command completes
+    const notice = getUpdateNotice()
+    if (notice) console.log(notice)
+
     if (!cmdResult.ok) {
       await audit.log({ action: `cli.command.${command}`, agent: 'cli', files: [], outcome: 'failure', error: cmdResult.error.code })
       console.error(`Error: ${cmdResult.error.code}`)
