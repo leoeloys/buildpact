@@ -2,6 +2,7 @@ import { mkdir, copyFile, readFile, writeFile, readdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AuditLogger } from './audit.js'
+import { CURRENT_SCHEMA_VERSION } from './version-guard.js'
 import { ok, err } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
@@ -93,12 +94,30 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
 
   const logger = new AuditLogger(auditLogPath)
 
+  // Read CLI version from package.json
+  let cliVersion = '2.0.0'
+  try {
+    const { readFileSync } = await import('node:fs')
+    const { resolve, dirname } = await import('node:path')
+    const { fileURLToPath } = await import('node:url')
+    let dir = dirname(fileURLToPath(import.meta.url))
+    for (let i = 0; i < 5; i++) {
+      try {
+        const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf-8'))
+        if (pkg.name === 'buildpact') { cliVersion = pkg.version; break }
+      } catch { /* keep walking */ }
+      dir = resolve(dir, '..')
+    }
+  } catch { /* fallback */ }
+
   const vars: Record<string, string> = {
     project_name: projectName,
     language,
     experience_level: experienceLevel,
     active_squad: installSquad ? 'software' : 'none',
     created_at: new Date().toISOString().slice(0, 10),
+    cli_version: cliVersion,
+    buildpact_schema: String(CURRENT_SCHEMA_VERSION),
   }
 
   try {
