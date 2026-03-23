@@ -506,6 +506,8 @@ cli:
     recommendations_title: "Recommendations"
     quality_title: "Quality Signals"
     report_saved: "Full diagnostic report saved to {path}"
+    report_exists: "Existing diagnostic report found (less than 24h old) — using cached analysis"
+    report_read_failed: "Could not read diagnostic report"
     next_specify: "No specs found — run /bp:specify to capture your first requirement"
     next_continue: "Work in progress detected — run /bp:execute to continue"
     next_plan: "Ready for planning — run /bp:plan to create execution plan"

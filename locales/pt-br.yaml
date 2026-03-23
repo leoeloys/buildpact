@@ -506,6 +506,8 @@ cli:
     recommendations_title: "Recomendações"
     quality_title: "Sinais de Qualidade"
     report_saved: "Relatório diagnóstico completo salvo em {path}"
+    report_exists: "Relatório diagnóstico existente encontrado (menos de 24h) — usando análise em cache"
+    report_read_failed: "Não foi possível ler o relatório diagnóstico"
     next_specify: "Nenhuma spec encontrada — execute /bp:specify para capturar seu primeiro requisito"
     next_continue: "Trabalho em andamento detectado — execute /bp:execute para continuar"
     next_plan: "Pronto para planejar — execute /bp:plan para criar plano de execução"
