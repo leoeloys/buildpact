@@ -20,6 +20,7 @@ import {
   checkRemoteForUpdates,
   pullAndRebuild,
 } from '../../foundation/self-updater.js'
+import { reinstall } from '../../foundation/reinstaller.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { ok, err } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
@@ -121,62 +122,64 @@ export async function runUpgrade(args: string[]): Promise<Result<void>> {
     }
   }
 
-  // Check if already current
+  // Check if already current schema
   if (effectiveSchema >= CURRENT_SCHEMA_VERSION) {
     clack.log.success(i18n.t('cli.upgrade.already_current', { version: String(CURRENT_SCHEMA_VERSION) }))
-    clack.outro('')
-    return ok(undefined)
   }
 
-  // List pending migrations
+  // ─── Step 3: Run schema migrations if needed ───────────────────────
   const pending = listPendingMigrations(effectiveSchema, CURRENT_SCHEMA_VERSION)
 
-  if (pending.length === 0) {
-    clack.log.success(i18n.t('cli.upgrade.already_current', { version: String(CURRENT_SCHEMA_VERSION) }))
-    clack.outro('')
-    return ok(undefined)
+  if (pending.length > 0) {
+    clack.log.info(i18n.t('cli.upgrade.migrations_planned'))
+    for (const m of pending) {
+      clack.log.step(`  v${m.fromSchema} → v${m.toSchema}: ${m.description}`)
+    }
+
+    if (dryRun) {
+      clack.log.info(i18n.t('cli.upgrade.dry_run_notice'))
+      clack.outro('')
+      return ok(undefined)
+    }
+
+    spinner.start(i18n.t('cli.upgrade.running'))
+    const migrationResult = await runMigrations(projectDir, effectiveSchema, CURRENT_SCHEMA_VERSION)
+    if (!migrationResult.ok) {
+      spinner.stop(i18n.t('cli.upgrade.migration_failed'))
+      return migrationResult as Result<void>
+    }
+    spinner.stop(i18n.t('cli.upgrade.success', {
+      from: String(migrationResult.value.fromSchema),
+      to: String(migrationResult.value.toSchema),
+    }))
   }
 
-  clack.log.info(i18n.t('cli.upgrade.migrations_planned'))
-  for (const m of pending) {
-    clack.log.step(`  v${m.fromSchema} → v${m.toSchema}: ${m.description}`)
-  }
-
+  // ─── Step 4: Reinstall all components (always) ─────────────────────
   if (dryRun) {
     clack.log.info(i18n.t('cli.upgrade.dry_run_notice'))
     clack.outro('')
     return ok(undefined)
   }
 
-  // Confirm
-  const confirmed = await clack.confirm({
-    message: i18n.t('cli.upgrade.confirm', { count: String(pending.length) }),
-  })
+  spinner.start(i18n.t('cli.upgrade.reinstalling'))
+  const reinstallResult = await reinstall(projectDir)
 
-  if (clack.isCancel(confirmed) || !confirmed) {
-    clack.cancel(i18n.t('cli.adopt.cancelled'))
-    return ok(undefined)
+  if (!reinstallResult.ok) {
+    spinner.stop(i18n.t('cli.upgrade.reinstall_failed'))
+    clack.log.warn(reinstallResult.error.code)
+  } else {
+    const r = reinstallResult.value
+    spinner.stop(i18n.t('cli.upgrade.reinstall_done', { version: r.cliVersion }))
+    if (r.commandsUpdated > 0) {
+      clack.log.success(i18n.t('cli.upgrade.commands_refreshed', { count: String(r.commandsUpdated) }))
+    }
+    if (r.squadUpdated) {
+      clack.log.success(i18n.t('cli.upgrade.squad_updated'))
+    }
+    if (r.filesModified.length > 0) {
+      clack.log.info(`${r.filesModified.length} file(s) updated`)
+    }
   }
-
-  // Run migrations
-  spinner.start(i18n.t('cli.upgrade.running'))
-
-  const result = await runMigrations(projectDir, effectiveSchema, CURRENT_SCHEMA_VERSION)
-
-  if (!result.ok) {
-    spinner.stop(i18n.t('cli.upgrade.migration_failed'))
-    return result as Result<void>
-  }
-
-  spinner.stop(i18n.t('cli.upgrade.success', {
-    from: String(result.value.fromSchema),
-    to: String(result.value.toSchema),
-  }))
-
-  const totalModified = result.value.results.reduce((sum, r) => sum + r.filesModified.length, 0)
-  const totalCreated = result.value.results.reduce((sum, r) => sum + r.filesCreated.length, 0)
-  if (totalModified > 0) clack.log.info(`${totalModified} file(s) modified`)
-  if (totalCreated > 0) clack.log.info(`${totalCreated} file(s) created`)
 
   await audit.log({
     action: 'upgrade.flow_complete',
@@ -185,6 +188,6 @@ export async function runUpgrade(args: string[]): Promise<Result<void>> {
     outcome: 'success',
   })
 
-  clack.outro('')
+  clack.outro(i18n.t('cli.upgrade.all_done'))
   return ok(undefined)
 }

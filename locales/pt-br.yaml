@@ -415,6 +415,12 @@ cli:
     cli_updated: "CLI atualizado: {from} → {to}"
     pull_failed: "Falha ao baixar atualizações"
     not_in_repo: "Não está em um repositório git — pulando auto-atualização do CLI"
+    commands_refreshed: "{count} slash command(s) atualizados para Claude Code"
+    squad_updated: "Templates de squad atualizados"
+    reinstalling: "Reinstalando componentes do BuildPact…"
+    reinstall_done: "Todos os componentes atualizados para v{version}"
+    reinstall_failed: "Reinstalação falhou — projeto pode precisar de correções manuais"
+    all_done: "Atualização completa — execute 'buildpact doctor' para verificar"
 
   version_guard:
     upgrade_available: "Schema do projeto v{project} pode ser atualizado para v{cli}. Execute 'buildpact upgrade'."

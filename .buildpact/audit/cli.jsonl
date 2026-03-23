@@ -155,3 +155,15 @@
 {"ts":"2026-03-23T09:43:47.844Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
 {"ts":"2026-03-23T09:43:48.002Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
 {"ts":"2026-03-23T09:43:48.006Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-03-23T12:14:06.321Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T12:14:06.399Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-03-23T12:14:06.668Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T12:14:06.797Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-03-23T12:14:06.961Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"failure","error":"1 check(s) failed"}
+{"ts":"2026-03-23T12:14:06.963Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"failure","error":"DOCTOR_CHECK_FAILED"}
+{"ts":"2026-03-23T19:37:19.578Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T19:37:19.672Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"failure","error":"CONFIG_INVALID"}
+{"ts":"2026-03-23T19:43:54.623Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T19:43:54.696Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"failure","error":"CONFIG_INVALID"}
+{"ts":"2026-03-23T19:43:58.807Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T19:44:00.784Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"failure","error":"CONFIG_INVALID"}

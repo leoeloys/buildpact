@@ -4,8 +4,9 @@
  * @module foundation/migrator
  */
 
-import { readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { readFile, writeFile, readdir, copyFile as fsCopyFile, mkdir, access } from 'node:fs/promises'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { ok, err } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import { AuditLogger } from './audit.js'
@@ -131,7 +132,49 @@ export const MIGRATIONS: Migration[] = [
       }
 
       await writeFile(configPath, content, 'utf-8')
-      return { filesCreated: [], filesModified: ['.buildpact/config.yaml'], filesDeleted: [], warnings: [] }
+      const filesModified = ['.buildpact/config.yaml']
+      const filesCreated: string[] = []
+      const warnings: string[] = []
+
+      // Update Claude Code slash commands if .claude/commands/bp/ exists
+      const claudeCommandsDir = join(projectDir, '.claude', 'commands', 'bp')
+      try {
+        await access(claudeCommandsDir)
+        // Find templates dir
+        let templatesDir: string | null = null
+        try {
+          let dir = dirname(fileURLToPath(import.meta.url))
+          for (let i = 0; i < 5; i++) {
+            const candidate = join(dir, 'templates', 'commands')
+            try { await access(candidate); templatesDir = candidate; break } catch { /* keep looking */ }
+            dir = join(dir, '..')
+          }
+        } catch { /* can't resolve */ }
+
+        if (templatesDir) {
+          const entries = await readdir(templatesDir)
+          const mdFiles = entries.filter(f => f.endsWith('.md'))
+          for (const file of mdFiles) {
+            await fsCopyFile(join(templatesDir, file), join(claudeCommandsDir, file))
+          }
+          filesModified.push('.claude/commands/bp/')
+        } else {
+          warnings.push('Could not find templates dir — slash commands not updated')
+        }
+
+        // Update CLAUDE.md
+        const claudeMdPath = join(projectDir, 'CLAUDE.md')
+        await writeFile(
+          claudeMdPath,
+          `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v2.0 slash commands: /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor, /bp:help, /bp:docs, /bp:investigate, /bp:orchestrate, /bp:export-web, /bp:memory, /bp:quality.\n`,
+          'utf-8',
+        )
+        filesModified.push('CLAUDE.md')
+      } catch {
+        // No Claude Code integration — skip
+      }
+
+      return { filesCreated, filesModified, filesDeleted: [], warnings }
     },
   },
 ]
