@@ -21,6 +21,14 @@ export type CommandId =
   | 'hub'
   | 'learn'
   | 'agent'
+  | 'upgrade'
+  | 'adopt'
+  | 'help'
+  | 'quality'
+  | 'docs'
+  | 'investigate'
+  | 'orchestrate'
+  | 'audit'
 
 /** A command handler that processes CLI arguments */
 export interface CommandHandler {
@@ -51,6 +59,14 @@ const REGISTRY: Record<CommandId, CommandFactory> = {
   hub:                () => import('./hub/index.js').then(m => m.handler),
   learn:              () => import('./learn/index.js').then(m => m.handler),
   agent:              () => import('./agent/index.js').then(m => m.handler),
+  upgrade:            () => import('./upgrade/index.js').then(m => m.handler),
+  adopt:              () => import('./adopt/index.js').then(m => m.handler),
+  help:               () => import('./help/index.js').then(m => m.handler),
+  quality:            () => import('./quality/index.js').then(m => m.handler),
+  docs:               () => import('./docs/index.js').then(m => m.handler),
+  investigate:        () => import('./investigate/index.js').then(m => m.handler),
+  orchestrate:        () => import('./orchestrate/index.js').then(m => m.handler),
+  audit:              () => import('./audit/index.js').then(m => m.handler),
 }
 
 /**

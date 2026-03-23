@@ -57,7 +57,7 @@ async function main(): Promise<void> {
 
     // Version guard: check project schema compatibility before running commands
     // Skip for commands that don't require an existing project
-    const SKIP_VERSION_GUARD = ['doctor', 'adopt', 'help', 'completion', 'hub', 'learn', 'agent']
+    const SKIP_VERSION_GUARD = ['doctor', 'adopt', 'help', 'completion', 'hub', 'learn', 'agent', 'upgrade']
     if (!SKIP_VERSION_GUARD.includes(command)) {
       const versionCheck = await checkProjectVersion(process.cwd())
       if (versionCheck.status === 'cli_too_old') {
