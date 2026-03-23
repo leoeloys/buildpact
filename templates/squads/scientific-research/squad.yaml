@@ -7,6 +7,15 @@ domain: research
 description: "Scientific research squad — Research Lead, Literature Reviewer, Data Analyst, Peer Reviewer, LaTeX Writer"
 initial_level: L2
 
+collaboration:
+  provides:
+    - research-clinical-evidence
+    - literature-review-summaries
+    - statistical-analysis-results
+  consumes:
+    - patient-flow-analysis
+    - compliance-audit-reports
+
 bundle_disclaimers:
   pt-br: "Este conteúdo foi gerado por IA e deve ser revisado por pesquisador qualificado antes do uso."
   en: "This content was AI-generated and must be reviewed by a qualified researcher before use."

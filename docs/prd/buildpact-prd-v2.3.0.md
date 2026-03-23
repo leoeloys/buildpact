@@ -10,11 +10,11 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.3.0-draft |
+| Version | 2.4.0-draft |
 | Date | March 14, 2026 |
 | Author | Dr. Leonardo Eloy Sousa |
 | Reviewer | Claude (PM Review) |
-| Status | DRAFT — Validated (v2.3.0) |
+| Status | DRAFT — Validated (v2.4.0) |
 | Classification | Open Source — MIT License |
 | Primary Language | PT-BR + EN (Bilingual) |
 | Standards | IEEE 830 / ISO/IEC 29148:2018 / Shape Up |
@@ -901,6 +901,70 @@ The AutoResearch Pattern is defined by four invariants: (1) a `program.md` file 
 - `.buildpact/squads/{domain}/benchmark/` — Golden input/output pairs for Squad optimization
 - `.buildpact/squads/{domain}/optimization-history/` — Past optimization reports
 
+### 4.5 v1.0 Extensions (FR-1500 Series)
+
+**FR-1501 — Documentation Site.** The framework MUST provide a VitePress-based documentation site with native PT-BR/EN i18n, including a Quick Start tutorial, CLI Reference, and Architecture Overview. The site MUST be hosted on GitHub Pages with automated deployment from the main branch. Priority: **MUST**.
+
+**FR-1502 — Squad Creation Guide.** The documentation MUST include a comprehensive Squad creation guide with worked examples covering the 6-layer agent structure, Voice DNA authoring, and squad.yaml configuration. The guide MUST include at least one non-software domain example (e.g., medical marketing or clinic management). Priority: **MUST**.
+
+**FR-1503 — Migration Guides.** The documentation SHOULD provide concept-mapping guides for users migrating from BMAD, GSD, or SpecKit. Each guide SHOULD map the source framework's workflows, artifacts, and commands to their BuildPact equivalents, highlighting gaps and new capabilities. Priority: **SHOULD**.
+
+**FR-1504 — Performance Budget Validation.** The framework SHOULD include an automated benchmark suite (`npm run benchmark`) measuring: CLI startup (<500ms), command parse (<50ms), squad load (<100ms), constitution check (<200ms), and audit write (<10ms). Results SHOULD be output in CI-compatible JSON format. Priority: **SHOULD**.
+
+**FR-1505 — Non-Interactive CI Mode.** All commands MUST support a `--ci` flag or `BP_CI=true` environment variable to bypass interactive prompts, using documented defaults for all choices. In CI mode, exit codes MUST be 0 for success and non-zero for failure. Priority: **MUST**.
+
+**FR-1506 — GitHub Actions Adapter.** The framework SHOULD provide a reusable composite GitHub Action (`buildpact/action@v1`) for running BuildPact commands in CI pipelines with budget guards and PR comment summaries. Priority: **SHOULD**.
+
+**FR-1507 — Webhook Notifications.** The framework SHOULD support a configurable webhook URL in config.yaml for pipeline stage completion notifications. Payloads SHOULD be Slack-compatible JSON. Delivery SHOULD be fire-and-forget with a single retry on failure. Selective event filtering SHOULD be supported. Priority: **SHOULD**.
+
+**FR-1508 — Hub Search & Discovery.** The command `buildpact hub search` SHOULD support domain filtering, sort options (downloads, relevance), and a detailed `buildpact hub info <squad>` card view. Priority: **SHOULD**.
+
+**FR-1509 — Squad Quality Scores.** The hub SHOULD compute automated quality scores (0–100) based on structural completeness, Voice DNA presence, smoke test results, documentation, and test fixtures. Badge tiers: Gold (≥90), Silver (≥75), Bronze (≥50), Unrated (<50). Priority: **SHOULD**.
+
+**FR-1510 — Onboarding Learn Command.** The command `buildpact learn` SHOULD open the locale-appropriate documentation site tutorial in the user's default browser. In non-GUI environments, it SHOULD print the URL to stdout with a descriptive message. Priority: **SHOULD**.
+
+**FR-1511 — Sponsorship & Contributor Infrastructure.** The project MUST configure GitHub Sponsors with Individual ($5–25/mo), Supporter ($50–100/mo), and Organization ($250+/mo) tiers. A CONTRIBUTING.md in PT-BR and EN MUST be maintained. A welcome bot MUST greet first-time PR authors. Priority: **MUST**.
+
+**FR-1512 — Release Validation.** The command `npm run release:check` MUST validate: tests passing, coverage thresholds (80% line, 70% branch), npm audit clean, CI mode compatibility, performance benchmarks, and CHANGELOG presence. The check MUST support readonly mode (`readonly: true` in config) for dry-run validation. Priority: **MUST**.
+
+### 4.6 v2.0 Agent Mode & Scale (FR-2000 Series)
+
+**FR-2001 — Agent Mode CLI Supervisor.** The commands `buildpact agent start`, `buildpact agent stop`, and `buildpact agent status` MUST manage a persistent background agent process. The supervisor MUST use a PID file for process tracking, support graceful shutdown with a 30-second timeout, and detect stale PID files from crashed processes. Priority: **MUST**.
+
+**FR-2002 — Auto-Advance Execution.** The agent supervisor MUST automatically advance through plan waves in a loop: execute wave → validate results → advance to next wave → repeat. The supervisor MUST pause on task failure or budget limit breach, and MUST support resume from the paused state. Priority: **MUST**.
+
+**FR-2003 — Event Bus.** The framework MUST provide an in-process EventEmitter-based pub/sub system for inter-agent communication. The event bus MUST support direct messaging, broadcast, topic-based subscriptions, message priorities (critical/high/normal/low), message TTL, and correlation IDs for request-response tracking. Priority: **MUST**.
+
+**FR-2004 — Real-Time Dashboard.** The framework SHOULD provide a terminal UI showing active agents, wave progress, cost accumulator, and elapsed time. The dashboard SHOULD update within 1 second of state changes. A JSON snapshot mode SHOULD be available for non-TTY environments. Priority: **SHOULD**.
+
+**FR-2005 — State Persistence & Recovery.** The agent supervisor MUST periodically checkpoint execution state (every 10 seconds and after each task completion). Technology selection (SQLite vs flat-file vs LevelDB) MUST be captured in an ADR. The supervisor MUST support full resume from the last checkpoint after a crash. Priority: **MUST**.
+
+**FR-2006 — Prompt-to-Agent Migration.** The command `buildpact migrate --to agent-mode` SHOULD validate existing project files against Agent Mode requirements, generate agent.yaml configuration, preserve all existing artifacts, and report a compatibility summary. Priority: **SHOULD**.
+
+**FR-2007 — Squad Optimization with A/B Testing.** The command `buildpact optimize --squad` SHOULD run controlled experiments with N variants against benchmark tasks. Statistical validation SHOULD use a significance threshold of p < 0.05. Priority: **SHOULD**.
+
+**FR-2008 — Domain Benchmark Sets.** The framework SHOULD provide built-in benchmark tasks per domain (e.g., code generation, bug fix, test writing, documentation, refactoring for the Software domain). Custom benchmarks SHOULD be supported via YAML definition. Each benchmark set SHOULD include a minimum of 5 tasks with a quality rubric (0–10 scale) and maximum cost per task. Priority: **SHOULD**.
+
+**FR-2009 — Optimization Isolation.** All optimization variants MUST run in temporary directories, never modifying the production squad. Approved variants MUST be committed via Git. Rejected variants MUST be cleanly deleted with no residual files. Priority: **MUST**.
+
+**FR-2010 — Statistical Optimization Reports.** After optimization, the system MUST generate `optimization-report.md` containing per-variant metrics (mean, standard deviation, p-value), the winning variant diff, and a cost summary. A machine-readable JSON companion file MUST be generated alongside the Markdown report. Priority: **MUST**.
+
+**FR-2011 — Role-Based Access Control (RBAC).** The framework SHOULD support role-based access control via `rbac.yaml` with roles: admin, lead, member, and viewer. Permission guards SHOULD be applied to all commands. The system SHOULD be backward-compatible (no rbac.yaml present = admin access). Denied access attempts SHOULD be logged to the audit trail. Priority: **SHOULD**.
+
+**FR-2012 — Centralized Constitution.** The framework SHOULD support an organization-level constitution at `.buildpact-org/constitution.md` with org-takes-precedence merge semantics. The org constitution SHOULD include an approved squads list and organization-wide defaults. Priority: **SHOULD**.
+
+**FR-2013 — Marketplace Ratings.** The command `buildpact hub review` SHOULD allow users to submit ratings with verified identity. The `hub info` display SHOULD include average rating and recent reviews. Content moderation SHOULD be enforced. Priority: **SHOULD**.
+
+**FR-2014 — Squad Certification.** The command `buildpact hub certify` SHOULD validate that a squad meets certification criteria: quality score ≥90, structural completeness, and passing smoke tests. Certified squads SHOULD receive a "Certified" badge. Certification SHOULD be automatically revoked on regression below thresholds. Priority: **SHOULD**.
+
+**FR-2015 — Cross-Project Learning.** The framework SHOULD generate a project fingerprint after pipeline completion and suggest patterns from similar projects (similarity threshold >0.7). Differential privacy (epsilon=1.0) SHOULD be applied to shared data. Users SHOULD be able to opt out of cross-project learning. Priority: **SHOULD**.
+
+**FR-2016 — Multi-Language Localization.** The framework SHOULD support a locale file contribution path enabling community translations. A minimum of 4 additional languages (ES, FR, DE, JA) SHOULD be targeted as community translations. English SHOULD be the fallback for any missing localization keys. Priority: **SHOULD**.
+
+**FR-2017 — Domain Expansion Packs.** The command `buildpact adopt --pack <domain>` SHOULD install a domain-specific squad, constitution rules, and example specifications. Installation SHOULD use additive merge semantics (no overwrites of existing files). Priority: **SHOULD**.
+
+**FR-2018 — Org-Level Memory.** The command `buildpact memory promote --to org` SHOULD copy validated patterns to `.buildpact-org/memory/` with anonymized source attribution. Cross-team pattern sharing SHOULD be supported. Priority: **SHOULD**.
+
 ---
 ## 5. Non-Functional Requirements
 
@@ -1441,8 +1505,8 @@ Conforming to ISO/IEC 29148:2018 traceability standards. Functional Requirements
 
 | Priority | FR Count | NFR Count | FR Examples |
 |----------|----------|-----------|-------------|
-| **MUST** | 44 | 17 | FR-101–105(a-c), FR-201–202, FR-301–302, FR-304, FR-401, FR-501–502, FR-504, FR-602–603, FR-606, FR-701–703, FR-705, FR-801, FR-803(T1), FR-804, FR-901–905, FR-1001–1002, FR-1103, FR-1201–1206, FR-1301, FR-1304, FR-1403–1404 |
-| **SHOULD** | 24 | 6 | FR-103, FR-105(d-e), FR-106, FR-203, FR-303, FR-402–403, FR-503, FR-505, FR-601, FR-604–605, FR-704, FR-802, FR-803(T2-T3), FR-906–907, FR-1003–1005, FR-1101–1102, FR-1302–1303, FR-1401–1402 *(v2.0 scope)* |
+| **MUST** | 55 | 17 | FR-101–105(a-c), FR-201–202, FR-301–302, FR-304, FR-401, FR-501–502, FR-504, FR-602–603, FR-606, FR-701–703, FR-705, FR-801, FR-803(T1), FR-804, FR-901–905, FR-1001–1002, FR-1103, FR-1201–1206, FR-1301, FR-1304, FR-1403–1404, FR-1501–1502, FR-1505, FR-1511–1512, FR-2001–2003, FR-2005, FR-2009–2010 |
+| **SHOULD** | 43 | 6 | FR-103, FR-105(d-e), FR-106, FR-203, FR-303, FR-402–403, FR-503, FR-505, FR-601, FR-604–605, FR-704, FR-802, FR-803(T2-T3), FR-906–907, FR-1003–1005, FR-1101–1102, FR-1302–1303, FR-1401–1402 *(v2.0 scope)*, FR-1503–1504, FR-1506–1510, FR-2004, FR-2006–2008, FR-2011–2018 |
 | **COULD** | 0 | 0 | No COULD-priority items in current version |
 | **WON'T (this version)** | 0 | 0 | Deferred items tracked in OQ section |
 
@@ -1459,6 +1523,7 @@ Conforming to ISO/IEC 29148:2018 traceability standards. Functional Requirements
 | **2.0.0-draft** | **2026-03-14** | **Dr. Leonardo Eloy Sousa + Claude (PM Review)** | **Major revision addressing 14 review findings:** (1) Expanded Section 6 Technical Architecture with data flow diagrams, sequence diagrams, Squad Plugin API, and file schemas. (2) Added Definition of Done per milestone with explicit FR checklists in Section 9.1. (3) Expanded FR-105 into 5 sub-requirements (FR-105a–e) covering token budgets, compression, conversational adaptation, versioning, and graceful degradation. (4) Added Persona A End-to-End User Journey with textual wireframe. (5) Added Section 7 Security and Trust Model with threat model, NFR-21–25. (6) Added Section 8 Testing Strategy with testing pyramid, output quality testing, and pre-release checklist. (7) Added Anti-Personas (Section 2.2). (8) Added pessimistic/base/optimistic scenarios to all KPIs. (9) Phased Memory Layer: Tier 1 MUST for v1.0, Tier 2+3 SHOULD for v1.1. (10) Moved Self-Optimizing Squads (FR-1401–1402) to v2.0 scope. (11) Added FR-1103 Squad Security Review. (12) Added owners, deadlines, and fallbacks to Open Questions. (13) Added Task Dispatch Payload Schema, Agent Definition Schema, Model Profile Schema, Budget Guards Schema. (14) Completed glossary with 7 additional terms. |
 | **2.1.0-draft** | **2026-03-14** | **Dr. Leonardo Eloy Sousa** | **Naming decision resolved: BuildPact.** (1) Framework name finalized as "BuildPact" after competitive analysis across npm, GitHub, domain registrars, and trademark databases. (2) All placeholders replaced: `[Framework Name TBD]` → BuildPact, `.specflow/` → `.buildpact/`, `/sf:` → `/bp:`. (3) OQ-01 marked as RESOLVED. (4) R-09 (name conflict risk) marked as MITIGATED. (5) Community hub repository named `buildpact-squads`. (6) Domain strategy: buildpact.dev (primary) + buildpact.com. |
 | **2.2.0-draft** | **2026-03-14** | **Dr. Leonardo Eloy Sousa** | **Added Project Decision Log system (NFR-26).** (1) New NFR-26 defining DECISIONS.md (compact append-only decision log, ~200 lines max) and STATUS.md (living current-state file, ~50 lines max) as MUST requirements. (2) Documented relationship to existing artifacts (PRD Revision History, ADRs, project-context.md). (3) Defined usage protocol for AI-assisted session continuity. (4) Updated file structure (Section 6.5) with DECISIONS.md and STATUS.md at project root. (5) Added 2 glossary terms. (6) Updated MoSCoW count (NFR MUST: 16 → 17). |
+| **2.4.0-draft** | **2026-03-22** | **Dr. Leonardo Eloy Sousa + Claude (PM Review)** | **Added missing Functional Requirements for Epics 18–25.** (1) Added Section 4.5 v1.0 Extensions (FR-1500 Series) with 12 new FRs: Documentation Site (FR-1501), Squad Creation Guide (FR-1502), Migration Guides (FR-1503), Performance Budget Validation (FR-1504), Non-Interactive CI Mode (FR-1505), GitHub Actions Adapter (FR-1506), Webhook Notifications (FR-1507), Hub Search & Discovery (FR-1508), Squad Quality Scores (FR-1509), Onboarding Learn Command (FR-1510), Sponsorship & Contributor Infrastructure (FR-1511), Release Validation (FR-1512). (2) Added Section 4.6 v2.0 Agent Mode & Scale (FR-2000 Series) with 18 new FRs: Agent Mode CLI Supervisor (FR-2001), Auto-Advance Execution (FR-2002), Event Bus (FR-2003), Real-Time Dashboard (FR-2004), State Persistence & Recovery (FR-2005), Prompt-to-Agent Migration (FR-2006), Squad Optimization with A/B Testing (FR-2007), Domain Benchmark Sets (FR-2008), Optimization Isolation (FR-2009), Statistical Optimization Reports (FR-2010), RBAC (FR-2011), Centralized Constitution (FR-2012), Marketplace Ratings (FR-2013), Squad Certification (FR-2014), Cross-Project Learning (FR-2015), Multi-Language Localization (FR-2016), Domain Expansion Packs (FR-2017), Org-Level Memory (FR-2018). (3) Updated MoSCoW summary: FR MUST 44→55, FR SHOULD 24→43. |
 | **2.3.0-draft** | **2026-03-14** | **Dr. Leonardo Eloy Sousa + Claude (PM Review)** | **Persona model clarification and PRD structural fixes following BMAD validation.** (1) Added Section 1.5 Product Scope (MVP/Growth/Vision). (2) Added Section 2.1.0 Persona Interaction Levels — explicitly distinguishes framework users (B, C, D) from Squad output users (A). (3) Added End-to-End User Journeys for Personas B, C, and D (Persona D journey identified as the most critical missing artifact). (4) Corrected Persona A description, jobs-to-be-done, and success criteria to reflect Squad-mediated interaction. (5) Fixed Persona-to-Feature Traceability Matrix — Persona A's direct attributions replaced with N/A or Indirect/Receives. (6) Fixed FR-105 subject (Persona D creates Bundles, Persona A receives them). (7) Split FR-504 into FR-504a (framework → spec author) and FR-504b (Squad → end-user). (8) Corrected FR-705 Budget Guards persona attribution (removed Persona A). (9) Fixed FR-301 testability (references active model's context window). (10) Fixed FR-503 testability (minimum 3 numbered options). (11) Fixed FR-704 testability (100% pass rate criterion, blocks wave progression). (12) Fixed NFR-03 dual-target ambiguity (70% mandatory, 90% stretch). (13) Fixed FR-906 to document Prompt Mode behavior. (14) Fixed Section 3.3 Progressive Disclosure note re: Persona A. (15) Fixed Alpha DoD (removed incorrect Persona A gate, deferred to Beta). (16) Added Persona A journey gate to Beta DoD. (17) Added v2.0 scope tag to FR-1401–1402 in MoSCoW table. |
 
 ### 13.4 References

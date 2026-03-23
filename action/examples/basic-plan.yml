@@ -1,0 +1,43 @@
+name: BuildPact Plan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run BuildPact plan
+        id: bp
+        uses: ./
+        with:
+          command: plan
+          budget: '1.00'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show outputs
+        if: always()
+        run: |
+          echo "Exit code : ${{ steps.bp.outputs.exit-code }}"
+          echo "Cost      : ${{ steps.bp.outputs.cost }}"
+          echo "Summary   : ${{ steps.bp.outputs.summary }}"
+
+      - name: Upload plan artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildpact-plan
+          path: .buildpact/plans/
+          retention-days: 7

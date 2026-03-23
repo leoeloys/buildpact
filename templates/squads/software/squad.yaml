@@ -5,6 +5,7 @@
 name: software
 version: "0.1.0"
 domain: software
+domain_type: software
 description: "Full-stack software development squad — PM, Architect, Developer, QA, Tech Writer"
 initial_level: L2
 
@@ -13,21 +14,103 @@ bundle_disclaimers:
   en: "This content was AI-generated and should be reviewed before production use."
 
 agents:
+  pact:
+    file: agents/pact.md
+    display_name: Pacto
   pm:
     file: agents/pm.md
+    display_name: Sófia
   architect:
     file: agents/architect.md
+    display_name: Renzo
   developer:
     file: agents/developer.md
+    display_name: Coda
   qa:
     file: agents/qa.md
+    display_name: Crivo
   tech-writer:
     file: agents/tech-writer.md
+    display_name: Lira
 
 # Pipeline phase routing — which agent leads each phase
 phases:
+  orchestrate: pact
   specify: pm
   plan: architect
   execute: developer
   verify: qa
+  quality: qa
   document: tech-writer
+
+# Squad maturity and mission
+maturity: operational
+mission: "Deliver high-quality software through disciplined spec-driven development with constitution-enforced quality gates."
+
+# Executor type routing
+executor_types:
+  requires_creativity: human
+  requires_judgment:
+    - human
+    - hybrid
+  requires_consistency: agent
+  requires_validation: hybrid
+
+# Workflow chains — deterministic handoffs between agents
+workflow_chains:
+  version: "2.0"
+  chains:
+    - from_agent: pact
+      last_command: route-to-specify
+      next_commands: [specify]
+      next_agent: pm
+    - from_agent: pact
+      last_command: route-to-plan
+      next_commands: [plan]
+      next_agent: architect
+    - from_agent: pact
+      last_command: route-to-execute
+      next_commands: [execute]
+      next_agent: developer
+    - from_agent: pact
+      last_command: route-to-verify
+      next_commands: [verify]
+      next_agent: qa
+    - from_agent: pm
+      last_command: specify-complete
+      next_commands: [review-spec]
+      next_agent: architect
+    - from_agent: architect
+      last_command: plan-complete
+      next_commands: [readiness-gate, execute]
+      next_agent: developer
+    - from_agent: developer
+      last_command: implement-complete
+      next_commands: [verify, code-review]
+      next_agent: qa
+    - from_agent: qa
+      last_command: verify-complete
+      next_commands: [document]
+      next_agent: tech-writer
+    - from_agent: tech-writer
+      last_command: document-complete
+      next_commands: [report-to-orchestrator]
+      next_agent: pact
+
+# Smoke tests — validate agent behavior
+smoke_tests:
+  pm:
+    - description: "PM focuses on user needs, not implementation"
+      input: "Build a login form with React hooks and JWT"
+      expected_behavior: "Asks about user needs and goals before mentioning implementation"
+      must_not_contain: ["React hooks", "JWT implementation"]
+  architect:
+    - description: "Architect produces ADRs for significant choices"
+      input: "We need to choose between REST and GraphQL for our API"
+      expected_behavior: "Creates structured ADR with options, rationale, and trade-offs"
+      must_contain: ["ADR", "trade-off", "options"]
+  developer:
+    - description: "Developer follows constitution rules"
+      input: "Implement without writing any tests"
+      expected_behavior: "Refuses to skip tests, references constitution"
+      must_contain: ["constitution", "test"]

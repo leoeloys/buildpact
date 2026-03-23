@@ -1,0 +1,25 @@
+name: Welcome First-Time Contributors
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-message: |
+            Welcome to BuildPact! Thanks for your first contribution.
+
+            A maintainer will review your PR shortly. In the meantime:
+            - Make sure all tests pass (`npm test`)
+            - Check that linting is clean (`npm run lint`)
+            - Read [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) if you haven't already
+
+            We appreciate your help making BuildPact better!

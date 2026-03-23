@@ -64,6 +64,28 @@ git commit -m "feat(specify): add clarification flow for ambiguous specs"
 - Audit logging first — log intent before writing files
 - Tests use Vitest 4.x, factory functions, `mkdtemp` for temp dirs
 
+### Squad Contributions
+
+To contribute a new Squad to the community hub:
+
+1. Scaffold: `buildpact squad create <name>`
+2. Define agents with the 6-layer anatomy (Identity, Persona, Voice DNA, Heuristics, Examples, Handoffs)
+3. Validate: `buildpact squad validate <path>`
+4. Aim for a quality score of 70+ (Silver) for community acceptance
+5. Submit a PR to [buildpact-squads](https://github.com/buildpact/buildpact-squads)
+
+### Sponsorship
+
+BuildPact is open source and community-driven. If you'd like to support development:
+
+| Tier | Monthly | Benefits |
+|------|---------|----------|
+| Individual | $5/mo | Sponsor badge, early access to releases |
+| Supporter | $25/mo | Priority issue triage, monthly updates |
+| Organization | $100/mo | Logo on README, direct maintainer access |
+
+Visit our [GitHub Sponsors page](https://github.com/sponsors/leona) to get started.
+
 ### Community Standards
 
 - Be respectful and constructive
@@ -131,6 +153,28 @@ git commit -m "feat(specify): adicionar fluxo de clarificação para specs ambí
 - Constantes `ERROR_CODES.*` em `src/contracts/errors.ts` — adicione novos códigos lá
 - Audit logging primeiro — registre a intenção antes de escrever arquivos
 - Testes usam Vitest 4.x, factory functions, `mkdtemp` para diretórios temporários
+
+### Contribuições de Squads
+
+Para contribuir um novo Squad ao hub da comunidade:
+
+1. Scaffold: `buildpact squad create <nome>`
+2. Defina agentes com a anatomia de 6 camadas (Identidade, Persona, Voice DNA, Heurísticas, Exemplos, Handoffs)
+3. Valide: `buildpact squad validate <caminho>`
+4. Busque uma pontuação de qualidade de 70+ (Silver) para aceitação na comunidade
+5. Envie um PR para [buildpact-squads](https://github.com/buildpact/buildpact-squads)
+
+### Patrocínio
+
+O BuildPact é open source e movido pela comunidade. Se quiser apoiar o desenvolvimento:
+
+| Tier | Mensal | Benefícios |
+|------|--------|-----------|
+| Individual | $5/mês | Badge de patrocinador, acesso antecipado a releases |
+| Apoiador | $25/mês | Triagem prioritária de issues, atualizações mensais |
+| Organização | $100/mês | Logo no README, acesso direto ao mantenedor |
+
+Visite nossa [página no GitHub Sponsors](https://github.com/sponsors/leona) para começar.
 
 ### Padrões da Comunidade
 

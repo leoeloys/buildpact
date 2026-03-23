@@ -1,0 +1,48 @@
+# BuildPact Model Profile — balanced (DEFAULT)
+# Balances quality and cost: research uses quality models, writing uses standard.
+name: balanced
+phases:
+  research:
+    primary: "claude-sonnet-4-6"
+    failover:
+      models: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 500
+      max_wait_ms: 15000
+    operations:
+      - operation: research
+        model: "claude-sonnet-4-6"
+      - operation: plan-writing
+        model: "claude-sonnet-4-6"
+      - operation: validation
+        model: "claude-sonnet-4-6"
+  plan:
+    primary: "claude-sonnet-4-6"
+    failover:
+      models: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 500
+      max_wait_ms: 15000
+    operations:
+      - operation: research
+        model: "claude-sonnet-4-6"
+      - operation: plan-writing
+        model: "claude-sonnet-4-6"
+      - operation: validation
+        model: "claude-haiku-4-5-20251001"
+  execute:
+    primary: "claude-sonnet-4-6"
+    failover:
+      models: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 500
+      max_wait_ms: 15000
+  verify:
+    primary: "claude-sonnet-4-6"
+    failover:
+      models: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 500
+      max_wait_ms: 15000
+  specify:
+    primary: "claude-sonnet-4-6"
+    failover:
+      models: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 500
+      max_wait_ms: 15000

@@ -31,4 +31,6 @@ export interface TaskResult {
   costUsd?: number
   /** Error details if task failed */
   error?: string
+  /** Response content from the subagent */
+  response?: string
 }

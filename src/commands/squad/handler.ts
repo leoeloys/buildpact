@@ -22,6 +22,14 @@ import {
   installSquad,
 } from '../../engine/squad-scaffolder.js'
 import { isRegistryName, downloadSquadFromHub } from '../../engine/community-hub.js'
+import {
+  readApprovalStore,
+  scanAgentSuggestions,
+  applyLevelChange,
+} from '../../squads/leveling.js'
+import { runSmokeTests } from '../../engine/squad-smoke-test.js'
+import { calculateQualityScore, scoreToBadge } from '../../engine/hub-search.js'
+import { validateSquad, toJsonOutput } from '../../squads/validator.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -185,6 +193,12 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
       return err(downloadResult.error)
     }
     spinner.stop(i18n.t('cli.squad.hub_downloaded', { name: rawName }))
+
+    // Warn if squad has not been reviewed by a BuildPact maintainer
+    if (!downloadResult.value.manifest.reviewed) {
+      clack.log.warn(i18n.t('cli.squad.hub.unreviewed_warning', { name: rawName }))
+    }
+
     sourceDir = tempDir
   } else {
     // Treat as local path
@@ -265,6 +279,55 @@ export async function runAdd(args: string[], projectDir: string): Promise<Result
   }
   spinner.stop(i18n.t('cli.squad.add_security_ok'))
 
+  // Quality score check — warn if below 50
+  const smokeResult = await runSmokeTests(sourceDir, rawName)
+  if (smokeResult.ok) {
+    const { readdir, access } = await import('node:fs/promises')
+    let agentCount = 0
+    let testFixtureCount = 0
+    let hasReadme = false
+    let hasChangelog = false
+    let hasExamples = false
+
+    try {
+      const agentFiles = await readdir(join(sourceDir, 'agents'))
+      agentCount = agentFiles.filter(f => f.endsWith('.md')).length
+    } catch { /* no agents dir */ }
+
+    try { await access(join(sourceDir, 'README.md')); hasReadme = true } catch { /* no readme */ }
+    try { await access(join(sourceDir, 'CHANGELOG.md')); hasChangelog = true } catch { /* no changelog */ }
+    try {
+      const entries = await readdir(sourceDir)
+      hasExamples = entries.some(e => e === 'examples' || e === 'fixtures')
+      testFixtureCount = entries.filter(e => e.endsWith('.test.yaml') || e.endsWith('.fixture.yaml')).length
+      if (hasExamples) {
+        try {
+          const exampleFiles = await readdir(join(sourceDir, 'examples'))
+          testFixtureCount += exampleFiles.length
+        } catch { /* empty examples */ }
+      }
+    } catch { /* can't read dir */ }
+
+    const quality = calculateQualityScore(smokeResult.value, {
+      hasReadme, hasChangelog, hasExamples, testFixtureCount, agentCount,
+    })
+    const badge = scoreToBadge(quality.total)
+
+    clack.log.info(`Quality: ${quality.total}/100 (${badge})`)
+
+    if (quality.total < 50) {
+      const proceed = await clack.confirm({
+        message: i18n.t('cli.hub.quality_low_warning', { score: String(quality.total) }),
+        initialValue: false,
+      })
+      if (clack.isCancel(proceed) || !proceed) {
+        if (tempDir) await rm(tempDir, { recursive: true, force: true })
+        clack.outro(i18n.t('cli.squad.add_cancelled'))
+        return ok(undefined)
+      }
+    }
+  }
+
   // Install
   spinner.start(i18n.t('cli.squad.add_installing'))
   const installResult = await installSquad(sourceDir, projectDir)
@@ -309,7 +372,47 @@ export async function runValidate(args: string[], projectDir: string): Promise<R
   const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'squad.jsonl'))
 
   const isCommunity = args.includes('--community')
+  const isJson = args.includes('--json')
   const pathArgs = args.filter(a => !a.startsWith('--'))
+
+  // --json path: machine-readable output, no clack, for CI/CD consumption
+  if (isJson) {
+    const rawPath = pathArgs[0]
+    if (!rawPath || rawPath.trim().length === 0) {
+      process.stdout.write(JSON.stringify([{
+        check: 'system', passed: false, message: 'Missing squad path argument', suggestedFix: 'Usage: buildpact squad validate <path> [--community] [--json]',
+      }]) + '\n')
+      return err({
+        code: ERROR_CODES.SQUAD_NOT_FOUND,
+        i18nKey: 'error.squad.not_found',
+        params: { name: '(none)' },
+      })
+    }
+    const squadDir = resolve(rawPath)
+    const validateResult = await validateSquad(squadDir, { community: isCommunity })
+    if (!validateResult.ok) {
+      process.stdout.write(JSON.stringify([{
+        check: 'system', passed: false, message: validateResult.error.code, suggestedFix: 'Ensure the squad directory exists and is readable',
+      }]) + '\n')
+      return err(validateResult.error)
+    }
+    const items = toJsonOutput(validateResult.value)
+    process.stdout.write(JSON.stringify(items) + '\n')
+    await audit.log({
+      action: 'squad.validate.json',
+      agent: 'squad-command',
+      files: [squadDir],
+      outcome: validateResult.value.passed ? 'success' : 'failure',
+    })
+    if (!validateResult.value.passed) {
+      return err({
+        code: ERROR_CODES.SQUAD_VALIDATION_FAILED,
+        i18nKey: 'error.squad.validation_failed',
+        params: { count: String(validateResult.value.totalErrors) },
+      })
+    }
+    return ok(undefined)
+  }
 
   clack.intro(i18n.t('cli.squad.validate_welcome'))
 
@@ -443,6 +546,64 @@ export async function runValidate(args: string[], projectDir: string): Promise<R
 }
 
 // ---------------------------------------------------------------------------
+// Sub-command: level check
+// ---------------------------------------------------------------------------
+
+/**
+ * Handle `buildpact squad level check`.
+ * Scans the approval store and suggests promotions/demotions with user confirmation.
+ */
+export async function runLevelCheck(args: string[], projectDir: string): Promise<Result<undefined>> {
+  const lang = await readLanguage(projectDir)
+  const i18n = createI18n(lang)
+
+  clack.intro(i18n.t('cli.autonomy.check_welcome'))
+
+  const store = await readApprovalStore(projectDir)
+  const suggestions = scanAgentSuggestions(store)
+
+  if (suggestions.length === 0) {
+    clack.outro(i18n.t('cli.autonomy.no_suggestions'))
+    return ok(undefined)
+  }
+
+  for (const suggestion of suggestions) {
+    const i18nKey = suggestion.direction === 'promotion'
+      ? 'cli.autonomy.promote_suggest'
+      : 'cli.autonomy.demote_suggest'
+
+    const confirmed = await clack.confirm({
+      message: i18n.t(i18nKey, {
+        agent: suggestion.agentId,
+        rate: Math.round(suggestion.rate * 100).toString(),
+        from: suggestion.currentLevel,
+        to: suggestion.suggestedLevel,
+      }),
+    })
+
+    if (clack.isCancel(confirmed) || !confirmed) {
+      clack.log.info(i18n.t('cli.autonomy.level_unchanged', { agent: suggestion.agentId }))
+      continue
+    }
+
+    const applyResult = await applyLevelChange(suggestion, projectDir)
+    if (!applyResult.ok) {
+      clack.log.error(i18n.t('error.autonomy.store_failed'))
+      return err(applyResult.error)
+    }
+
+    clack.log.success(i18n.t('cli.autonomy.level_changed', {
+      agent: suggestion.agentId,
+      from: suggestion.currentLevel,
+      to: suggestion.suggestedLevel,
+    }))
+  }
+
+  clack.outro(i18n.t('cli.autonomy.check_welcome'))
+  return ok(undefined)
+}
+
+// ---------------------------------------------------------------------------
 // Command handler
 // ---------------------------------------------------------------------------
 
@@ -462,6 +623,10 @@ export const handler: CommandHandler = {
 
     if (subcommand === 'validate') {
       return runValidate(subArgs, projectDir)
+    }
+
+    if (subcommand === 'level' && subArgs[0] === 'check') {
+      return runLevelCheck(subArgs.slice(1), projectDir)
     }
 
     // Unknown subcommand — show usage hint

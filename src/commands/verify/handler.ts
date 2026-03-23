@@ -16,6 +16,7 @@ import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { buildFeedbackEntry, captureSessionFeedback, loadRecentFeedbacks } from '../../engine/session-feedback.js'
 import { captureDistilledLessons } from '../../engine/lessons-distiller.js'
+import { isCiMode, ciLog } from '../../foundation/ci.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -209,6 +210,7 @@ export async function findLatestSpecSlug(projectDir: string): Promise<string | u
 export const handler: CommandHandler = {
   async run(args: string[]) {
     const projectDir = process.cwd()
+    const isCi = isCiMode(args)
     const configPath = join(projectDir, '.buildpact', 'config.yaml')
 
     let lang: SupportedLanguage = 'en'
@@ -227,11 +229,12 @@ export const handler: CommandHandler = {
     clack.intro(i18n.t('cli.verify.welcome'))
 
     // Resolve spec path — CLI arg or latest in .buildpact/specs/
+    const positionalArgs = args.filter(a => !a.startsWith('--'))
     let specPath: string
     let slug: string
 
-    if (args[0]) {
-      specPath = args[0]
+    if (positionalArgs[0]) {
+      specPath = positionalArgs[0]
       const parts = specPath.split('/')
       slug = parts[parts.length - 2] ?? parts[parts.length - 1] ?? 'unknown'
     } else {
@@ -273,40 +276,49 @@ export const handler: CommandHandler = {
     // Walk through each AC
     const acResults: AcVerificationEntry[] = []
 
-    for (let i = 0; i < acs.length; i++) {
-      const ac = acs[i] ?? ''
-      const guidance = buildAcGuidance(ac)
-
-      clack.log.step(i18n.t('cli.verify.ac_header', { index: String(i + 1), total: String(acs.length) }))
-      clack.log.message(i18n.t('cli.verify.ac_criterion', { ac }))
-      clack.log.message(i18n.t('cli.verify.ac_guidance', { guidance }))
-
-      const verdict = await clack.select({
-        message: i18n.t('cli.verify.ac_prompt'),
-        options: [
-          { value: 'pass', label: i18n.t('cli.verify.verdict_pass') },
-          { value: 'fail', label: i18n.t('cli.verify.verdict_fail') },
-          { value: 'skip', label: i18n.t('cli.verify.verdict_skip') },
-        ],
-      })
-
-      if (clack.isCancel(verdict)) {
-        clack.cancel(i18n.t('cli.verify.cancelled'))
-        return ok(undefined)
+    if (isCi) {
+      // CI mode: auto-skip all ACs
+      ciLog('auto-skipped', 'manual verification')
+      for (let i = 0; i < acs.length; i++) {
+        const ac = acs[i] ?? ''
+        acResults.push({ index: i, ac, status: 'skip', note: '[ci] auto-skipped: manual verification' })
       }
+    } else {
+      for (let i = 0; i < acs.length; i++) {
+        const ac = acs[i] ?? ''
+        const guidance = buildAcGuidance(ac)
 
-      let note: string | undefined
-      if (verdict === 'fail') {
-        const noteInput = await clack.text({
-          message: i18n.t('cli.verify.fail_note_prompt'),
-          placeholder: i18n.t('cli.verify.fail_note_placeholder'),
+        clack.log.step(i18n.t('cli.verify.ac_header', { index: String(i + 1), total: String(acs.length) }))
+        clack.log.message(i18n.t('cli.verify.ac_criterion', { ac }))
+        clack.log.message(i18n.t('cli.verify.ac_guidance', { guidance }))
+
+        const verdict = await clack.select({
+          message: i18n.t('cli.verify.ac_prompt'),
+          options: [
+            { value: 'pass', label: i18n.t('cli.verify.verdict_pass') },
+            { value: 'fail', label: i18n.t('cli.verify.verdict_fail') },
+            { value: 'skip', label: i18n.t('cli.verify.verdict_skip') },
+          ],
         })
-        if (!clack.isCancel(noteInput) && noteInput) {
-          note = noteInput
-        }
-      }
 
-      acResults.push({ index: i, ac, status: verdict as AcStatus, ...(note !== undefined && { note }) })
+        if (clack.isCancel(verdict)) {
+          clack.cancel(i18n.t('cli.verify.cancelled'))
+          return ok(undefined)
+        }
+
+        let note: string | undefined
+        if (verdict === 'fail') {
+          const noteInput = await clack.text({
+            message: i18n.t('cli.verify.fail_note_prompt'),
+            placeholder: i18n.t('cli.verify.fail_note_placeholder'),
+          })
+          if (!clack.isCancel(noteInput) && noteInput) {
+            note = noteInput
+          }
+        }
+
+        acResults.push({ index: i, ac, status: verdict as AcStatus, ...(note !== undefined && { note }) })
+      }
     }
 
     // Build report

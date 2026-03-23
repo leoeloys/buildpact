@@ -8,7 +8,7 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { ok, err, ERROR_CODES, type Result } from '../contracts/errors.js'
-import { extractPrinciples } from './constitution-enforcer.js'
+import { extractPrincipleGroups } from './constitution-enforcer.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,8 +60,8 @@ export function diffConstitutionPrinciples(
   oldContent: string,
   newContent: string,
 ): PrincipleChange[] {
-  const oldPrinciples = extractPrinciples(oldContent)
-  const newPrinciples = extractPrinciples(newContent)
+  const oldPrinciples = extractPrincipleGroups(oldContent)
+  const newPrinciples = extractPrincipleGroups(newContent)
 
   const oldMap = new Map(oldPrinciples.map((p) => [p.name, p.rules]))
   const newMap = new Map(newPrinciples.map((p) => [p.name, p.rules]))
@@ -137,7 +137,7 @@ export async function scanDownstreamArtifacts(
         artifacts.push({
           path: relative(projectDir, filePath),
           referencedPrinciples: referenced,
-          recommendedAction: 'Review for compliance with updated Constitution rules',
+          recommendedAction: 'review_compliance',
         })
       }
     }

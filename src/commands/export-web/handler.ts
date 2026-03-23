@@ -9,6 +9,7 @@ import * as clack from '@clack/prompts'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
+import { execSync } from 'node:child_process'
 import { ok, err, ERROR_CODES } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
 import type { CommandHandler } from '../registry.js'
@@ -658,12 +659,31 @@ export function applyProgressiveCompression(
 // Handler
 // ---------------------------------------------------------------------------
 
-/** Parse platform from CLI args, defaulting to 'claude' */
-export function parsePlatform(args: string[]): WebPlatform {
-  const arg = args[0]?.toLowerCase() ?? ''
-  if (arg === 'chatgpt') return 'chatgpt'
-  if (arg === 'gemini') return 'gemini'
-  return 'claude'
+/** Valid platform identifiers */
+export const VALID_PLATFORMS: WebPlatform[] = ['claude', 'chatgpt', 'gemini']
+
+/** Parse platform from CLI args; returns undefined for invalid platform */
+export function parsePlatform(args: string[]): WebPlatform | undefined {
+  const arg = args[0]?.toLowerCase() ?? 'claude'
+  if (VALID_PLATFORMS.includes(arg as WebPlatform)) return arg as WebPlatform
+  return undefined
+}
+
+/** Detect available clipboard command */
+export function detectClipboardCommand(): string | undefined {
+  try {
+    execSync('which pbcopy', { stdio: 'pipe' })
+    return 'pbcopy'
+  } catch {
+    // not macOS
+  }
+  try {
+    execSync('which xclip', { stdio: 'pipe' })
+    return 'xclip -selection clipboard'
+  } catch {
+    // not available
+  }
+  return undefined
 }
 
 export const handler: CommandHandler = {
@@ -676,6 +696,13 @@ export const handler: CommandHandler = {
     clack.intro(i18n.t('cli.export_web.welcome'))
 
     const platform = parsePlatform(args)
+    if (!platform) {
+      return err({
+        code: 'INVALID_PLATFORM',
+        i18nKey: 'cli.export.invalid_platform',
+        params: { platforms: VALID_PLATFORMS.join(', ') },
+      })
+    }
 
     // Log intent
     await audit.log({
@@ -805,6 +832,22 @@ export const handler: CommandHandler = {
         platform,
       }),
     )
+
+    // Offer clipboard copy if available
+    const clipCmd = detectClipboardCommand()
+    if (clipCmd) {
+      const shouldCopy = await clack.confirm({
+        message: i18n.t('cli.export.copy_prompt'),
+      })
+      if (shouldCopy === true) {
+        try {
+          execSync(`cat ${JSON.stringify(outputPath)} | ${clipCmd}`, { stdio: 'pipe' })
+          clack.log.success(i18n.t('cli.export.copied'))
+        } catch {
+          // Clipboard failed silently
+        }
+      }
+    }
 
     clack.outro(i18n.t('cli.export_web.outro'))
 

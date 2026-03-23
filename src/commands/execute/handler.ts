@@ -20,6 +20,9 @@ import {
   executeWave,
 } from '../../engine/wave-executor.js'
 import type { WaveTask, WaveExecutionResult } from '../../engine/wave-executor.js'
+import { WaveProgressRenderer } from '../../engine/progress-renderer.js'
+import type { TuiAdapter } from '../../engine/progress-renderer.js'
+import { persistToAudit } from '../../engine/cost-projector.js'
 import {
   verifyWaveAcs,
   formatWaveVerificationReport,
@@ -39,6 +42,7 @@ import {
   getAgentLevel,
   requiresWriteConfirmation,
 } from '../../engine/autonomy-manager.js'
+import { isCiMode, ciLog } from '../../foundation/ci.js'
 
 // ---------------------------------------------------------------------------
 // Plan discovery — pure functions exported for unit testing
@@ -210,6 +214,7 @@ export const handler: CommandHandler = {
     const lang = await readLanguage(projectDir)
     const i18n = createI18n(lang)
     const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'cli.jsonl'))
+    const isCi = isCiMode(args)
 
     clack.intro(i18n.t('cli.execute.welcome'))
 
@@ -276,6 +281,22 @@ export const handler: CommandHandler = {
     const agentLevel = getAgentLevel(activeSquadName ?? '__default__', approvalStore, 'L2')
     const needsWriteConfirm = requiresWriteConfirmation(agentLevel)
 
+    // Set up progress renderer for real-time terminal feedback
+    const tuiAdapter: TuiAdapter = {
+      spinner: () => clack.spinner(),
+      log: clack.log,
+    }
+    const renderer = new WaveProgressRenderer(tuiAdapter)
+
+    // Graceful shutdown — register SIGINT/SIGTERM handlers
+    let cancelled = false
+    const signalHandler = () => {
+      cancelled = true
+      clack.log.warn(i18n.t('cli.execute.cancelling') || 'Cancelling execution, waiting for current tasks to finish...')
+    }
+    process.on('SIGINT', signalHandler)
+    process.on('SIGTERM', signalHandler)
+
     // Execute waves sequentially with goal-backward verification after each wave
     const executeSpinner = clack.spinner()
     executeSpinner.start(i18n.t('cli.execute.executing'))
@@ -285,6 +306,12 @@ export const handler: CommandHandler = {
     let verificationFailed = false
 
     for (const waveTasks of waveGroups) {
+      // Graceful shutdown check
+      if (cancelled) {
+        executeSpinner.stop(i18n.t('cli.execute.cancelled') || 'Execution cancelled.')
+        break
+      }
+
       // Budget guard — check before dispatching any AI calls for this wave (FR-705)
       const budgetCheck = checkBudget({
         config: budgetConfig,
@@ -296,6 +323,13 @@ export const handler: CommandHandler = {
         executeSpinner.stop(i18n.t('cli.execute.budget_exceeded', { type: budgetCheck.value.limitType ?? 'unknown', limit: budgetCheck.value.limitUsd.toFixed(2) }))
         const summary = formatCostSummary({ config: budgetConfig, sessionSpendUsd, phaseSpendUsd, dailySpendUsd: dailySpendBaseline + sessionSpendUsd })
         clack.log.warn(i18n.t('cli.execute.budget_summary') + '\n' + summary)
+
+        if (isCi) {
+          // CI mode: strict budget enforcement — no override prompt
+          ciLog('budget-exceeded', (budgetCheck.value.limitType ?? 'unknown') + ' limit $' + budgetCheck.value.limitUsd.toFixed(2))
+          waveExecutionFailed = true
+          break
+        }
 
         const action = await clack.select({
           message: i18n.t('cli.execute.budget_action_prompt'),
@@ -338,22 +372,30 @@ export const handler: CommandHandler = {
 
       // L1 autonomy confirmation — L1 agents require explicit approval before any write op (FR-851)
       if (needsWriteConfirm) {
-        executeSpinner.stop(i18n.t('cli.execute.executing'))
-        const firstTask = waveTasks[0]?.title ?? ''
-        const confirmed = await clack.confirm({
-          message: i18n.t('cli.autonomy.l1_write_confirm', {
-            agent: activeSquadName ?? 'agent',
-            task: firstTask,
-          }),
-        })
-        if (clack.isCancel(confirmed) || confirmed === false) {
-          clack.log.warn(i18n.t('cli.autonomy.l1_write_cancelled', { agent: activeSquadName ?? 'agent' }))
-          break
+        if (isCi) {
+          ciLog('auto-confirmed', 'L1 write operation')
+        } else {
+          executeSpinner.stop(i18n.t('cli.execute.executing'))
+          const firstTask = waveTasks[0]?.title ?? ''
+          const confirmed = await clack.confirm({
+            message: i18n.t('cli.autonomy.l1_write_confirm', {
+              agent: activeSquadName ?? 'agent',
+              task: firstTask,
+            }),
+          })
+          if (clack.isCancel(confirmed) || confirmed === false) {
+            clack.log.warn(i18n.t('cli.autonomy.l1_write_cancelled', { agent: activeSquadName ?? 'agent' }))
+            break
+          }
+          executeSpinner.start(i18n.t('cli.execute.executing'))
         }
-        executeSpinner.start(i18n.t('cli.execute.executing'))
       }
 
-      const waveResult = executeWave(waveTasks)
+      const waveResult = executeWave(waveTasks, {
+        renderer,
+        totalWaves: waveGroups.length,
+        cancelled: () => cancelled,
+      })
       waveResults.push(waveResult)
 
       // Accumulate stub spend for this wave (FR-705)
@@ -439,6 +481,16 @@ export const handler: CommandHandler = {
         }),
       )
     }
+
+    // Clean up signal handlers
+    process.removeListener('SIGINT', signalHandler)
+    process.removeListener('SIGTERM', signalHandler)
+
+    // Persist cost data to audit trail
+    const waveTaskResults = waveResults.map(w => w.tasks)
+    await persistToAudit(projectDir, waveTaskResults, 'balanced').catch(() => {
+      // Best-effort — don't fail execution if audit write fails
+    })
 
     // Report per-wave results
     for (const wave of waveResults) {

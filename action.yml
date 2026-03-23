@@ -1,0 +1,125 @@
+name: BuildPact
+description: Run BuildPact commands in CI with budget guards, annotations, and PR comments.
+
+inputs:
+  command:
+    description: >
+      BuildPact command to run (plan, execute, quick, verify, specify,
+      orchestrate, doctor, status, quality, audit, diff).
+    required: true
+  plan:
+    description: Path to an existing plan file or directory (optional).
+    required: false
+    default: ''
+  budget:
+    description: Per-session budget ceiling in USD (e.g. "1.00"). Set to "0" to disable.
+    required: false
+    default: '1.00'
+  ci-mode:
+    description: Pass --ci flag to every BuildPact command.
+    required: false
+    default: 'true'
+  node-version:
+    description: Node.js version to install.
+    required: false
+    default: '22'
+  buildpact-version:
+    description: npm version tag/range for buildpact (e.g. "latest", "0.1.0-alpha.5").
+    required: false
+    default: 'latest'
+
+outputs:
+  exit-code:
+    description: Exit code returned by the BuildPact command.
+    value: ${{ steps.run-command.outputs.exit-code }}
+  cost:
+    description: Reported cost in USD for the session (extracted from [ci:cost] marker).
+    value: ${{ steps.run-command.outputs.cost }}
+  summary:
+    description: One-line summary extracted from [ci:summary] marker in command output.
+    value: ${{ steps.run-command.outputs.summary }}
+
+runs:
+  using: composite
+  steps:
+    # -------------------------------------------------------------------------
+    # 1. Validate command input
+    # -------------------------------------------------------------------------
+    - name: Validate command
+      shell: bash
+      run: |
+        set -euo pipefail
+        KNOWN_COMMANDS="plan execute quick verify specify orchestrate doctor status quality audit diff"
+        COMMAND="${{ inputs.command }}"
+        for c in $KNOWN_COMMANDS; do
+          if [ "$c" = "$COMMAND" ]; then
+            echo "Command validated: $COMMAND"
+            exit 0
+          fi
+        done
+        echo "::error ::Unknown BuildPact command '$COMMAND'. Allowed: $KNOWN_COMMANDS"
+        exit 1
+
+    # -------------------------------------------------------------------------
+    # 2. Setup Node.js
+    # -------------------------------------------------------------------------
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # -------------------------------------------------------------------------
+    # 3. Install BuildPact
+    # -------------------------------------------------------------------------
+    - name: Install BuildPact
+      shell: bash
+      run: |
+        set -euo pipefail
+        npm install -g buildpact@${{ inputs.buildpact-version }}
+        buildpact --version
+
+    # -------------------------------------------------------------------------
+    # 4. Configure budget
+    # -------------------------------------------------------------------------
+    - name: Setup budget
+      shell: bash
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/action/setup-budget.sh" "${{ inputs.budget }}"
+
+    # -------------------------------------------------------------------------
+    # 5. Run the BuildPact command
+    # -------------------------------------------------------------------------
+    - name: Run BuildPact command
+      id: run-command
+      shell: bash
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/action/run-command.sh" \
+          "${{ inputs.command }}" \
+          "${{ inputs.plan }}" \
+          "${{ inputs.ci-mode }}"
+
+    # -------------------------------------------------------------------------
+    # 6. Annotate failures
+    # -------------------------------------------------------------------------
+    - name: Annotate failures
+      if: always()
+      shell: bash
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/action/annotate-failures.sh"
+
+    # -------------------------------------------------------------------------
+    # 7. Post PR comment
+    # -------------------------------------------------------------------------
+    - name: Post PR comment
+      if: always()
+      shell: bash
+      env:
+        BP_COMMAND: ${{ inputs.command }}
+        BP_COST: ${{ steps.run-command.outputs.cost }}
+        BP_SUMMARY: ${{ steps.run-command.outputs.summary }}
+      run: |
+        set -euo pipefail
+        "${{ github.action_path }}/action/post-pr-comment.sh"

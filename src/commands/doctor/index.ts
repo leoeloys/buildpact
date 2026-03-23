@@ -6,7 +6,7 @@ import type { CommandHandler } from '../registry.js'
 import type { SupportedLanguage } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
 import { AuditLogger } from '../../foundation/audit.js'
-import { checkNodeVersion, checkGitAvailable, checkBuildpactDir, checkIdeConfigs, checkSquadIntegrity } from './checks.js'
+import { checkNodeVersion, checkGitAvailable, checkBuildpactDir, checkIdeConfigs, checkSquadIntegrity, checkConstitutionConflicts } from './checks.js'
 import { reportCheck } from './reporter.js'
 import type { CheckResult } from './types.js'
 
@@ -64,6 +64,13 @@ export const handler: CommandHandler = {
     const squadResult = await checkSquadIntegrity(projectDir, i18n)
     reportCheck(squadResult)
     results.push(squadResult)
+
+    // 6. Constitution conflict detection (if --check-constitution flag is present)
+    if (_args.includes('--check-constitution')) {
+      const constitutionResult = await checkConstitutionConflicts(projectDir, i18n)
+      reportCheck(constitutionResult)
+      results.push(constitutionResult)
+    }
 
     const failCount = results.filter(r => r.status === 'fail').length
 

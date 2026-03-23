@@ -9,11 +9,28 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
-import type { ProfileTier, ModelConfig, FailoverChain } from '../contracts/profile.js'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+/** Quality tier for model selection */
+export type ProfileTier = 'quality' | 'balanced' | 'budget'
+
+/** Descriptor for a single AI model */
+export interface ModelConfig {
+  provider: string
+  modelId: string
+  maxTokens: number
+  costPer1kOutputUsd: number
+}
+
+/** Runtime failover chain with cursor tracking */
+export interface FailoverChain {
+  phase: string
+  models: ModelConfig[]
+  currentIndex: number
+}
 
 /** Operation types within a pipeline phase for per-operation model routing */
 export type OperationType =

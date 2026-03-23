@@ -1,0 +1,160 @@
+name: Squad Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Changed Squads
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed squad directories
+        id: changed
+        run: |
+          git diff --name-only origin/main...HEAD \
+            | grep '^squads/' \
+            | cut -d'/' -f1-2 \
+            | sort -u > changed_squads.txt
+          echo "Changed squads:"
+          cat changed_squads.txt || echo "(none)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install BuildPact CLI
+        run: npm install -g buildpact
+
+      - name: Validate changed squads
+        id: validate
+        run: |
+          results='[]'
+          exit_code=0
+
+          if [ ! -s changed_squads.txt ]; then
+            echo "No squad directories changed — skipping validation"
+            echo "$results" > results.json
+            exit 0
+          fi
+
+          while IFS= read -r squad_dir; do
+            echo "Validating: $squad_dir"
+            squad_result=$(npx buildpact squad validate "$squad_dir" --community --json 2>/dev/null || true)
+            if [ -z "$squad_result" ]; then
+              squad_result="[{\"check\":\"system\",\"passed\":false,\"message\":\"CLI produced no output for $squad_dir\",\"suggestedFix\":\"Ensure the squad directory exists and has a valid structure\"}]"
+            fi
+            # Check if any items failed
+            if echo "$squad_result" | node -e "
+              const data = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+              process.exit(data.some(i => !i.passed) ? 1 : 0);
+            " 2>/dev/null; then
+              :
+            else
+              exit_code=1
+            fi
+            # Merge results: tag each item with its squad dir
+            tagged=$(echo "$squad_result" | node -e "
+              const items = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+              const tagged = items.map(i => ({ ...i, squad: '$squad_dir' }));
+              process.stdout.write(JSON.stringify(tagged));
+            " 2>/dev/null || echo "$squad_result")
+            results=$(node -e "
+              const a = JSON.parse('$results');
+              const b = JSON.parse(process.argv[1]);
+              process.stdout.write(JSON.stringify([...a,...b]));
+            " "$tagged" 2>/dev/null || echo "$results")
+          done < changed_squads.txt
+
+          echo "$results" > results.json
+          exit $exit_code
+
+      - name: Post validation summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let items = [];
+            try {
+              items = JSON.parse(fs.readFileSync('results.json', 'utf8'));
+            } catch {
+              items = [{ check: 'system', passed: false, message: 'Could not read validation results', suggestedFix: 'Check the validate step logs above' }];
+            }
+
+            const passed = items.filter(i => i.passed);
+            const failed = items.filter(i => !i.passed);
+            const icon = failed.length === 0 ? '✅' : '❌';
+
+            let summary = `## ${icon} Squad Validation Results\n\n`;
+            summary += `**${passed.length} check(s) passed** | **${failed.length} check(s) failed**\n\n`;
+
+            if (failed.length > 0) {
+              summary += `### ❌ Failures\n\n`;
+              summary += `| Squad | Check | File | Message | Suggested Fix |\n`;
+              summary += `|-------|-------|------|---------|---------------|\n`;
+              for (const item of failed) {
+                const squad = item.squad || '—';
+                const file = item.file || '—';
+                const msg = (item.message || '').replace(/\|/g, '\\|');
+                const fix = (item.suggestedFix || '').replace(/\|/g, '\\|');
+                summary += `| \`${squad}\` | ${item.check} | \`${file}\` | ${msg} | ${fix} |\n`;
+              }
+              summary += '\n';
+            }
+
+            if (passed.length > 0) {
+              summary += `### ✅ Passing Checks\n\n`;
+              summary += `| Squad | Check | Message |\n`;
+              summary += `|-------|-------|---------|\n`;
+              for (const item of passed) {
+                const squad = item.squad || '—';
+                summary += `| \`${squad}\` | ${item.check} | ${item.message} |\n`;
+              }
+            }
+
+            // Write to GitHub step summary
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+
+            // Post PR comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Squad Validation Results')
+            );
+
+            const commentBody = summary;
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody,
+              });
+            }
+
+            // Fail the workflow if any checks failed
+            if (failed.length > 0) {
+              core.setFailed(`${failed.length} squad validation check(s) failed — resolve all issues before merging`);
+            }

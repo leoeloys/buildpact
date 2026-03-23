@@ -113,7 +113,7 @@ describe('scaffoldSquad', () => {
     expect(result.value.filesCreated).toHaveLength(7)
   })
 
-  it('includes inline documentation in each agent file', async () => {
+  it('includes inline documentation in each agent file (all 6 layers)', async () => {
     const result = await scaffoldSquad('my-squad', tmpDir)
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -121,10 +121,13 @@ describe('scaffoldSquad', () => {
     const chiefPath = filesCreated.find(f => f.includes('chief.md'))
     expect(chiefPath).toBeDefined()
     const content = await readFile(chiefPath!, 'utf-8')
-    // Inline doc comments
+    // Inline doc comments must be present for all 6 layers
     expect(content).toContain('<!-- LAYER 1:')
+    expect(content).toContain('<!-- LAYER 2:')
+    expect(content).toContain('<!-- LAYER 3:')
     expect(content).toContain('<!-- LAYER 4:')
     expect(content).toContain('<!-- LAYER 5:')
+    expect(content).toContain('<!-- LAYER 6:')
   })
 
   it('returns squad directory path in result', async () => {
@@ -192,6 +195,79 @@ describe('validateSquadStructure', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.errors.some(e => e.includes('agents/'))).toBe(true)
+  })
+
+  it('error message identifies agent filename and Voice DNA section name when section is missing (AC-2)', async () => {
+    const squadDir = join(tmpDir, 'missing-voice-dna-section')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(
+      join(squadDir, 'squad.yaml'),
+      'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n',
+      'utf-8',
+    )
+    // Agent has Voice DNA but is missing "Opinion Stance" subsection
+    await writeFile(
+      join(squadDir, 'agents', 'specialist.md'),
+      [
+        '## Identity',
+        '## Persona',
+        '## Voice DNA',
+        '### Personality Anchors',
+        '- Precise',
+        '### Anti-Patterns',
+        '- ✘ Never skip\n- ✔ Always verify\n- ✘ Never assume\n- ✔ Always clarify\n- ✘ Never ignore\n- ✔ Always check',
+        '### Never-Do Rules',
+        '- Never ship unreviewed',
+        '### Inspirational Anchors',
+        '- Inspired by: The Checklist Manifesto',
+        '## Heuristics',
+        '1. When [situation], [action]',
+        '2. If [ambiguous], clarify VETO: never assume',
+        '3. When [quality fails], [remediation]',
+        '## Examples',
+        '1. **A:** x → **B:** y',
+        '2. **A:** x → **B:** y',
+        '3. **A:** x → **B:** y',
+        '## Handoffs',
+        '- ← Chief: when ready',
+      ].join('\n'),
+      'utf-8',
+    )
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const voiceDnaError = result.value.errors.find(e => e.includes('Opinion Stance'))
+    expect(voiceDnaError).toBeDefined()
+    // Must follow format: agents/<file>.md: Voice DNA missing section "<section_name>"
+    expect(voiceDnaError).toContain('specialist.md')
+    expect(voiceDnaError).toContain('Voice DNA missing section')
+    expect(voiceDnaError).toContain('"Opinion Stance"')
+  })
+
+  it('error message identifies agent filename and layer name (AC-2)', async () => {
+    const squadDir = join(tmpDir, 'agent-filename-in-error')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(
+      join(squadDir, 'squad.yaml'),
+      'name: t\nversion: "1.0"\ndomain: x\ndescription: d\ninitial_level: L2\n',
+      'utf-8',
+    )
+    // Agent file missing Handoffs layer — error must reference the filename
+    await writeFile(
+      join(squadDir, 'agents', 'specialist.md'),
+      '## Identity\n## Persona\n## Voice DNA\n### Personality Anchors\n### Opinion Stance\n### Anti-Patterns\n### Never-Do Rules\n### Inspirational Anchors\n## Heuristics\n## Examples\n1. **A:** x → **B:** y\n2. **A:** x → **B:** y\n3. **A:** x → **B:** y\n',
+      'utf-8',
+    )
+
+    const result = await validateSquadStructure(squadDir)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const handoffsError = result.value.errors.find(e => e.includes('Handoffs'))
+    expect(handoffsError).toBeDefined()
+    // Must identify both the agent filename and the missing layer
+    expect(handoffsError).toContain('specialist.md')
+    expect(handoffsError).toContain('Handoffs')
   })
 
   it('reports error for agent missing a required layer', async () => {

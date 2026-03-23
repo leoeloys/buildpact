@@ -9,6 +9,13 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { err, ok, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
+import type { EnforcementResult } from '../contracts/task.js'
+import type { I18nResolver } from '../contracts/i18n.js'
+import { loadConstitution, enforceConstitution } from '../foundation/constitution.js'
+import { AuditLogger } from '../foundation/audit.js'
+import { notifyStageCompletion } from './webhook-notifier.js'
+export type { WebhookEvent, WebhookStatus, WebhookPayload, NotificationConfig } from './webhook-notifier.js'
+export { notifyStageCompletion } from './webhook-notifier.js'
 
 /** Maximum number of lines permitted in any orchestrator Markdown file (FR-301) */
 const MAX_ORCHESTRATOR_LINES = 300
@@ -76,4 +83,48 @@ export function validateOrchestratorFile(content: string, filePath: string): Res
   }
 
   return ok(undefined)
+}
+
+/**
+ * Load constitution, validate output against its principles, display any violations,
+ * and audit-log the enforcement outcome (FR-202).
+ * Returns a clean EnforcementResult if no constitution exists.
+ *
+ * @param output - The AI-generated output to validate
+ * @param projectDir - Project root directory
+ * @param i18n - Optional i18n resolver for localized violation messages
+ */
+export async function enforceConstitutionOnOutput(
+  output: string,
+  projectDir: string,
+  i18n?: I18nResolver,
+): Promise<Result<EnforcementResult>> {
+  const auditLogger = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'enforcement.jsonl'))
+  const constitutionResult = await loadConstitution(projectDir)
+
+  // No constitution — nothing to enforce
+  if (!constitutionResult.ok) {
+    return ok({ violations: [], hasViolations: false })
+  }
+
+  const report = enforceConstitution(output, constitutionResult.value)
+
+  if (report.hasViolations) {
+    await auditLogger.log({
+      action: 'constitution.enforce.warn',
+      agent: 'orchestrator',
+      files: [],
+      outcome: 'failure',
+      error: `${report.violations.length} violation(s) detected`,
+    })
+  } else {
+    await auditLogger.log({
+      action: 'constitution.enforce.pass',
+      agent: 'orchestrator',
+      files: [],
+      outcome: 'success',
+    })
+  }
+
+  return ok(report)
 }

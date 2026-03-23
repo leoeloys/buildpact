@@ -20,6 +20,18 @@ export const today = (): string => new Date().toISOString().slice(0, 10)
 // Budget config reader
 // ---------------------------------------------------------------------------
 
+/** Strip optional YAML quotes and inline comments, then parse as number. */
+function parseYamlNumber(raw: string): number | null {
+  let s = raw.trim()
+  // Strip inline comment: `0.50 # dollars`
+  const commentIdx = s.indexOf('#')
+  if (commentIdx !== -1) s = s.slice(0, commentIdx).trim()
+  // Strip surrounding quotes: `"0.50"` or `'0.50'`
+  s = s.replace(/^["']|["']$/g, '')
+  const n = parseFloat(s)
+  return isNaN(n) ? null : n
+}
+
 /**
  * Read budget limits from .buildpact/config.yaml.
  * Looks for a `budget:` section with `per_session_usd`, `per_phase_usd`, `per_day_usd`.
@@ -49,13 +61,13 @@ export async function readBudgetConfig(projectDir: string): Promise<BudgetConfig
         continue
       }
       if (trimmed.startsWith('per_session_usd:')) {
-        defaults.sessionLimitUsd = parseFloat(trimmed.slice('per_session_usd:'.length).trim()) || 0
+        defaults.sessionLimitUsd = parseYamlNumber(trimmed.slice('per_session_usd:'.length)) ?? 0
       } else if (trimmed.startsWith('per_phase_usd:')) {
-        defaults.phaseLimitUsd = parseFloat(trimmed.slice('per_phase_usd:'.length).trim()) || 0
+        defaults.phaseLimitUsd = parseYamlNumber(trimmed.slice('per_phase_usd:'.length)) ?? 0
       } else if (trimmed.startsWith('per_day_usd:')) {
-        defaults.dailyLimitUsd = parseFloat(trimmed.slice('per_day_usd:'.length).trim()) || 0
+        defaults.dailyLimitUsd = parseYamlNumber(trimmed.slice('per_day_usd:'.length)) ?? 0
       } else if (trimmed.startsWith('warning_threshold:')) {
-        defaults.warningThreshold = parseFloat(trimmed.slice('warning_threshold:'.length).trim()) || 0.8
+        defaults.warningThreshold = parseYamlNumber(trimmed.slice('warning_threshold:'.length)) ?? 0.8
       }
     }
   } catch {

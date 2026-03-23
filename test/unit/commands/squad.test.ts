@@ -276,6 +276,46 @@ describe('runAdd', () => {
     expect(vi.mocked(communityHub.downloadSquadFromHub)).not.toHaveBeenCalled()
   })
 
+  it('shows unreviewed_warning when manifest.reviewed is false', async () => {
+    const { runAdd } = await import('../../../src/commands/squad/handler.js')
+    const communityHub = await import('../../../src/engine/community-hub.js')
+    const clack = await import('@clack/prompts')
+
+    vi.mocked(communityHub.downloadSquadFromHub).mockResolvedValueOnce({
+      ok: true,
+      value: {
+        manifest: { name: 'software', version: '1.0', domain: 'software', description: 'Dev', files: [], reviewed: false },
+        files: [],
+      },
+    })
+
+    vi.mocked(clack.log.warn).mockClear()
+    await runAdd(['software'], tmpDir)
+
+    const warnCalls = vi.mocked(clack.log.warn).mock.calls.map(c => String(c[0]))
+    expect(warnCalls.some(msg => msg.includes('not been reviewed') || msg.includes('não foi revisado'))).toBe(true)
+  })
+
+  it('does NOT show unreviewed_warning when manifest.reviewed is true', async () => {
+    const { runAdd } = await import('../../../src/commands/squad/handler.js')
+    const communityHub = await import('../../../src/engine/community-hub.js')
+    const clack = await import('@clack/prompts')
+
+    vi.mocked(communityHub.downloadSquadFromHub).mockResolvedValueOnce({
+      ok: true,
+      value: {
+        manifest: { name: 'software', version: '1.0', domain: 'software', description: 'Dev', files: [], reviewed: true },
+        files: [],
+      },
+    })
+
+    vi.mocked(clack.log.warn).mockClear()
+    await runAdd(['software'], tmpDir)
+
+    const warnCalls = vi.mocked(clack.log.warn).mock.calls.map(c => String(c[0]))
+    expect(warnCalls.some(msg => msg.includes('not been reviewed') || msg.includes('não foi revisado'))).toBe(false)
+  })
+
   it('blocks squad with security violations', async () => {
     const { runAdd } = await import('../../../src/commands/squad/handler.js')
 
@@ -413,5 +453,100 @@ describe('runValidate', () => {
     expect(result.ok).toBe(false)
 
     cwdSpy.mockRestore()
+  })
+
+  // --json flag tests (Task 2.3, Story 11-2)
+
+  it('--json: writes JSON array to stdout for a valid squad', async () => {
+    const squadDir = join(tmpDir, 'json-valid-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: jsquad\nversion: "1.0"\ndomain: custom\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    await writeFile(join(squadDir, 'agents', 'chief.md'), buildValidAgent('jsquad', 'chief'), 'utf-8')
+
+    const written: string[] = []
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      written.push(String(chunk))
+      return true
+    })
+
+    const result = await runValidate([squadDir, '--json'], tmpDir)
+
+    stdoutSpy.mockRestore()
+
+    expect(result.ok).toBe(true)
+    const output = written.join('')
+    const parsed = JSON.parse(output)
+    expect(Array.isArray(parsed)).toBe(true)
+    expect(parsed.length).toBeGreaterThan(0)
+    for (const item of parsed) {
+      expect(typeof item.check).toBe('string')
+      expect(typeof item.passed).toBe('boolean')
+      expect(typeof item.message).toBe('string')
+      expect(typeof item.suggestedFix).toBe('string')
+    }
+  })
+
+  it('--json: returns err and writes JSON with passed=false items when squad fails', async () => {
+    const squadDir = join(tmpDir, 'json-bad-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: bad\n', 'utf-8')
+    await writeFile(join(squadDir, 'agents', 'agent.md'), '## Identity\nHello\n', 'utf-8')
+
+    const written: string[] = []
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      written.push(String(chunk))
+      return true
+    })
+
+    const result = await runValidate([squadDir, '--json'], tmpDir)
+
+    stdoutSpy.mockRestore()
+
+    expect(result.ok).toBe(false)
+    const output = written.join('')
+    const parsed = JSON.parse(output)
+    expect(parsed.some((i: { passed: boolean }) => !i.passed)).toBe(true)
+  })
+
+  it('--json: does not call clack functions (no TTY pollution)', async () => {
+    const squadDir = join(tmpDir, 'json-clean-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: csquad\nversion: "1.0"\ndomain: custom\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    await writeFile(join(squadDir, 'agents', 'chief.md'), buildValidAgent('csquad', 'chief'), 'utf-8')
+
+    vi.clearAllMocks()
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+
+    await runValidate([squadDir, '--json'], tmpDir)
+
+    stdoutSpy.mockRestore()
+
+    const clack = await import('@clack/prompts')
+    expect(vi.mocked(clack.intro)).not.toHaveBeenCalled()
+    expect(vi.mocked(clack.outro)).not.toHaveBeenCalled()
+  })
+
+  it('--json: supports --community flag combined with --json', async () => {
+    const squadDir = join(tmpDir, 'json-community-squad')
+    await mkdir(join(squadDir, 'agents'), { recursive: true })
+    await writeFile(join(squadDir, 'squad.yaml'), 'name: comsquad\nversion: "1.0"\ndomain: custom\ndescription: d\ninitial_level: L2\n', 'utf-8')
+    const agentWithUrl = buildValidAgent('comsquad', 'chief') + '\nSee https://evil.example.com for docs.\n'
+    await writeFile(join(squadDir, 'agents', 'chief.md'), agentWithUrl, 'utf-8')
+
+    const written: string[] = []
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      written.push(String(chunk))
+      return true
+    })
+
+    const result = await runValidate([squadDir, '--json', '--community'], tmpDir)
+
+    stdoutSpy.mockRestore()
+
+    expect(result.ok).toBe(false)
+    const parsed = JSON.parse(written.join(''))
+    const secFailed = parsed.find((i: { check: string; passed: boolean }) => i.check === 'security' && !i.passed)
+    expect(secFailed).toBeDefined()
+    expect(secFailed.suggestedFix).toContain('Remove or replace')
   })
 })

@@ -19,11 +19,21 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { buildTaskPayload } from '../../engine/subagent.js'
 import type { TaskDispatchPayload } from '../../contracts/task.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
+import { enforceConstitutionOnOutput } from '../../engine/orchestrator.js'
+import { guardConstitutionModification } from '../registry.js'
 import {
   validatePlan,
   formatValidationReport,
   autoRevisePlan,
+  type PlanValidationReport,
 } from '../../engine/plan-validator.js'
+import { analyzeWaves, splitIntoPlanFiles } from '../../engine/wave-executor.js'
+import type { TaskNode } from '../../engine/types.js'
+import { spawnResearchAgents } from './researcher.js'
+import { loadProfile, resolveModelForOperation } from '../../foundation/profile.js'
+import { tagTasks } from './tagger.js'
+import { runReadinessGate } from '../../engine/readiness-gate.js'
+import { isCiMode, ciLog } from '../../foundation/ci.js'
 
 // ---------------------------------------------------------------------------
 // Research types
@@ -39,7 +49,7 @@ export interface ResearchAgentPayload {
 }
 
 /** Findings returned by a completed research subagent */
-export interface ResearchResult {
+export interface PlanResearchResult {
   topic: ResearchTopic
   findings: string
   /** Keys extracted from findings for plan cross-referencing */
@@ -47,10 +57,10 @@ export interface ResearchResult {
 }
 
 /** Consolidated summary from all research agents */
-export interface ResearchSummary {
-  techStack: ResearchResult
-  codebase: ResearchResult
-  squadDomain: ResearchResult
+export interface PlanResearchSummary {
+  techStack: PlanResearchResult
+  codebase: PlanResearchResult
+  squadDomain: PlanResearchResult
   consolidatedAt: string
 }
 
@@ -70,28 +80,15 @@ export interface PlanTask {
 // Human / Agent classification types
 // ---------------------------------------------------------------------------
 
-/** Whether a task requires a human or can be executed by an agent */
-export type ExecutionType = 'HUMAN' | 'AGENT'
+// Re-export from tagger and progress for backward compatibility
+export { classifyTask, type ExecutionType, type TaggedTask } from './tagger.js'
+export { loadProgress, saveProgress, isHumanStepPending, type TaskProgressEntry, type PlanProgress } from './progress.js'
+import { classifyTask } from './tagger.js'
+import type { ExecutionType } from './tagger.js'
+import { loadProgress } from './progress.js'
+import type { PlanProgress, TaskProgressEntry } from './progress.js'
 
-/**
- * Progress entry for a single task — persisted to progress.json for session resume.
- */
-export interface TaskProgressEntry {
-  taskId: string
-  title: string
-  executionType: ExecutionType
-  completed: boolean
-  completedAt?: string
-}
-
-/**
- * Full plan progress state — written to progress.json in the plan directory.
- */
-export interface PlanProgress {
-  slug: string
-  generatedAt: string
-  tasks: TaskProgressEntry[]
-}
+// PlanProgress and TaskProgressEntry moved to progress.ts — imported above
 
 /** A group of tasks that can run in parallel (same wave) */
 export interface WaveGroup {
@@ -286,47 +283,7 @@ export function splitWavesIfNeeded(
  * Keywords in task titles that indicate a human manual action is required.
  * Case-insensitive substring match — order matters (more specific first).
  */
-const HUMAN_KEYWORDS = [
-  'review',
-  'approve',
-  'sign off',
-  'sign-off',
-  'manually',
-  'manual ',
-  'call ',
-  'meeting',
-  'interview',
-  'contact ',
-  'visit ',
-  'present',
-  'negotiate',
-  'decide',
-  'authorize',
-  'inspect',
-  'survey',
-  'hand off',
-  'hand-off',
-  'coordinate',
-  'train ',
-  'onboard',
-  'audit ',
-  'confirm with',
-  'notify ',
-] as const
-
-/**
- * Classify a task as [HUMAN] or [AGENT] based on its title.
- * Uses keyword heuristics: if title contains any HUMAN_KEYWORDS → HUMAN.
- * All other tasks are assumed automatable → AGENT.
- * Pure function — no side effects.
- */
-export function classifyTask(title: string): ExecutionType {
-  const lower = title.toLowerCase()
-  for (const kw of HUMAN_KEYWORDS) {
-    if (lower.includes(kw)) return 'HUMAN'
-  }
-  return 'AGENT'
-}
+// classifyTask and HUMAN_KEYWORDS moved to tagger.ts — imported above
 
 /**
  * Build the initial progress state for a plan (all tasks incomplete).
@@ -355,22 +312,25 @@ export function buildProgressContent(
  */
 export function buildWaveFileContent(
   fileSpec: PlanFileSpec,
-  research: ResearchSummary,
+  research: PlanResearchSummary,
   slug: string,
   generatedAt: string,
+  domainType: string = 'software',
 ): string {
   const waveNum = fileSpec.waveNumber + 1
   const waveLabel = fileSpec.partSuffix
     ? `Wave ${waveNum}${fileSpec.partSuffix.toUpperCase()}`
     : `Wave ${waveNum}`
 
-  const taskLines = fileSpec.tasks
+  const taggedTasks = tagTasks(fileSpec.tasks, domainType)
+  const taskLines = taggedTasks
     .map(t => {
       const depNote =
         t.dependencies.length > 0 ? ` _(after: ${t.dependencies.join(', ')})_` : ''
-      const execType = classifyTask(t.title)
-      if (execType === 'HUMAN') {
-        return `- [ ] [HUMAN] ${t.title}${depNote}\n  - [ ] Confirm step completed manually`
+      if (t.executor === 'HUMAN') {
+        const checklistItems = t.checklistItems ?? ['Confirm step completed manually']
+        const checklist = checklistItems.map(item => `  - [ ] ${item}`).join('\n')
+        return `- [ ] [HUMAN] ${t.title}${depNote}\n${checklist}`
       }
       return `- [ ] [AGENT] ${t.title}${depNote}`
     })
@@ -411,6 +371,7 @@ export function buildResearchPayload(
   topic: ResearchTopic,
   specContent: string,
   constitutionPath?: string,
+  squadContext?: string,
 ): ResearchAgentPayload {
   const prompts: Record<ResearchTopic, string> = {
     tech_stack:
@@ -421,7 +382,10 @@ export function buildResearchPayload(
       'Analyse the spec below. Extract domain-specific constraints, compliance requirements, and domain rules that must be respected during planning.',
   }
 
-  const content = `# Research Task: ${topic}\n\n${prompts[topic]}\n\n---\n\n## Spec\n\n${specContent}`
+  let content = `# Research Task: ${topic}\n\n${prompts[topic]}\n\n---\n\n## Spec\n\n${specContent}`
+  if (topic === 'squad_domain' && squadContext) {
+    content += `\n\n## Active Squad Guidance\n\n${squadContext}`
+  }
 
   const taskPayload = buildTaskPayload({
     type: 'plan',
@@ -438,7 +402,7 @@ export function buildResearchPayload(
  * In production, this would be replaced by the actual Task() dispatch result.
  * Pure function — no side effects.
  */
-export function buildStubFindings(topic: ResearchTopic, specSnippet: string): ResearchResult {
+export function buildStubFindings(topic: ResearchTopic, specSnippet: string, squadContext?: string): PlanResearchResult {
   const firstLine = specSnippet.split('\n').find(l => l.trim().length > 0) ?? 'Unknown feature'
 
   const stubData: Record<ResearchTopic, { findings: string; keywords: string[] }> = {
@@ -451,7 +415,9 @@ export function buildStubFindings(topic: ResearchTopic, specSnippet: string): Re
       keywords: ['contracts', 'foundation', 'engine', 'commands', 'Result', 'I18nResolver', 'AuditLogger'],
     },
     squad_domain: {
-      findings: `Domain Constraints Research for: ${firstLine}\n\n- Domain rules: enforce project Constitution if present\n- Compliance: no external URLs in squad files; validate payloads ≤20KB\n- Domain questions: use Squad question templates when active Squad detected\n- Output: all artifacts saved to .buildpact/ hierarchy`,
+      findings: squadContext
+        ? `Domain Constraints Research for: ${firstLine}\n\nActive Squad Guidance (excerpt):\n${squadContext.split('\n').slice(0, 10).join('\n')}\n\n- Enforce project Constitution if present\n- Validate payloads ≤20KB before dispatch\n- All artifacts saved to .buildpact/ hierarchy`
+        : `Domain Constraints Research for: ${firstLine}\n\n- Domain rules: enforce project Constitution if present\n- Compliance: no external URLs in squad files; validate payloads ≤20KB\n- Domain questions: use Squad question templates when active Squad detected\n- Output: all artifacts saved to .buildpact/ hierarchy`,
       keywords: ['Constitution', 'payload', 'Squad', '.buildpact'],
     },
   }
@@ -464,10 +430,10 @@ export function buildStubFindings(topic: ResearchTopic, specSnippet: string): Re
  * Pure function — no side effects.
  */
 export function consolidateResearch(
-  techStack: ResearchResult,
-  codebase: ResearchResult,
-  squadDomain: ResearchResult,
-): ResearchSummary {
+  techStack: PlanResearchResult,
+  codebase: PlanResearchResult,
+  squadDomain: PlanResearchResult,
+): PlanResearchSummary {
   return {
     techStack,
     codebase,
@@ -483,9 +449,10 @@ export function consolidateResearch(
  */
 export function buildPlanContent(
   specContent: string,
-  research: ResearchSummary,
+  research: PlanResearchSummary,
   slug: string,
   generatedAt: string,
+  domainType: string = 'software',
 ): string {
   // Extract tasks and assign waves from spec
   const rawTasks = extractTasksFromSpec(specContent)
@@ -504,13 +471,16 @@ export function buildPlanContent(
   for (const wave of waves) {
     waveSections.push(`### Wave ${wave.waveNumber + 1}`)
     waveSections.push('')
-    for (const task of wave.tasks) {
+    const taggedWaveTasks = tagTasks(wave.tasks, domainType)
+    for (const task of taggedWaveTasks) {
       const depNote =
         task.dependencies.length > 0 ? ` _(after: ${task.dependencies.join(', ')})_` : ''
-      const execType = classifyTask(task.title)
-      if (execType === 'HUMAN') {
+      if (task.executor === 'HUMAN') {
         waveSections.push(`- [ ] [HUMAN] ${task.title}${depNote}`)
-        waveSections.push(`  - [ ] Confirm step completed manually`)
+        const checklistItems = task.checklistItems ?? ['Confirm step completed manually']
+        for (const item of checklistItems) {
+          waveSections.push(`  - [ ] ${item}`)
+        }
       } else {
         waveSections.push(`- [ ] [AGENT] ${task.title}${depNote}`)
       }
@@ -575,6 +545,77 @@ async function readLanguage(projectDir: string): Promise<SupportedLanguage> {
   return 'en'
 }
 
+/** Read active_squad from .buildpact/config.yaml, fallback to '' */
+async function readActiveSquad(projectDir: string): Promise<string> {
+  try {
+    const content = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('active_squad:')) {
+        return trimmed.slice('active_squad:'.length).trim().replace(/^["']|["']$/g, '')
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return ''
+}
+
+/**
+ * Load all markdown files from the active squad directory as a single string.
+ * Returns empty string if no squad is configured or directory not found.
+ */
+async function loadSquadContext(projectDir: string, activeSquad: string): Promise<string> {
+  if (!activeSquad) return ''
+  try {
+    const squadDir = join(projectDir, '.buildpact', 'squads', activeSquad)
+    const entries = await readdir(squadDir)
+    const mdFiles = entries.filter(f => f.endsWith('.md')).sort()
+    const contents = await Promise.all(
+      mdFiles.map(f => readFile(join(squadDir, f), 'utf-8').catch(() => '')),
+    )
+    return contents.filter(Boolean).join('\n\n')
+  } catch {
+    return ''
+  }
+}
+
+/** Read domain_type from the active squad's squad.yaml, fallback to 'software' */
+async function readSquadDomainType(projectDir: string, activeSquad: string): Promise<string> {
+  if (!activeSquad) return 'software'
+  try {
+    const squadYaml = await readFile(
+      join(projectDir, '.buildpact', 'squads', activeSquad, 'squad.yaml'),
+      'utf-8',
+    )
+    for (const line of squadYaml.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('domain_type:')) {
+        return trimmed.slice('domain_type:'.length).trim().replace(/^["']|["']$/g, '') || 'software'
+      }
+    }
+  } catch {
+    // Squad YAML not found or unreadable — default to software
+  }
+  return 'software'
+}
+
+/** Read active_model_profile from .buildpact/config.yaml, fallback to 'default' */
+async function readModelProfileName(projectDir: string): Promise<string> {
+  try {
+    const content = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('active_model_profile:')) {
+        return trimmed.slice('active_model_profile:'.length).trim().replace(/^["']|["']$/g, '')
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return 'default'
+}
+
 /**
  * Find the most recently modified spec.md in .buildpact/specs/.
  * Returns the content and slug of the spec, or undefined if none found.
@@ -608,23 +649,50 @@ export const handler: CommandHandler = {
     const lang = await readLanguage(projectDir)
     const i18n = createI18n(lang)
     const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'cli.jsonl'))
+    const isCi = isCiMode(args)
 
     clack.intro(i18n.t('cli.plan.welcome'))
 
+    // Load model profile (FR-603)
+    const profileName = await readModelProfileName(projectDir)
+    const profileResult = await loadProfile(profileName, projectDir)
+    const activeProfile = profileResult.ok ? profileResult.value : undefined
+    const researchModel = activeProfile
+      ? resolveModelForOperation(activeProfile, 'plan', 'research')
+      : 'claude-sonnet-4-6'
+    const planWritingModel = activeProfile
+      ? resolveModelForOperation(activeProfile, 'plan', 'plan-writing')
+      : 'claude-sonnet-4-6'
+
+    await audit.log({
+      action: 'plan.profile.loaded',
+      agent: 'plan',
+      files: [],
+      outcome: profileResult.ok ? 'success' : 'failure',
+      ...(profileResult.ok
+        ? {}
+        : { error: `Profile '${profileName}' not found — using defaults` }),
+    })
+
+    // Suppress unused-variable warnings in Alpha (models used by Task() dispatch in production)
+    void researchModel
+    void planWritingModel
+
     // Resolve spec — from arg (path to spec.md) or latest in .buildpact/specs/
+    const positionalArgs = args.filter(a => !a.startsWith('--'))
     let specContent: string
     let specSlug: string
 
-    if (args[0]) {
+    if (positionalArgs[0]) {
       try {
-        specContent = await readFile(args[0], 'utf-8')
-        specSlug = args[0].split('/').at(-2) ?? 'unknown'
+        specContent = await readFile(positionalArgs[0], 'utf-8')
+        specSlug = positionalArgs[0].split('/').at(-2) ?? 'unknown'
       } catch {
-        clack.log.error(i18n.t('cli.plan.spec_not_found', { path: args[0] }))
+        clack.log.error(i18n.t('cli.plan.spec_not_found', { path: positionalArgs[0] }))
         return err({
           code: ERROR_CODES.FILE_READ_FAILED,
           i18nKey: 'cli.plan.spec_not_found',
-          params: { path: args[0] },
+          params: { path: positionalArgs[0] },
         })
       }
     } else {
@@ -640,19 +708,59 @@ export const handler: CommandHandler = {
 
     const constitutionPath = await resolveConstitutionPath(projectDir)
 
+    // Load active squad context for domain constraints research (AC #3)
+    const activeSquad = await readActiveSquad(projectDir)
+    const squadContext = await loadSquadContext(projectDir, activeSquad)
+
+    // Detect non-software domain for human/agent tagging (FR-505)
+    const domainType = await readSquadDomainType(projectDir, activeSquad)
+    if (domainType !== 'software' && activeSquad) {
+      clack.log.info(i18n.t('cli.plan.non_software_detected', { domain_type: domainType }))
+    }
+
+    // Check for existing progress — offer resume (AC #5)
+    const resumePlanDir = join(projectDir, '.buildpact', 'plans', specSlug || 'default')
+    const existingProgress = await loadProgress(resumePlanDir)
+    let resumeFromProgress = false
+    if (existingProgress) {
+      const completedCount = existingProgress.tasks.filter(t => t.completed).length
+      if (completedCount > 0 && completedCount < existingProgress.tasks.length) {
+        if (isCi) {
+          ciLog('auto-skipped', 'resume prompt')
+          // CI always generates fresh plan
+        } else {
+          const resumeChoice = await clack.select({
+            message: i18n.t('cli.plan.resume_prompt', {
+              completed: String(completedCount),
+              total: String(existingProgress.tasks.length),
+            }),
+            options: [
+              { value: 'yes', label: i18n.t('cli.plan.resume_yes') },
+              { value: 'no', label: i18n.t('cli.plan.resume_no') },
+            ],
+          })
+          if (!clack.isCancel(resumeChoice) && resumeChoice === 'yes') {
+            resumeFromProgress = true
+          }
+        }
+      }
+    }
+
     // Spawn parallel research agents
     const spinner = clack.spinner()
     spinner.start(i18n.t('cli.plan.research_start'))
 
     const topics: ResearchTopic[] = ['tech_stack', 'codebase', 'squad_domain']
     const payloads = topics.map(topic =>
-      buildResearchPayload(topic, specContent, constitutionPath),
+      buildResearchPayload(topic, specContent, constitutionPath, topic === 'squad_domain' ? squadContext : undefined),
     )
 
     // In Alpha: produce stub findings. In production, Task() dispatch replaces this.
-    const results = payloads.map(p => buildStubFindings(p.topic, specContent))
+    const results = payloads.map(p =>
+      buildStubFindings(p.topic, specContent, p.topic === 'squad_domain' ? squadContext : undefined),
+    )
 
-    const [techStack, codebase, squadDomain] = results as [ResearchResult, ResearchResult, ResearchResult]
+    const [techStack, codebase, squadDomain] = results as [PlanResearchResult, PlanResearchResult, PlanResearchResult]
     const research = consolidateResearch(techStack, codebase, squadDomain)
 
     spinner.stop(i18n.t('cli.plan.research_done', { count: String(topics.length) }))
@@ -672,7 +780,7 @@ export const handler: CommandHandler = {
     // --- Nyquist Multi-Perspective Validation ---
     const validationSpinner = clack.spinner()
     validationSpinner.start(i18n.t('cli.plan.validation_start'))
-    const validationReport = validatePlan(specContent, withWaves)
+    let validationReport = validatePlan(specContent, withWaves)
     validationSpinner.stop(i18n.t('cli.plan.validation_done'))
 
     if (validationReport.totalIssues > 0) {
@@ -691,10 +799,16 @@ export const handler: CommandHandler = {
       for (const perspective of validationReport.perspectives) {
         if (perspective.issues.length > 0) {
           for (const issue of perspective.issues) {
+            const msg = i18n.t(
+              issue.severity === 'critical'
+                ? 'cli.plan.validation_issue_critical'
+                : 'cli.plan.validation_issue_warning',
+              { perspective: perspective.label, message: issue.message },
+            )
             if (issue.severity === 'critical') {
-              clack.log.error(`[${perspective.label}] ${issue.message}`)
+              clack.log.error(msg)
             } else {
-              clack.log.warn(`[${perspective.label}] ${issue.message}`)
+              clack.log.warn(msg)
             }
           }
         }
@@ -706,34 +820,130 @@ export const handler: CommandHandler = {
     // If there are critical issues, ask user whether to revise or override
     let finalTasks = withWaves
     if (validationReport.hasCritical) {
-      const choice = await clack.select({
-        message: i18n.t('cli.plan.validation_block'),
-        options: [
-          { value: 'revise', label: i18n.t('cli.plan.validation_revise') },
-          { value: 'override', label: i18n.t('cli.plan.validation_override') },
-          { value: 'cancel', label: i18n.t('cli.plan.validation_cancel') },
-        ],
-      })
+      if (isCi) {
+        // CI mode: auto-revise; fail if still critical after max attempts
+        ciLog('auto-action', 'nyquist auto-revision')
+        const MAX_REVISION_ATTEMPTS = 3
+        let revisionAttempts = 0
+        let revised = withWaves
+        let revalidated = validationReport
 
-      if (clack.isCancel(choice) || choice === 'cancel') {
-        clack.outro(i18n.t('cli.plan.validation_cancelled'))
-        return ok(undefined)
-      }
+        while (revalidated.hasCritical && revisionAttempts < MAX_REVISION_ATTEMPTS) {
+          revised = assignWaves(inferDependencies(autoRevisePlan(specContent, revised)))
+          revalidated = validatePlan(specContent, revised)
+          revisionAttempts++
+        }
 
-      if (choice === 'revise') {
-        finalTasks = assignWaves(inferDependencies(autoRevisePlan(specContent, withWaves)))
+        finalTasks = revised
+        validationReport = revalidated
+
+        if (revalidated.hasCritical) {
+          ciLog('auto-action', 'nyquist revision failed after ' + MAX_REVISION_ATTEMPTS + ' attempts')
+          return err({
+            code: ERROR_CODES.NOT_IMPLEMENTED,
+            i18nKey: 'cli.plan.validation_cancelled',
+            params: {},
+          })
+        }
         clack.log.success(i18n.t('cli.plan.validation_revised'))
-      }
-      // 'override' → proceed with original tasks, just log it
-      if (choice === 'override') {
-        clack.log.warn(i18n.t('cli.plan.validation_overridden'))
+      } else {
+        const choice = await clack.select({
+          message: i18n.t('cli.plan.validation_block'),
+          options: [
+            { value: 'revise', label: i18n.t('cli.plan.validation_revise') },
+            { value: 'override', label: i18n.t('cli.plan.validation_override') },
+            { value: 'cancel', label: i18n.t('cli.plan.validation_cancel') },
+          ],
+        })
+
+        if (clack.isCancel(choice) || choice === 'cancel') {
+          clack.outro(i18n.t('cli.plan.validation_cancelled'))
+          return ok(undefined)
+        }
+
+        if (choice === 'revise') {
+          const MAX_REVISION_ATTEMPTS = 3
+          let revisionAttempts = 0
+          let revised = withWaves
+          let revalidated = validationReport
+
+          while (revalidated.hasCritical && revisionAttempts < MAX_REVISION_ATTEMPTS) {
+            revised = assignWaves(inferDependencies(autoRevisePlan(specContent, revised)))
+            revalidated = validatePlan(specContent, revised)
+            revisionAttempts++
+          }
+
+          finalTasks = revised
+          validationReport = revalidated
+
+          if (revalidated.hasCritical) {
+            clack.log.warn(i18n.t('cli.plan.validation_issues', {
+              total: String(revalidated.totalIssues),
+              critical: String(revalidated.perspectives.flatMap(p => p.issues).filter(i => i.severity === 'critical').length),
+            }))
+          } else {
+            clack.log.success(i18n.t('cli.plan.validation_revised'))
+          }
+        }
+        // 'override' → proceed with original tasks, just log it
+        if (choice === 'override') {
+          clack.log.warn(i18n.t('cli.plan.validation_overridden'))
+        }
       }
     }
 
-    const planContent = buildPlanContent(specContent, research, specSlug, generatedAt)
+    const planContent = buildPlanContent(specContent, research, specSlug, generatedAt, domainType)
+
+    // Constitution enforcement — validate plan output before writing (FR-202)
+    const guardResult = await guardConstitutionModification(planContent, projectDir, i18n)
+    if (!guardResult.ok) return guardResult
+    const enforcement = await enforceConstitutionOnOutput(planContent, projectDir, i18n)
+    if (enforcement.ok && enforcement.value.hasViolations) {
+      const { formatViolationWarning } = await import('../../foundation/constitution.js')
+      const { readExperienceLevel } = await import('../../foundation/context.js')
+      const beginnerMode = (await readExperienceLevel(projectDir)) === 'beginner'
+      for (const v of enforcement.value.violations) {
+        clack.log.warn(formatViolationWarning(v, beginnerMode, i18n))
+      }
+    }
 
     const waves = groupIntoWaves(finalTasks)
     const planFiles = splitWavesIfNeeded(waves)
+
+    // Write research summary to snapshots directory (FR-601)
+    const snapshotDir = join(projectDir, '.buildpact', 'snapshots', specSlug)
+    await mkdir(snapshotDir, { recursive: true })
+    const researchSummaryPath = join(snapshotDir, 'research-summary.md')
+    const researchSummaryContent = [
+      `# Research Summary — ${specSlug}`,
+      '',
+      `> Consolidated: ${research.consolidatedAt}`,
+      '',
+      '## Tech Stack',
+      '',
+      research.techStack.findings,
+      '',
+      '### Keywords',
+      '',
+      research.techStack.keywords.map(k => `- \`${k}\``).join('\n'),
+      '',
+      '## Codebase',
+      '',
+      research.codebase.findings,
+      '',
+      '### Keywords',
+      '',
+      research.codebase.keywords.map(k => `- \`${k}\``).join('\n'),
+      '',
+      '## Squad Domain',
+      '',
+      research.squadDomain.findings,
+      '',
+      '### Keywords',
+      '',
+      research.squadDomain.keywords.map(k => `- \`${k}\``).join('\n'),
+    ].join('\n')
+    await writeFile(researchSummaryPath, researchSummaryContent, 'utf-8')
 
     // Write plan directory
     const planDir = join(projectDir, '.buildpact', 'plans', specSlug)
@@ -748,7 +958,7 @@ export const handler: CommandHandler = {
     await writeFile(validationReportPath, formatValidationReport(validationReport), 'utf-8')
 
     // Write per-wave files when multiple files are needed
-    const writtenFiles: string[] = [planPath, validationReportPath]
+    const writtenFiles: string[] = [researchSummaryPath, planPath, validationReportPath]
     if (planFiles.length > 1) {
       clack.log.info(
         i18n.t('cli.plan.wave_split', {
@@ -757,7 +967,7 @@ export const handler: CommandHandler = {
         }),
       )
       for (const fileSpec of planFiles) {
-        const waveContent = buildWaveFileContent(fileSpec, research, specSlug, generatedAt)
+        const waveContent = buildWaveFileContent(fileSpec, research, specSlug, generatedAt, domainType)
         const wavePath = join(planDir, fileSpec.filename)
         await writeFile(wavePath, waveContent, 'utf-8')
         writtenFiles.push(wavePath)
@@ -766,23 +976,46 @@ export const handler: CommandHandler = {
 
     // --- Human step acknowledgement ---
     // Walk through HUMAN tasks in wave order and pause for user confirmation.
-    const humanTasks = finalTasks.filter(t => classifyTask(t.title) === 'HUMAN')
+    const humanTasks = tagTasks(finalTasks, domainType).filter(t => t.executor === 'HUMAN')
     const progress = buildProgressContent(specSlug, finalTasks, generatedAt)
 
     for (const task of humanTasks) {
+      // Skip completed tasks when resuming from previous session
+      if (resumeFromProgress && existingProgress) {
+        const prevEntry = existingProgress.tasks.find(e => e.taskId === task.id)
+        if (prevEntry?.completed) continue
+      }
+
+      if (isCi) {
+        // CI mode: auto-skip human steps, mark as pending
+        ciLog('auto-skipped', 'human step acknowledgement for ' + task.title)
+        continue
+      }
+
       clack.log.warn(i18n.t('cli.plan.human_pause', { title: task.title }))
-      const confirmed = await clack.confirm({
+      const choice = await clack.select({
         message: i18n.t('cli.plan.human_confirm'),
+        options: [
+          { value: 'done', label: i18n.t('cli.plan.human_done') },
+          { value: 'save_and_exit', label: i18n.t('cli.plan.human_save_exit') },
+        ],
       })
 
-      if (!clack.isCancel(confirmed) && confirmed === true) {
+      if (clack.isCancel(choice) || choice === 'save_and_exit') {
+        // Save progress and exit — session can be resumed later
+        const progressPath = join(planDir, 'progress.json')
+        await writeFile(progressPath, JSON.stringify(progress, null, 2), 'utf-8')
+        clack.log.info(i18n.t('cli.plan.progress_saved', { path: progressPath }))
+        clack.outro(i18n.t('cli.plan.human_skipped', { title: task.title }))
+        return ok(undefined)
+      }
+
+      if (choice === 'done') {
         const entry = progress.tasks.find(e => e.taskId === task.id)
         if (entry) {
           entry.completed = true
           entry.completedAt = new Date().toISOString()
         }
-      } else {
-        clack.log.warn(i18n.t('cli.plan.human_skipped', { title: task.title }))
       }
     }
 
@@ -791,6 +1024,42 @@ export const handler: CommandHandler = {
     await writeFile(progressPath, JSON.stringify(progress, null, 2), 'utf-8')
     writtenFiles.push(progressPath)
     clack.log.info(i18n.t('cli.plan.progress_saved', { path: progressPath }))
+
+    // -----------------------------------------------------------------------
+    // Readiness Gate — PASS / CONCERNS / FAIL
+    // -----------------------------------------------------------------------
+    const gateResult = runReadinessGate(projectDir, specSlug)
+
+    if (gateResult.decision === 'FAIL') {
+      clack.log.error(i18n.t('cli.plan.readiness_fail'))
+      clack.log.info(gateResult.report)
+      clack.outro(i18n.t('cli.plan.readiness_fix_required'))
+      return ok(undefined)
+    }
+
+    if (gateResult.decision === 'CONCERNS') {
+      if (isCi) {
+        ciLog('readiness-gate', 'CONCERNS -> auto-fail')
+        return err({
+          code: ERROR_CODES.NOT_IMPLEMENTED,
+          i18nKey: 'cli.plan.readiness_fix_required',
+          params: {},
+        })
+      }
+      clack.log.warn(i18n.t('cli.plan.readiness_concerns'))
+      clack.log.info(gateResult.report)
+      const override = await clack.confirm({
+        message: i18n.t('cli.plan.readiness_override'),
+      })
+      if (clack.isCancel(override) || override === false) {
+        clack.outro(i18n.t('cli.plan.readiness_fix_required'))
+        return ok(undefined)
+      }
+    }
+
+    if (gateResult.decision === 'PASS') {
+      clack.log.success(i18n.t('cli.plan.readiness_pass'))
+    }
 
     // Audit
     await audit.log({
@@ -803,4 +1072,229 @@ export const handler: CommandHandler = {
     clack.outro(i18n.t('cli.plan.done', { path: planPath }))
     return ok(undefined)
   },
+}
+
+/** Alias for handler — public API name used by index.ts (FR-601) */
+export const planCommand = handler
+
+// ---------------------------------------------------------------------------
+// Programmatic API — planCommand(specSlug) (FR-602, Story 5.2)
+// ---------------------------------------------------------------------------
+
+/** Output produced by the programmatic planCommand API */
+export interface PlanOutput {
+  specSlug: string
+  /** Wave plan files written to .buildpact/snapshots/specSlug/plans/ */
+  planFiles: string[]
+  /** Research summary path */
+  researchSummaryPath: string
+  /** Number of waves produced */
+  waveCount: number
+  /** Whether the plan passed Nyquist validation (no critical issues) */
+  validationPassed: boolean
+  /** Path to the Nyquist validation report file */
+  validationReportPath?: string
+}
+
+/**
+ * Parse spec.md content into TaskNode[] for dependency analysis.
+ * Reads a `## Tasks` section with format:
+ *   `- task-id: description (deps: dep-id, dep-id)`
+ * Falls back to extracting from `## Acceptance Criteria` when no Tasks section found.
+ * Pure function — no side effects.
+ */
+export function parseSpecTasks(specContent: string): TaskNode[] {
+  const lines = specContent.split('\n')
+  const tasks: TaskNode[] = []
+  let inTasksSection = false
+  let taskIdx = 0
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^##\s+Tasks\b/i.test(trimmed)) {
+      inTasksSection = true
+      continue
+    }
+    if (inTasksSection && /^##\s/.test(trimmed)) {
+      inTasksSection = false
+      continue
+    }
+    if (inTasksSection && /^[-*]\s/.test(trimmed)) {
+      // Format: `- task-id: description (deps: dep1, dep2)` or `- task-id: description (deps: none)`
+      const match = /^[-*]\s+([\w-]+):\s+(.+?)(?:\s+\(deps:\s*(.+?)\))?\s*$/.exec(trimmed)
+      if (match) {
+        const [, id, description, rawDeps] = match
+        if (!id || !description) continue
+        const dependencies =
+          rawDeps && rawDeps.trim() !== 'none'
+            ? rawDeps.split(',').map(d => d.trim()).filter(Boolean)
+            : []
+        tasks.push({ id, description, dependencies })
+        continue
+      }
+      // Fallback: plain bullet as task
+      const plainTitle = trimmed.slice(2).trim()
+      if (plainTitle.length > 2) {
+        taskIdx++
+        tasks.push({ id: `task-${taskIdx}`, description: plainTitle, dependencies: [] })
+      }
+    }
+  }
+
+  if (tasks.length > 0) return tasks
+
+  // Fallback — extract from Acceptance Criteria section
+  let inAcSection = false
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^##\s+(Acceptance Criteria|Functional Requirements|FRs?)\b/i.test(trimmed)) {
+      inAcSection = true
+      continue
+    }
+    if (inAcSection && /^##\s/.test(trimmed)) {
+      inAcSection = false
+      continue
+    }
+    if (inAcSection && /^[-*]\s/.test(trimmed)) {
+      const description = trimmed.slice(2).replace(/^\[[ xX]\]\s*/, '').trim()
+      if (description.length > 3) {
+        taskIdx++
+        tasks.push({ id: `task-${taskIdx}`, description, dependencies: [] })
+      }
+    }
+  }
+
+  return tasks
+}
+
+/**
+ * Build the markdown content for a wave plan file.
+ * Pure function — no side effects.
+ */
+function buildPlanFileContent(
+  waveNumber: number,
+  planNumber: number,
+  tasks: TaskNode[],
+): string {
+  const waveLabel = `Wave ${waveNumber + 1} — Plan ${planNumber}`
+  const taskLines = tasks
+    .map(t => {
+      const depsNote =
+        t.dependencies.length > 0 ? `\n**Dependencies:** ${t.dependencies.join(', ')}` : '\n**Dependencies:** none'
+      return `### Task: ${t.id}\n**Description:** ${t.description}${depsNote}\n**Wave:** ${waveNumber + 1} (${tasks.every(u => u.dependencies.length === 0) ? 'parallel' : 'sequential'})`
+    })
+    .join('\n\n')
+
+  return [`# ${waveLabel}`, '', '## Tasks', '', taskLines, ''].join('\n')
+}
+
+/**
+ * Programmatic plan command: orchestrates research → wave analysis → plan file writing.
+ * Uses analyzeWaves() and splitIntoPlanFiles() from the engine layer.
+ * Writes plan files to `.buildpact/snapshots/{{specSlug}}/plans/`.
+ * @see FR-602 — Wave-Based Plan Generation
+ * @see Story 5.2 — Task 3
+ */
+export async function runPlanCommand(
+  specSlug: string,
+  projectDir = process.cwd(),
+): Promise<Result<PlanOutput, import('../../contracts/errors.js').CliError>> {
+  // Step 1 — read spec.md
+  const specPath = join(projectDir, '.buildpact', 'specs', specSlug, 'spec.md')
+  let specContent: string
+  try {
+    specContent = await readFile(specPath, 'utf-8')
+  } catch {
+    return err({
+      code: ERROR_CODES.FILE_READ_FAILED,
+      i18nKey: 'cli.plan.spec_not_found',
+      params: { path: specPath },
+    })
+  }
+
+  // Step 2 — spawn research agents (FR-601)
+  const research = await spawnResearchAgents(specContent, '', specSlug)
+
+  // Write research summary
+  const snapshotsDir = join(projectDir, '.buildpact', 'snapshots', specSlug)
+  await mkdir(snapshotsDir, { recursive: true })
+  const researchSummaryPath = join(snapshotsDir, 'research-summary.md')
+  const researchSummaryContent = [
+    `# Research Summary — ${specSlug}`,
+    '',
+    `> Consolidated: ${research.timestamp}`,
+    '',
+    '## Tech Stack',
+    '',
+    research.techStack.findings.join('\n'),
+    '',
+    '## Codebase',
+    '',
+    research.codebase.findings.join('\n'),
+    '',
+    '## Squad Constraints',
+    '',
+    research.squadConstraints.findings.join('\n'),
+  ].join('\n')
+  await writeFile(researchSummaryPath, researchSummaryContent, 'utf-8')
+
+  // Step 3 — parse spec tasks → TaskNode[]
+  const tasks = parseSpecTasks(specContent)
+
+  // Step 4 — wave analysis
+  const waves = analyzeWaves(tasks)
+
+  // Step 4b — Nyquist multi-perspective validation (FR-504)
+  const planTasks: PlanTask[] = tasks.map((t, idx) => ({
+    id: t.id,
+    title: t.description,
+    dependencies: t.dependencies,
+    wave: waves.findIndex(w => w.tasks.some(wt => wt.id === t.id)),
+  }))
+
+  const MAX_REVISION_ATTEMPTS = 3
+  let validatedTasks = planTasks
+  let validationReport: PlanValidationReport = validatePlan(specContent, validatedTasks)
+  let attempts = 0
+
+  while (validationReport.hasCritical && attempts < MAX_REVISION_ATTEMPTS) {
+    validatedTasks = autoRevisePlan(specContent, validatedTasks)
+    validationReport = validatePlan(specContent, validatedTasks)
+    attempts++
+  }
+
+  // Write validation report to snapshots
+  const validationReportPath = join(snapshotsDir, 'nyquist-report.md')
+  await writeFile(validationReportPath, formatValidationReport(validationReport), 'utf-8')
+
+  // Re-analyze waves if auto-revision changed the tasks
+  const finalWaves = attempts > 0 ? analyzeWaves(validatedTasks.map(t => ({
+    id: t.id,
+    description: t.title,
+    dependencies: t.dependencies,
+  }))) : waves
+
+  // Step 5 — split into plan files and write
+  const plansDir = join(snapshotsDir, 'plans')
+  await mkdir(plansDir, { recursive: true })
+
+  const writtenFiles: string[] = []
+  for (const wave of finalWaves) {
+    const planFiles = splitIntoPlanFiles(wave)
+    for (const planFile of planFiles) {
+      const content = buildPlanFileContent(planFile.waveNumber, planFile.planNumber, planFile.tasks)
+      const filePath = join(plansDir, planFile.filename)
+      await writeFile(filePath, content, 'utf-8')
+      writtenFiles.push(filePath)
+    }
+  }
+
+  return ok({
+    specSlug,
+    planFiles: writtenFiles,
+    researchSummaryPath,
+    waveCount: finalWaves.length,
+    validationPassed: !validationReport.hasCritical,
+    validationReportPath,
+  })
 }

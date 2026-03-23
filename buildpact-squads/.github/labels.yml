@@ -1,0 +1,61 @@
+# BuildPact Community Squads — GitHub Labels
+# Apply via: gh label create --force ... or use a labels sync action
+
+# ─── Good First Issues ─────────────────────────────────────────────────────────
+# Each label: clear scope + <2hr effort + assigned mentor in issue body
+
+- name: "good-first-issue: add-squad-readme"
+  color: "7057ff"
+  description: "Add or improve a Squad's README.md. Scope: <squad-dir>/README.md. Effort: <1hr. Mentor: @maintainer"
+
+- name: "good-first-issue: fix-manifest-schema"
+  color: "7057ff"
+  description: "Fix a field in a Squad's manifest.json. Scope: <squad-dir>/manifest.json. Effort: <30min. Mentor: @maintainer"
+
+- name: "good-first-issue: add-voice-dna-section"
+  color: "7057ff"
+  description: "Add a missing Voice DNA section to an agent file. Scope: <squad-dir>/agents/. Effort: <1hr. Mentor: @maintainer"
+
+- name: "good-first-issue: translate-squad-readme"
+  color: "7057ff"
+  description: "Add bilingual content (EN→PT-BR or PT-BR→EN) to a Squad README. Scope: <squad-dir>/README.md. Effort: <2hr. Mentor: @maintainer"
+
+- name: "good-first-issue: add-squad-example"
+  color: "7057ff"
+  description: "Add a usage example to a Squad's README.md. Scope: <squad-dir>/README.md. Effort: <1hr. Mentor: @maintainer"
+
+- name: "good-first-issue: improve-contributing"
+  color: "7057ff"
+  description: "Clarify a step or add an FAQ entry to CONTRIBUTING.md. Scope: CONTRIBUTING.md. Effort: <30min. Mentor: @maintainer"
+
+- name: "good-first-issue: add-squad-heuristic"
+  color: "7057ff"
+  description: "Add an IF/THEN heuristic rule to a Squad agent file. Scope: <squad-dir>/agents/. Effort: <1hr. Mentor: @maintainer"
+
+# ─── Bug Labels ────────────────────────────────────────────────────────────────
+
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working as expected"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New Squad or improvement to an existing Squad"
+
+# ─── Process Labels ────────────────────────────────────────────────────────────
+
+- name: "needs-review"
+  color: "e4e669"
+  description: "Needs review and approval by a BuildPact maintainer"
+
+- name: "needs-i18n"
+  color: "fbca04"
+  description: "Squad is missing bilingual content (PT-BR + EN) for user-facing text"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or PR already exists"

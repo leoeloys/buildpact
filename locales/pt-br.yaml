@@ -41,8 +41,14 @@ cli:
     no_changes: "Nenhuma alteração feita"
     confirm_edit: "Modificar a Constituição é permanente. Tem certeza que deseja continuar?"
     edit_consent_denied: "Edição da Constituição cancelada — nenhuma alteração feita"
-    violation_warning: "Violação da Constituição [{principle}]: \"{rule}\""
-    violation_warning_beginner: "Atenção: A saída não segue a regra \"{rule}\" na seção \"{principle}\". Revise antes de aceitar."
+    violation:
+      title_expert: "Violação da Constituição detectada: {principle}"
+      title_beginner: "As regras do seu projeto não permitem isso"
+      explanation_expert: "A saída conflita com o princípio '{principle}' na seção '{section}'"
+      explanation_beginner: "A IA criou algo que vai contra uma regra que você definiu para este projeto. Conflita com sua regra sobre '{principle_simple}'. Revise a saída e decida se quer mantê-la."
+      action_expert: "Revise a saída e atualize a Constituição se sua intenção mudou"
+      action_beginner: "Veja o que foi criado e decida se parece correto"
+      modification_blocked: "Esta ação alteraria as regras do seu projeto. Você deve aprovar manualmente."
     reason_prompt: "Por que você está fazendo essa alteração?"
     reason_placeholder: "ex: Atualizado para alinhar com novos requisitos de conformidade"
     checklist_generated: "Lista de verificação de atualização salva em .buildpact/constitution_update_checklist.md"
@@ -56,39 +62,36 @@ cli:
     done: "Quick spec salva em {path} (tipo: {type})"
     cancelled: "Comando quick cancelado — nenhuma alteração feita"
     discuss_welcome: "BuildPact Quick — Modo de Coleta de Contexto"
-    discuss_scope_q: "Qual parte do código esta mudança vai afetar?"
-    discuss_scope_frontend: "Frontend / Interface"
-    discuss_scope_backend: "Backend / API"
-    discuss_scope_database: "Banco de dados / Schema"
-    discuss_scope_fullstack: "Full-stack (frontend e backend)"
-    discuss_risk_q: "Qual é o nível de risco desta mudança?"
-    discuss_risk_low: "Baixo — código isolado ou novo, fácil de reverter"
-    discuss_risk_medium: "Médio — altera funcionalidade existente"
-    discuss_risk_high: "Alto — mudança disruptiva ou caminho crítico"
-    discuss_risk_unknown: "Ainda não sei"
-    discuss_done_q: "Como você saberá que esta mudança está pronta?"
-    discuss_done_tests: "Todos os testes existentes passam"
-    discuss_done_new_tests: "Novos testes escritos e passando"
-    discuss_done_manual: "Verificação manual pelo usuário"
-    discuss_done_deployed: "Implantado e verificado em staging"
-    discuss_constraints_q: "Há alguma restrição a considerar?"
-    discuss_constraints_none: "Nenhuma restrição especial"
-    discuss_constraints_compat: "Deve manter compatibilidade retroativa"
-    discuss_constraints_perf: "Caminho crítico de desempenho"
-    discuss_constraints_security: "Mudança sensível à segurança"
-    discuss_opt_other: "Outro (vou descrever)"
-    discuss_other_prompt: "Por favor, descreva:"
-    discuss_other_placeholder: "ex: Requisito ou restrição específica"
-    discuss_context_header: "Contexto da Discussão"
     full_welcome: "BuildPact Quick — Fluxo Completo com Verificação de Plano"
-    full_plan_generating: "Gerando plano a partir da spec..."
-    full_validation_passed: "Ambas as perspectivas de validação passaram — o plano está sólido"
-    full_validation_issues: "{count} problema(s) de validação encontrado(s) — revise antes de prosseguir"
-    full_risk_warn: "Revise o plano acima antes de prosseguir com a execução"
     full_risk_confirm: "Prosseguir com a execução?"
-    full_verified: "Verificação aprovada — todos os critérios de aceitação estão cobertos"
-    full_verification_failed: "{count} critério(s) de aceitação não coberto(s) — plano de correção gerado"
-    full_fix_plan_generated: "Plano de correção salvo em {path} — trate os critérios falhos e execute novamente"
+    discuss:
+      intro: "Vou fazer algumas perguntas para refinar o escopo"
+      question_prefix: "Pergunta {n} de {total}"
+      other_option: "Outro (texto livre)"
+      proceeding: "Contexto coletado — prosseguindo com spec refinada"
+    full:
+      generating_plan: "Gerando plano mínimo a partir da spec..."
+      validating_plan: "Validando plano em 2 perspectivas (completude + dependências)..."
+      risk_detected: "{count} risco(s) detectado(s) na validação do plano"
+      risk_abort: "Execução do plano abortada pelo usuário"
+      risk_continue: "Prosseguindo apesar dos riscos de validação"
+      verifying: "Verificando resultado contra o objetivo original..."
+      verification_passed: "Verificação aprovada — mudanças atendem ao objetivo declarado"
+      verification_failed: "Verificação falhou: {reason}"
+      fix_plan_generated: "Plano de correção gerado com {count} passo(s)"
+      fix_plan_confirm: "Executar o plano de correção?"
+      fix_plan_skip: "Plano de correção ignorado — resolução manual necessária"
+    no_description: "Nenhuma descrição fornecida — uso: /bp:quick <descrição>"
+    executing: "Executando..."
+    constitution_warning: "Violação da Constituição detectada — revise antes de prosseguir"
+    confirm_violation: "Prosseguir apesar da violação da Constituição?"
+    complete: "Fluxo quick concluído"
+    commit_created: "Commit criado: {message}"
+    scale_too_complex: "Esta tarefa é {level} ({label}) — complexa demais para o Quick Flow"
+    scale_use_specify: "Use /bp:specify para planejamento adequado, depois /bp:plan para criar um plano de execução"
+    scale_recommend_specify: "Isto parece moderadamente complexo (L2). Continuar com Quick Flow, ou usar /bp:specify? (S = Quick, N = sair)"
+    scale_assessment: "Escala: {level} — {label}"
+    not_implemented: "Este modo ainda não está implementado — disponível na versão Beta"
   specify:
     welcome: "BuildPact Specify — Especificação em Linguagem Natural"
     welcome_beginner: "BuildPact Specify — Assistente de Especificação Guiada"
@@ -160,6 +163,9 @@ cli:
     budget_limit_increased: "Limite de orçamento aumentado para ${limit}"
     budget_profile_switched: "Perfil econômico ativado — limites efetivos dobrados para esta sessão"
     budget_stopped: "Execução interrompida — resultados preservados"
+    lock_conflict: "Outra sessão está executando este plano — aguarde ou remova o lock manualmente"
+    lock_stale_removed: "Lock de execução obsoleto detectado (>30 min) — removido, continuando"
+    lock_released: "Lock de execução liberado"
   plan:
     welcome: "BuildPact Plan — Pesquisa Paralela Automatizada"
     research_start: "Iniciando agentes de pesquisa — stack tecnológico, base de código, restrições de domínio..."
@@ -183,10 +189,23 @@ cli:
     validation_revised: "Plano revisado automaticamente — problemas críticos resolvidos"
     validation_overridden: "Problemas críticos ignorados — plano gerado como está"
     validation_cancelled: "Geração do plano cancelada — nenhum arquivo escrito"
+    validation_issue_critical: "[{perspective}] {message}"
+    validation_issue_warning: "[{perspective}] {message}"
     human_pause: "Etapa humana necessária: {title}"
     human_confirm: "Você concluiu esta etapa manual?"
+    human_done: "Sim, terminei — continuar"
+    human_save_exit: "Salvar progresso e sair por enquanto"
     human_skipped: "Etapa ignorada — marcada como pendente em progress.json: {title}"
     progress_saved: "Progresso salvo em {path}"
+    non_software_detected: "Domínio não-software detectado ({domain_type}). Ativando classificação humano/agente."
+    resume_prompt: "Progresso anterior encontrado ({completed}/{total} tarefas concluídas). Retomar de onde parou?"
+    resume_yes: "Sim, retomar do último passo concluído"
+    resume_no: "Não, começar do zero"
+    readiness_pass: "✓ Gate de Prontidão: APROVADO — plano pronto para execução"
+    readiness_concerns: "Gate de Prontidão: ATENÇÃO — verificações opcionais não passaram"
+    readiness_fail: "Gate de Prontidão: FALHA — verificações obrigatórias não passaram"
+    readiness_override: "Ignorar avisos e salvar o plano mesmo assim?"
+    readiness_fix_required: "Corrija os problemas acima e execute /bp:plan novamente"
   verify:
     welcome: "BuildPact Verify — Teste de Aceitação Guiado (UAT)"
     no_spec_found: "Nenhuma spec encontrada em .buildpact/specs/ — execute /bp:specify primeiro"
@@ -231,6 +250,20 @@ cli:
     loop_cost_stop: "Parar e preservar resultados"
     loop_stopped: "Loop encerrado — {count} experimentos executados, resultados preservados"
     loop_no_flag: "Use a flag --loop para iniciar o loop de experimentos, ex: /bp:optimize {target} --loop"
+  help:
+    welcome: "BuildPact Help — Status do Projeto & Próximos Passos"
+    scanning: "Verificando estado do projeto..."
+    not_initialized: "Projeto não inicializado — execute: buildpact init"
+    fresh_project: "Projeto novo detectado — sem specs ainda"
+    next_specify: "Próximo passo: /bp:specify para capturar seu primeiro requisito"
+    next_plan: "Próximo passo: /bp:plan para criar um plano de execução"
+    next_execute: "Próximo passo: /bp:execute para implementar o plano"
+    next_verify: "Próximo passo: /bp:verify para validar a implementação"
+    next_feature: "Tudo verificado! Pronto para a próxima feature — execute /bp:specify"
+    next_fix: "Falhas encontradas — execute /bp:execute no plano de correção"
+    squad_active: "Squad ativo: {name} ({domain})"
+    squad_none: "Nenhum squad ativo configurado"
+    done: "Execute o comando sugerido acima, ou /bp:help a qualquer momento"
   doctor:
     title: "BuildPact Doctor — Verificação de Saúde"
     node_pass: "Node.js {version} (atende mínimo ≥20.x)"
@@ -252,6 +285,11 @@ cli:
     squad_fix: "Verifique a estrutura do squad.yaml — campos obrigatórios: name, version, domain, description, initial_level"
     summary_healthy: "Todas as verificações passaram — projeto saudável"
     summary_issues: "{fail_count} problema(s) encontrado(s) — veja acima para correção"
+    constitution_not_found: "Constituição não encontrada — verificação de conflitos ignorada"
+    constitution_check_failed: "Verificação de conflitos da constituição falhou"
+    constitution_clean: "Constituição sem conflitos — regras são consistentes"
+    constitution_conflicts: "Conflitos na constituição: {errors} erro(s), {warnings} aviso(s)"
+    constitution_conflicts_fix: "Revise o relatório de conflitos em {path} e resolva as contradições"
   squad:
     create_welcome: "BuildPact Squad — Criar Novo Squad"
     create_scaffolding: "Criando estrutura do Squad '{name}'..."
@@ -300,8 +338,12 @@ cli:
     hub_downloading: "Baixando Squad '{name}' do hub da comunidade..."
     hub_downloaded: "Squad '{name}' baixado do hub da comunidade"
     hub_download_failed: "Falha ao baixar Squad '{name}' do hub da comunidade"
+    hub:
+      downloading: "Baixando '{name}' do hub da comunidade..."
+      install_success: "Squad '{name}' instalado em .buildpact/squads/{name}/"
+      unreviewed_warning: "⚠️  O Squad '{name}' ainda não foi revisado por um maintainer do BuildPact. Prosseguindo com a instalação."
     unknown_subcommand: "Subcomando de squad desconhecido: '{subcommand}'"
-    usage_hint: "Uso: buildpact squad create <nome> | buildpact squad add <nome-ou-caminho> | buildpact squad validate <caminho>"
+    usage_hint: "Uso: buildpact squad create <nome> | buildpact squad add <nome-ou-caminho> | buildpact squad validate <caminho> | buildpact squad level check"
   autonomy:
     l1_write_confirm: "Agente '{agent}' está em L1 (Observador) — confirmar operação de escrita: {task}"
     l1_write_cancelled: "Operação de escrita cancelada pelo usuário — agente '{agent}' está em L1 e requer confirmação"
@@ -322,6 +364,104 @@ cli:
     report_written: "Relatório de compatibilidade salvo em {path}"
     outro: "Revise .buildpact/agent-mode.yaml e altere mode: prompt → agent quando estiver pronto para ativar"
 
+  adopt:
+    scanning: "Escaneando estrutura do projeto…"
+    scan_complete: "Escaneamento concluído"
+    detected_title: "Stack Detectada"
+    nothing_detected: "Nenhum arquivo de projeto conhecido detectado — será criada uma configuração nova"
+    existing_detected: ".buildpact/ existente encontrado — como proceder?"
+    merge_option: "Mesclar (manter existente, adicionar novo)"
+    overwrite_option: "Sobrescrever (começar do zero)"
+    cancel_option: "Cancelar"
+    confirm: "Aplicar alterações neste projeto?"
+    applying: "Configurando BuildPact…"
+    success: "Projeto adotado com sucesso"
+    failed: "Falha na adoção"
+    created_count: "{count} arquivo(s) criado(s)"
+    modified_count: "{count} arquivo(s) modificado(s)"
+    skipped_count: "{count} arquivo(s) ignorado(s) (já existem)"
+    cancelled: "Adoção cancelada — nada foi alterado."
+    run_diagnostic: "Executar diagnóstico do projeto? (analisa PRD, fases, qualidade do código)"
+    diagnosing: "Analisando projeto — escaneando docs, fases, requisitos, código…"
+    diagnostic_done: "Diagnóstico concluído"
+    diag_summary_title: "Diagnóstico do Projeto"
+    diag_docs: "{count} documento(s) encontrado(s) (PRD, specs, planos)"
+    diag_phases: "{done}/{total} fases concluídas"
+    diag_reqs: "{count} requisito(s) rastreado(s)"
+    diag_files: "arquivos fonte"
+    diag_recommendations_title: "Recomendações"
+    diag_report_saved: "Relatório completo salvo em {path}"
+    outro: "Execute 'buildpact doctor' para verificar seu setup, depois 'buildpact specify' para começar."
+
+  upgrade:
+    reading_schema: "Lendo schema do projeto…"
+    already_current: "Projeto já está atualizado (schema v{version})"
+    no_schema: "Projeto legado detectado (sem versão de schema) — tratando como schema v0"
+    no_project: "Nenhum projeto BuildPact encontrado. Execute 'buildpact init' ou 'buildpact adopt' primeiro."
+    migrations_planned: "Migrações a executar:"
+    dry_run_notice: "Simulação — nenhuma alteração aplicada"
+    confirm: "Aplicar {count} migração(ões)?"
+    running: "Executando migrações…"
+    success: "Atualizado de schema v{from} para v{to}"
+    migration_failed: "Migração falhou"
+
+  version_guard:
+    upgrade_available: "Schema do projeto v{project} pode ser atualizado para v{cli}. Execute 'buildpact upgrade'."
+    upgrade_required: "Schema do projeto v{project} é incompatível. Execute 'buildpact upgrade'."
+    cli_too_old: "Projeto usa schema v{project} mas este CLI suporta até v{cli}. Execute: npm update -g buildpact"
+    no_schema: "Projeto legado detectado. Execute 'buildpact upgrade' para adicionar versionamento."
+
+  quality:
+    welcome: "BuildPact Quality — Relatório de Qualidade Inspirado na ISO 9001"
+    scanning: "Escaneando artefatos para métricas de qualidade..."
+    first_pass_yield: "Rendimento na primeira passagem: {value}%"
+    traceability: "Cobertura de rastreabilidade: {value}%"
+    compliance: "Conformidade de processo: {value}%"
+    adversarial_density: "Densidade adversarial: {value} achados/spec"
+    no_issues: "Nenhum problema de qualidade encontrado — processo saudável"
+    issues_found: "{count} problema(s) de qualidade encontrado(s)"
+    report_saved: "Relatório de qualidade salvo em {path}"
+    done: "Auditoria de qualidade concluída"
+
+  docs:
+    welcome: "BuildPact Docs — Organizador de Documentação do Projeto"
+    scanning: "Escaneando toda a árvore do projeto..."
+    suggest_move: "Sugestão: Mover {file} → {destination}"
+    suggest_delete: "Sugestão: Excluir {file} (arquivo temporário obsoleto)"
+    suggest_dedup: "Sugestão: Remover duplicata {file}"
+    approve: "Aprovar esta alteração?"
+    stale_found: "{count} documento(s) desatualizado(s) encontrado(s) (>30 dias sem atualizações)"
+    orphans_found: "{count} artefato(s) órfão(s) encontrado(s)"
+    no_issues: "Toda a documentação está saudável e organizada"
+    index_writing: "Escrevendo PROJECT-INDEX.md com {count} entradas de arquivo..."
+    index_saved: "Índice do projeto salvo em .buildpact/PROJECT-INDEX.md"
+    index_preview: "Visualizar índice antes de escrever?"
+    done: "Auditoria de documentação completa"
+    suggest_run: "Dica: Execute /bp:docs periodicamente. Agentes buscam o PROJECT-INDEX.md para encontrar arquivos."
+    authorization_required: "Autorização necessária antes de qualquer alteração de arquivo"
+
+  orchestrate:
+    welcome_new: "Bem-vindo ao BuildPact. Sou o Pacto, seu orquestrador de projeto."
+    welcome_back: "Bem-vindo de volta. Sou o Pacto. Deixa eu verificar onde paramos..."
+    routing: "Estou passando isso para {agent_name}, nosso(a) {role}."
+    phase_complete: "{agent_name} concluiu {phase}. Veja o que foi realizado:"
+    next_step: "Próximo passo: {recommendation}"
+    all_done: "Todas as fases concluídas. Ótimo trabalho! Pronto para a próxima feature?"
+
+  investigate:
+    welcome: "BuildPact Investigação — Pesquisa de Domínio e Codebase"
+    scanning: "Investigando..."
+    domain_brief: "Relatório de investigação de domínio salvo em {path}"
+    codebase_brief: "Relatório de investigação do codebase salvo em {path}"
+    tech_brief: "Relatório de investigação tecnológica salvo em {path}"
+    report_saved: "Relatório de investigação salvo em {path}"
+    done: "Investigação concluída"
+
+  audit:
+    export_done: "Exportação de auditoria concluída — {count} entradas"
+    export_written: "Exportação de auditoria salva em {path}"
+    no_entries: "Nenhuma entrada de auditoria corresponde aos filtros fornecidos"
+
   export_web:
     welcome: "BuildPact — Exportação de Bundle Web"
     loading: "Carregando Squad, Constituição e Contexto do Projeto…"
@@ -333,6 +473,44 @@ cli:
     stale_age: "Bundle existente tem mais de 7 dias — gerando uma nova exportação"
     stale_source: "Arquivos fonte foram alterados desde a última exportação — gerando novo bundle"
     outro: "Cole o arquivo .txt no {platform} para ativar seu fluxo de trabalho do Squad"
+
+  hub:
+    welcome: "BuildPact Hub — Descoberta de Squads da Comunidade"
+    searching: "Pesquisando hub da comunidade..."
+    fetch_failed: "Não foi possível acessar o hub da comunidade"
+    search_done: "{count} squad(s) encontrado(s)"
+    no_results: "Nenhum squad corresponde à sua pesquisa"
+    no_results_hint: "Tente ampliar sua busca ou visite https://github.com/buildpact/buildpact-squads"
+    results_title: "Resultados da Pesquisa ({count})"
+    search_outro: "Execute 'buildpact hub info <nome>' para detalhes, ou 'buildpact squad add <nome>' para instalar"
+    fetching_info: "Buscando detalhes de '{name}'..."
+    squad_not_found: "Squad '{name}' não encontrado no hub da comunidade"
+    info_loaded: "Informações do squad carregadas"
+    info_outro: "Execute 'buildpact squad add <nome>' para instalar este squad"
+    quality_low_warning: "Pontuação de qualidade baixa ({score}/100). Instalar mesmo assim? [s/N]"
+
+  learn:
+    opening: "Abrindo tutorial do BuildPact..."
+    fallback: "Se o navegador não abriu, acesse: {url}"
+    url_only: "Tutorial do BuildPact: {url}"
+
+  readonly:
+    blocked: "Projeto em modo somente leitura — comandos que modificam estado estão bloqueados"
+
+  agent:
+    welcome: "BuildPact Agent — Supervisor Persistente"
+    starting: "Iniciando supervisor de agentes..."
+    started: "Supervisor de agentes iniciado (PID: {pid})"
+    stopping: "Parando supervisor de agentes..."
+    stopped: "Supervisor de agentes parado"
+    status_title: "Status do Supervisor de Agentes"
+    not_running: "Supervisor de agentes não está em execução"
+    stale_pid: "Arquivo PID obsoleto detectado — limpando e iniciando do zero"
+    already_running: "Supervisor de agentes já em execução (PID: {pid})"
+    paused: "Execução pausada — {reason}"
+    resumed: "Execução retomada a partir da wave {wave}"
+    auto_advance_complete: "Todas as waves concluídas com sucesso"
+    budget_paused: "Limite de orçamento atingido — execução pausada"
 
 domain:
   software: "Software / Tecnologia"
@@ -361,6 +539,17 @@ ide:
   cursor_hint: "Instala .cursorrules e .cursor/rules/"
   gemini_hint: "Instala config .gemini/"
   codex_hint: "Instala config .codex/"
+
+bundle:
+  conversational:
+    welcome: "Olá! Sou o assistente {squad_name}. Como posso ajudá-lo hoje?"
+    phase_specify: "Vamos descrever o que você quer fazer"
+    phase_plan: "Vou criar um plano para isso"
+    phase_execute: "Vou executar o plano agora"
+    phase_verify: "Vamos revisar o resultado"
+    choose_option: "Escolha uma opção:"
+    staleness_warning: "Aviso: este assistente pode estar desatualizado. Peça ao criador uma versão mais recente."
+    bundle_too_large: "Este assistente foi simplificado para funcionar nesta plataforma. Algumas funcionalidades avançadas foram removidas."
 
 error:
   recovery:
@@ -393,3 +582,54 @@ error:
   agent:
     load_failed: "Falha ao carregar agente '{path}': {reason}"
     not_in_index: "Agente '{agentId}' não encontrado no índice da squad '{squad}'"
+  engine:
+    file_read_failed: "Falha ao ler arquivo do engine '{path}'. Verifique permissões."
+    orchestrator_too_long: "Arquivo do orquestrador excede limite de 300 linhas ({lines} linhas). Divida em módulos menores."
+    missing_orchestrator_header: "Arquivo do orquestrador sem cabeçalho obrigatório. Adicione um bloco frontmatter YAML."
+    missing_implementation_notes: "Arquivo do orquestrador sem seção de Notas de Implementação."
+    payload_too_large: "Payload da tarefa ({bytes} bytes) excede limite de 20KB ({max} bytes). Reduza o conteúdo."
+  constitution:
+    not_found: "Arquivo de constituição não encontrado em .buildpact/constitution.md. Execute 'buildpact constitution' para criar."
+    empty: "Arquivo de constituição existe mas não tem regras. Adicione padrões de código ou requisitos de qualidade."
+  sharding:
+    write_failed: "Falha ao gravar documento fragmentado em '{path}'. Verifique espaço em disco."
+  stub:
+    not_implemented: "'{feature}' ainda não está implementado. Disponível em {phase}."
+  command:
+    not_found: "Comando '{name}' não reconhecido. Execute 'buildpact help' para ver comandos disponíveis."
+  optimize:
+    report_write_failed: "Falha ao gravar relatório de otimização em '{path}'."
+    tsv_write_failed: "Falha ao gravar resultados TSV de otimização em '{path}'."
+  metrics:
+    custom_exec_failed: "Script de métrica personalizada falhou: {reason}."
+    custom_non_numeric: "Métrica personalizada retornou valor não-numérico '{value}'. Métricas devem retornar número."
+  ratchet:
+    branch_failed: "Falha ao criar branch de otimização '{branch}'. Verifique estado do git."
+    commit_failed: "Falha ao fazer commit da melhoria. Verifique estado do git."
+    revert_failed: "Falha ao reverter tentativa de otimização. Limpeza manual necessária: git checkout ."
+  task:
+    timeout: "Tarefa '{title}' expirou após {seconds}s. Aumente execution.task_timeout_seconds no config.yaml."
+    result_invalid: "Tarefa '{title}' retornou resultado inválido: {reason}."
+  lock:
+    version_unsupported: "Versão do lockfile da squad '{version}' não suportada. Esperada versão 1."
+  smoke:
+    test_failed: "Teste de fumaça falhou para squad '{name}': {count} verificação(ões) falharam."
+  drift:
+    detected: "Squad '{name}' divergiu do lockfile. Execute 'buildpact squad update' para re-bloquear."
+  provider:
+    api_key_missing: "Chave de API não encontrada para o provedor '{provider}'. Configure {env_var} no seu ambiente."
+    dispatch_failed: "Envio de tarefa para '{provider}' falhou: {reason}"
+  hub:
+    squad_not_found: "Squad '{name}' não encontrado no hub da comunidade"
+  readonly:
+    blocked: "Projeto em modo somente leitura. Comandos que modificam estado (execute, plan --write, specify --write) estão bloqueados."
+  adopt:
+    failed: "Falha ao adotar projeto — verifique permissões de arquivo e tente novamente"
+  upgrade:
+    migration_failed: "Migração v{from} → v{to} falhou"
+    no_project: "Nenhum projeto BuildPact encontrado — execute 'buildpact init' ou 'buildpact adopt' primeiro"
+
+warn:
+  webhook:
+    delivery_failed: "Notificacao webhook falhou apos retry — pipeline continua normalmente"
+    invalid_url: "URL do webhook nao e uma URL HTTP(S) valida — notificacoes desativadas"

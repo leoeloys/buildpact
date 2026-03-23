@@ -9,9 +9,9 @@
  */
 
 import * as clack from '@clack/prompts'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { ok, err, ERROR_CODES } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
 import type { CommandHandler } from '../registry.js'
@@ -21,319 +21,58 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { slugify } from '../../foundation/sharding.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
 import { buildTaskPayload } from '../../engine/subagent.js'
+import { assessScale, formatScaleAssessment } from '../../engine/scale-router.js'
+import { isCiMode, ciLog } from '../../foundation/ci.js'
+import { generateDiscussQuestions, buildRefinedSpec } from './discuss-flow.js'
+import type { QuickAnswer } from './discuss-flow.js'
+import {
+  generateMinimalPlan,
+  validatePlanCompleteness,
+  validatePlanDependencies,
+  generateFixPlan,
+} from './plan-verifier.js'
 
 // ---------------------------------------------------------------------------
-// Discuss-mode: clarifying questions
+// Discuss-mode: clarifying questions (uses discuss-flow.ts pure functions)
 // ---------------------------------------------------------------------------
-
-/** A single collected answer from the discuss flow */
-export interface DiscussAnswer {
-  key: string
-  question: string
-  answer: string
-}
-
-/** Static definition of the 4 clarifying questions used in --discuss mode */
-const DISCUSS_QUESTIONS = [
-  {
-    key: 'scope',
-    messageKey: 'cli.quick.discuss_scope_q',
-    options: [
-      { value: 'frontend', labelKey: 'cli.quick.discuss_scope_frontend' },
-      { value: 'backend', labelKey: 'cli.quick.discuss_scope_backend' },
-      { value: 'database', labelKey: 'cli.quick.discuss_scope_database' },
-      { value: 'fullstack', labelKey: 'cli.quick.discuss_scope_fullstack' },
-      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
-    ],
-  },
-  {
-    key: 'risk',
-    messageKey: 'cli.quick.discuss_risk_q',
-    options: [
-      { value: 'low', labelKey: 'cli.quick.discuss_risk_low' },
-      { value: 'medium', labelKey: 'cli.quick.discuss_risk_medium' },
-      { value: 'high', labelKey: 'cli.quick.discuss_risk_high' },
-      { value: 'unknown', labelKey: 'cli.quick.discuss_risk_unknown' },
-      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
-    ],
-  },
-  {
-    key: 'done',
-    messageKey: 'cli.quick.discuss_done_q',
-    options: [
-      { value: 'tests_pass', labelKey: 'cli.quick.discuss_done_tests' },
-      { value: 'new_tests', labelKey: 'cli.quick.discuss_done_new_tests' },
-      { value: 'manual', labelKey: 'cli.quick.discuss_done_manual' },
-      { value: 'deployed', labelKey: 'cli.quick.discuss_done_deployed' },
-      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
-    ],
-  },
-  {
-    key: 'constraints',
-    messageKey: 'cli.quick.discuss_constraints_q',
-    options: [
-      { value: 'none', labelKey: 'cli.quick.discuss_constraints_none' },
-      { value: 'compat', labelKey: 'cli.quick.discuss_constraints_compat' },
-      { value: 'perf', labelKey: 'cli.quick.discuss_constraints_perf' },
-      { value: 'security', labelKey: 'cli.quick.discuss_constraints_security' },
-      { value: 'other', labelKey: 'cli.quick.discuss_opt_other' },
-    ],
-  },
-] as const
 
 /**
- * Ask 4 clarifying questions via numbered-option selects.
- * If the user picks "other", a free-text follow-up prompt is shown.
- * Returns collected answers, or `undefined` if the user cancels.
+ * Gather clarifying questions for --discuss mode.
+ * Uses generateDiscussQuestions() to produce 3–5 targeted questions based on description.
+ * Returns collected QuickAnswer[], or undefined if user cancels.
  */
-export async function gatherDiscussContext(
+async function gatherDiscussContext(
+  description: string,
   i18n: I18nResolver,
-): Promise<DiscussAnswer[] | undefined> {
-  const answers: DiscussAnswer[] = []
+): Promise<QuickAnswer[] | undefined> {
+  clack.log.info(i18n.t('cli.quick.discuss.intro'))
+  const questions = generateDiscussQuestions(description)
+  const answers: QuickAnswer[] = []
 
-  for (const question of DISCUSS_QUESTIONS) {
-    const options = question.options.map((opt) => ({
-      value: opt.value,
-      label: i18n.t(opt.labelKey),
-    }))
-
-    const selection = await clack.select({
-      message: i18n.t(question.messageKey),
-      options,
-    })
-
+  for (let questionIndex = 0; questionIndex < questions.length; questionIndex++) {
+    const q = questions[questionIndex]!
+    const options = q.options.map((o) => ({ value: o, label: o }))
+    const selection = await clack.select({ message: q.text, options })
     if (clack.isCancel(selection)) return undefined
 
-    const selectedValue = selection as string
-    let answerText: string
+    const selectedOption = selection as string
+    let freeText: string | undefined
 
-    if (selectedValue === 'other') {
-      const freeText = await clack.text({
-        message: i18n.t('cli.quick.discuss_other_prompt'),
-        placeholder: i18n.t('cli.quick.discuss_other_placeholder'),
+    // Last option is always "Other (free text)" — trigger free-text follow-up
+    if (selectedOption === q.options[q.options.length - 1]) {
+      const input = await clack.text({
+        message: i18n.t('cli.quick.discuss.question_prefix'),
+        placeholder: i18n.t('cli.quick.discuss.other_option'),
       })
-      if (clack.isCancel(freeText) || !freeText) return undefined
-      answerText = String(freeText)
-    } else {
-      const opt = question.options.find((o) => o.value === selectedValue)
-      answerText = opt ? i18n.t(opt.labelKey) : selectedValue
+      if (clack.isCancel(input) || !input) return undefined
+      freeText = String(input)
     }
 
-    answers.push({
-      key: question.key,
-      question: i18n.t(question.messageKey),
-      answer: answerText,
-    })
+    answers.push({ questionIndex, selectedOption, ...(freeText !== undefined && { freeText }) })
   }
 
+  clack.log.info(i18n.t('cli.quick.discuss.proceeding'))
   return answers
-}
-
-// ---------------------------------------------------------------------------
-// Full-mode: plan generation, validation, verification
-// ---------------------------------------------------------------------------
-
-/** Result from a single validation perspective */
-export interface PlanValidationResult {
-  perspective: string
-  issues: string[]
-  passed: boolean
-}
-
-/** Result from verifying spec ACs against a plan */
-export interface VerificationResult {
-  passed: string[]
-  failed: string[]
-}
-
-/**
- * Build a full plan document for --full mode.
- * Two-task structure with explicit AC coverage and risk assessment.
- */
-export function buildFullPlan(
-  description: string,
-  constitutionPath: string | undefined,
-  payload: { taskId: string; type: string },
-  generatedAt: string,
-): string {
-  const constitutionLine = constitutionPath
-    ? `- **Constitution**: \`${constitutionPath}\` (validated)`
-    : `- **Constitution**: not configured`
-
-  const lines = [
-    `# Full Plan — ${description}`,
-    '',
-    `> Generated: ${generatedAt}  `,
-    `> Mode: quick (full — with plan verification)`,
-    '',
-    '## Goal',
-    '',
-    description,
-    '',
-    '## Metadata',
-    '',
-    `- **Task ID**: \`${payload.taskId}\``,
-    `- **Type**: \`${payload.type}\``,
-    constitutionLine,
-    '',
-    '## Tasks',
-    '',
-    '### Task 1: Implement Core Change',
-    '',
-    `- **Scope**: Implement the change described: "${description}"`,
-    '- **Steps**:',
-    '  1. Identify affected files and components',
-    '  2. Apply the minimal change required',
-    '  3. Ensure existing tests still pass',
-    '',
-    '### Task 2: Verify and Commit',
-    '',
-    '- **Scope**: Validate and commit the change atomically',
-    '- **Steps**:',
-    '  1. Run all quality checks (typecheck, lint, tests)',
-    '  2. Review change against acceptance criteria',
-    '  3. Produce one atomic Git commit',
-    '',
-    '## Acceptance Criteria Coverage',
-    '',
-    '- [x] The change described above is implemented (Task 1)',
-    '- [x] All existing tests continue to pass (Task 2, step 1)',
-    '- [x] One atomic Git commit produced (Task 2, step 3)',
-    '',
-    '## Risk Assessment',
-    '',
-    '- Changes are scoped to the minimum required',
-    '- Existing tests serve as regression safety net',
-    '- Constitution validation ensures compliance',
-    '',
-  ]
-
-  return lines.join('\n')
-}
-
-/**
- * Perspective 1 — Completeness: checks that every AC from the spec
- * has at least one keyword present in the plan.
- */
-export function validatePlanCompleteness(
-  specContent: string,
-  planContent: string,
-): PlanValidationResult {
-  const issues: string[] = []
-
-  const specACs = specContent
-    .split('\n')
-    .filter((line) => /^\s*- \[[ x]\]/.test(line))
-    .map((line) => line.replace(/^\s*- \[[ x]\]\s*/, '').trim())
-
-  for (const ac of specACs) {
-    if (ac.length === 0) continue
-    const keywords = ac.split(/\s+/).filter((w) => w.length > 4)
-    const covered = keywords.some((kw) =>
-      planContent.toLowerCase().includes(kw.toLowerCase()),
-    )
-    if (!covered) {
-      issues.push(`AC not clearly covered in plan: "${ac.slice(0, 60)}"`)
-    }
-  }
-
-  return { perspective: 'Completeness', issues, passed: issues.length === 0 }
-}
-
-/**
- * Perspective 2 — Feasibility: checks the plan has required structural
- * elements (tasks, risk assessment, AC coverage section).
- */
-export function validatePlanFeasibility(planContent: string): PlanValidationResult {
-  const issues: string[] = []
-
-  const taskSections = (planContent.match(/### Task \d+/g) ?? []).length
-  if (taskSections === 0) {
-    issues.push('Plan contains no defined tasks')
-  }
-  if (!planContent.includes('Risk Assessment')) {
-    issues.push('Plan is missing Risk Assessment section')
-  }
-  if (!planContent.includes('Acceptance Criteria Coverage')) {
-    issues.push('Plan does not map tasks to Acceptance Criteria')
-  }
-
-  return { perspective: 'Feasibility', issues, passed: issues.length === 0 }
-}
-
-/**
- * Verify spec ACs against the plan content.
- * Returns which ACs are covered and which are not.
- */
-export function verifyAgainstSpec(
-  specContent: string,
-  planContent: string,
-): VerificationResult {
-  const passed: string[] = []
-  const failed: string[] = []
-
-  const specACs = specContent
-    .split('\n')
-    .filter((line) => /^\s*- \[[ x]\]/.test(line))
-    .map((line) => line.replace(/^\s*- \[[ x]\]\s*/, '').trim())
-
-  for (const ac of specACs) {
-    if (ac.length === 0) continue
-    const keywords = ac.split(/\s+/).filter((w) => w.length > 4)
-    const covered = keywords.some((kw) =>
-      planContent.toLowerCase().includes(kw.toLowerCase()),
-    )
-    if (covered) {
-      passed.push(ac)
-    } else {
-      failed.push(ac)
-    }
-  }
-
-  return { passed, failed }
-}
-
-/**
- * Build a targeted fix plan for ACs that failed verification.
- */
-export function buildFixPlan(
-  description: string,
-  failedACs: string[],
-  payload: { taskId: string },
-  generatedAt: string,
-): string {
-  const fixTasks = failedACs
-    .map((ac, i) => [
-      `### Fix Task ${i + 1}: Address Failed Criterion`,
-      '',
-      `- **Target AC**: "${ac}"`,
-      '- **Action**: Review implementation and ensure this criterion is satisfied',
-      '',
-    ])
-    .flat()
-
-  const lines = [
-    `# Fix Plan — ${description}`,
-    '',
-    `> Generated: ${generatedAt}  `,
-    `> Mode: quick (full — targeted fix for failed verification)`,
-    '',
-    '## Failed Acceptance Criteria',
-    '',
-    ...failedACs.map((ac) => `- [ ] ${ac}`),
-    '',
-    '## Fix Tasks',
-    '',
-    ...fixTasks,
-    '## Notes',
-    '',
-    '- This fix plan targets only the failed criteria',
-    '- Re-run verification after applying fixes',
-    `- **Task ID**: \`${payload.taskId}\``,
-    '',
-  ]
-
-  return lines.join('\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -343,7 +82,6 @@ export function buildFixPlan(
 /** Read language from .buildpact/config.yaml, fallback to 'en' */
 async function readLanguage(projectDir: string): Promise<SupportedLanguage> {
   try {
-    const { readFile } = await import('node:fs/promises')
     const content = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
     for (const line of content.split('\n')) {
       const trimmed = line.trim()
@@ -360,17 +98,22 @@ async function readLanguage(projectDir: string): Promise<SupportedLanguage> {
 
 /**
  * Infer a conventional-commit type prefix from the description.
- * Checks leading keywords (case-insensitive) for common patterns.
+ * Scans for keywords anywhere in the description (case-insensitive).
+ * Priority order: fix → docs → test → refactor → chore → style → feat → chore (default).
+ * @see AC#3 — Story 3.1
  */
 export function inferCommitType(description: string): string {
-  const lower = description.toLowerCase().trimStart()
-  if (/^(fix|resolve|correct|repair|revert|bug|hotfix)/.test(lower)) return 'fix'
-  if (/^(doc|docs|document|readme|changelog|comment|jsdoc)/.test(lower)) return 'docs'
-  if (/^(test|spec|coverage|vitest|jest)/.test(lower)) return 'test'
-  if (/^(refactor|rename|move|extract|reorganize|clean)/.test(lower)) return 'refactor'
-  if (/^(chore|bump|upgrade|update dep|update package|build|ci|lint)/.test(lower)) return 'chore'
-  if (/^(style|format|prettier|eslint)/.test(lower)) return 'style'
-  return 'feat'
+  const lower = description.toLowerCase()
+  // fix keywords: AC#3 spec + conventional extras
+  if (/\b(fix|bug|error|null|broken|crash|repair|revert|wrong|resolve|correct|hotfix)\b/.test(lower)) return 'fix'
+  if (/\b(doc|docs|document|readme|changelog|comment|jsdoc)\b/.test(lower)) return 'docs'
+  if (/\b(test|spec|coverage|vitest|jest)\b/.test(lower)) return 'test'
+  if (/\b(refactor|rename|move|extract|reorganize|clean)\b/.test(lower)) return 'refactor'
+  // feat keywords: AC#3 spec
+  if (/\b(add|create|implement|new|build|introduce|enable)\b/.test(lower)) return 'feat'
+  if (/\b(style|format|prettier|eslint)\b/.test(lower)) return 'style'
+  // chore is the default per AC#3 — no fix/feat keywords matched
+  return 'chore'
 }
 
 /** Build minimal spec content for the quick flow */
@@ -379,7 +122,7 @@ function buildQuickSpec(
   constitutionPath: string | undefined,
   payload: { taskId: string; type: string },
   generatedAt: string,
-  answers?: DiscussAnswer[],
+  answers?: QuickAnswer[],
   modeSuffix?: string,
 ): string {
   const constitutionLine = constitutionPath
@@ -413,10 +156,10 @@ function buildQuickSpec(
   ]
 
   if (answers && answers.length > 0) {
-    lines.push('## Context from Discussion', '')
-    for (const a of answers) {
-      lines.push(`**${a.question}**`, `→ ${a.answer}`, '')
-    }
+    const refined = buildRefinedSpec(description, answers)
+    // Extract bullet lines from refined spec (skip "## Quick Spec" header and blank lines)
+    const bullets = refined.split('\n').filter((l) => l.startsWith('- '))
+    lines.push('## Context from Discussion', '', ...bullets, '')
   }
 
   return lines.join('\n')
@@ -428,7 +171,7 @@ function buildQuickSpec(
  */
 function runGit(args: string[], cwd: string): Result<string> {
   try {
-    const output = execSync(`git ${args.join(' ')}`, {
+    const output = execFileSync('git', args, {
       cwd,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -437,7 +180,7 @@ function runGit(args: string[], cwd: string): Result<string> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     return err({
-      code: ERROR_CODES.FILE_WRITE_FAILED,
+      code: ERROR_CODES.GIT_COMMAND_FAILED,
       i18nKey: 'error.file.write_failed',
       params: { path: 'git', reason: message },
       cause: e,
@@ -456,10 +199,21 @@ export const handler: CommandHandler = {
     const i18n = createI18n(lang)
     const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'cli.jsonl'))
 
+    const isCi = isCiMode(args)
     const discussMode = args.includes('--discuss')
     const fullMode = args.includes('--full')
+    const mode = fullMode ? 'full' : discussMode ? 'discuss' : 'base'
     // Accept description from CLI args or prompt
     const descriptionArg = args.filter((a) => !a.startsWith('--')).join(' ').trim()
+
+    // CI mode requires description
+    if (isCi && !descriptionArg) {
+      return err({
+        code: ERROR_CODES.MISSING_ARG,
+        i18nKey: 'cli.quick.no_description',
+        params: {},
+      })
+    }
 
     clack.intro(
       fullMode
@@ -484,15 +238,53 @@ export const handler: CommandHandler = {
       description = String(input)
     }
 
+    // -----------------------------------------------------------------------
+    // STEP 0: Scale Assessment — route by complexity (L0–L4)
+    // -----------------------------------------------------------------------
+    const scaleResult = assessScale(description)
+    clack.log.info(formatScaleAssessment(scaleResult))
+
+    if (scaleResult.level === 'L3' || scaleResult.level === 'L4') {
+      if (isCi) {
+        ciLog('auto-rejected', 'scale ' + scaleResult.level + ' too complex for quick')
+      }
+      clack.log.error(i18n.t('cli.quick.scale_too_complex', {
+        level: scaleResult.level,
+        label: scaleResult.label,
+      }))
+      clack.outro(i18n.t('cli.quick.scale_use_specify'))
+      return isCi
+        ? err({ code: ERROR_CODES.NOT_IMPLEMENTED, i18nKey: 'cli.quick.scale_use_specify', params: {} })
+        : ok(undefined)
+    }
+
+    if (scaleResult.level === 'L2') {
+      if (isCi) {
+        ciLog('auto-confirmed', 'L2 scale proceed')
+      } else {
+        const proceed = await clack.confirm({
+          message: i18n.t('cli.quick.scale_recommend_specify'),
+        })
+        if (clack.isCancel(proceed) || proceed === false) {
+          clack.outro(i18n.t('cli.quick.scale_use_specify'))
+          return ok(undefined)
+        }
+      }
+    }
+
     // Gather discuss context if --discuss flag provided
-    let discussAnswers: DiscussAnswer[] | undefined
-    if (discussMode) {
-      const gathered = await gatherDiscussContext(i18n)
+    // Uses generateDiscussQuestions() from discuss-flow.ts — AC1/AC2 of Story 3.2
+    let discussAnswers: QuickAnswer[] | undefined
+    if (discussMode && !isCi) {
+      const gathered = await gatherDiscussContext(description, i18n)
       if (gathered === undefined) {
         clack.outro(i18n.t('cli.quick.cancelled'))
         return ok(undefined)
       }
       discussAnswers = gathered
+    }
+    if (discussMode && isCi) {
+      ciLog('auto-skipped', 'discussion flow')
     }
 
     // Resolve constitution path for constitution validation (FR-203)
@@ -541,86 +333,115 @@ export const handler: CommandHandler = {
       clack.log.info(i18n.t('cli.quick.constitution_validated'))
     }
 
-    // --full mode: plan generation, 2-perspective validation, risk confirm, verification
+    // --full mode: plan generation, 2-perspective validation (plan-verifier.ts), risk confirm, verification
+    let planValidationData: { isValid: boolean; riskCount: number } | undefined
+    let verificationPassed: boolean | undefined
+
     if (fullMode) {
-      clack.log.info(i18n.t('cli.quick.full_plan_generating'))
+      clack.log.info(i18n.t('cli.quick.full.generating_plan'))
 
-      const planContent = buildFullPlan(description, constitutionPath, payload, generatedAt)
+      // Generate minimal plan steps using plan-verifier pure function (FR-403)
+      const planSteps = generateMinimalPlan(description, specContent)
 
-      // Perspective 1: Completeness
-      const completeness = validatePlanCompleteness(specContent, planContent)
-      // Perspective 2: Feasibility
-      const feasibility = validatePlanFeasibility(planContent)
+      // 2-perspective validation: completeness (plan-verifier) + dependency (plan-verifier)
+      clack.log.info(i18n.t('cli.quick.full.validating_plan'))
+      const completenessResult = validatePlanCompleteness(description, planSteps)
+      const dependencyResult = validatePlanDependencies(planSteps)
+      const allRisks = [...completenessResult.risks, ...dependencyResult.risks]
 
-      const allIssues = [...completeness.issues, ...feasibility.issues]
-      if (allIssues.length === 0) {
-        clack.log.success(i18n.t('cli.quick.full_validation_passed'))
-      } else {
+      planValidationData = { isValid: allRisks.length === 0, riskCount: allRisks.length }
+
+      // AC3: risk notification only when risks are detected — not unconditionally
+      if (allRisks.length > 0) {
         clack.log.warn(
-          i18n.t('cli.quick.full_validation_issues', { count: String(allIssues.length) }),
+          i18n.t('cli.quick.full.risk_detected', { count: String(allRisks.length) }),
         )
-        for (const issue of allIssues) {
-          clack.log.warn(`  • ${issue}`)
+        for (const risk of allRisks) {
+          clack.log.warn(`  • ${risk}`)
         }
+        if (isCi) {
+          ciLog('auto-confirmed', 'risk accepted')
+        } else {
+          const proceed = await clack.confirm({ message: i18n.t('cli.quick.full_risk_confirm') })
+          if (clack.isCancel(proceed) || proceed === false) {
+            clack.outro(i18n.t('cli.quick.full.risk_abort'))
+            return ok(undefined)
+          }
+        }
+        clack.log.info(i18n.t('cli.quick.full.risk_continue'))
       }
 
-      // Risk notification + explicit user confirmation before execution
-      clack.log.warn(i18n.t('cli.quick.full_risk_warn'))
-      const proceed = await clack.confirm({ message: i18n.t('cli.quick.full_risk_confirm') })
-      if (clack.isCancel(proceed) || proceed === false) {
-        clack.outro(i18n.t('cli.quick.cancelled'))
-        return ok(undefined)
-      }
-
-      // Write plan.md to spec directory
+      // Build and write plan.md
+      const planLines = [
+        `# Quick Plan — ${description}`,
+        '',
+        `> Generated: ${generatedAt}`,
+        `> Mode: quick (full — with plan verification)`,
+        '',
+        '## Steps',
+        '',
+        ...planSteps.map((s) => `${s.index}. ${s.description}`),
+        '',
+      ]
       const planPath = join(specDir, 'plan.md')
       try {
-        await writeFile(planPath, planContent, 'utf-8')
-      } catch (e) {
-        const reason = e instanceof Error ? e.message : String(e)
-        clack.log.error(i18n.t('error.file.write_failed'))
-        return err({
-          code: ERROR_CODES.FILE_WRITE_FAILED,
-          i18nKey: 'error.file.write_failed',
-          params: { path: planPath, reason },
-          cause: e,
-        })
+        await writeFile(planPath, planLines.join('\n'), 'utf-8')
+      } catch {
+        // Non-fatal — proceed even if plan write fails
       }
 
-      // Verify spec ACs are addressed in the plan
-      const verification = verifyAgainstSpec(specContent, planContent)
+      // Post-write verification: confirm artifacts were persisted and cover the stated goal
+      // This is distinct from pre-execution validation (which checks plan structure).
+      // Verification reads back the written files and checks content correctness.
+      clack.log.info(i18n.t('cli.quick.full.verifying'))
+      try {
+        const writtenPlan = await readFile(planPath, 'utf-8')
+        const writtenSpec = await readFile(specPath, 'utf-8')
+        // Verify: plan has steps section, spec contains the description,
+        // and every validated plan step was persisted in the plan file
+        verificationPassed =
+          writtenPlan.includes('## Steps') &&
+          writtenSpec.includes(description) &&
+          planSteps.every((s) => writtenPlan.includes(s.description))
+      } catch {
+        verificationPassed = false
+      }
 
-      if (verification.failed.length > 0) {
-        clack.log.warn(
-          i18n.t('cli.quick.full_verification_failed', {
-            count: String(verification.failed.length),
-          }),
+      if (!verificationPassed) {
+        const failureReason = 'Written artifacts do not match validated plan — files may be incomplete or corrupted'
+        clack.log.warn(i18n.t('cli.quick.full.verification_failed', { reason: failureReason }))
+
+        // AC5: generate fix plan and offer [1] Execute fix [2] Skip prompt
+        const fixSteps = generateFixPlan(description, failureReason)
+        clack.log.info(
+          i18n.t('cli.quick.full.fix_plan_generated', { count: String(fixSteps.length) }),
         )
-        // Auto-generate a targeted fix plan for failed ACs
-        const fixPayload = buildTaskPayload({
-          type: 'quick',
-          content: description,
-          outputPath: `.buildpact/specs/${featureSlug}/`,
-        })
-        const fixPlanContent = buildFixPlan(
-          description,
-          verification.failed,
-          fixPayload,
-          new Date().toISOString(),
-        )
-        const fixPlanPath = join(specDir, 'fix-plan.md')
-        try {
-          await writeFile(fixPlanPath, fixPlanContent, 'utf-8')
-          clack.log.info(
-            i18n.t('cli.quick.full_fix_plan_generated', {
-              path: `.buildpact/specs/${featureSlug}/fix-plan.md`,
-            }),
-          )
-        } catch {
-          // Non-fatal — proceed even if fix plan write fails
+        for (const step of fixSteps) {
+          clack.log.info(`  ${step.index}. ${step.description}`)
+        }
+        if (isCi) {
+          ciLog('auto-skipped', 'fix plan execution')
+          clack.log.info(i18n.t('cli.quick.full.fix_plan_skip'))
+        } else {
+          const executeFix = await clack.confirm({ message: i18n.t('cli.quick.full.fix_plan_confirm') })
+          if (clack.isCancel(executeFix) || executeFix === false) {
+            clack.log.info(i18n.t('cli.quick.full.fix_plan_skip'))
+          } else {
+            const fixPlanPath = join(specDir, 'fix-plan.md')
+            const fixLines = [
+              `# Fix Plan — ${description}`,
+              '',
+              ...fixSteps.map((s) => `${s.index}. ${s.description}`),
+            ]
+            try {
+              await writeFile(fixPlanPath, fixLines.join('\n'), 'utf-8')
+            } catch {
+              // Non-fatal
+            }
+          }
         }
       } else {
-        clack.log.success(i18n.t('cli.quick.full_verified'))
+        clack.log.success(i18n.t('cli.quick.full.verification_passed'))
       }
     }
 
@@ -643,10 +464,13 @@ export const handler: CommandHandler = {
     }
 
     await audit.log({
-      action: 'quick.spec',
+      action: 'quick.execute',
       agent: 'quick',
       files: [`${relativeSpecDir}quick-spec.md`],
       outcome: 'success',
+      ...(mode !== 'base' && { mode }),
+      ...(planValidationData !== undefined && { planValidation: planValidationData }),
+      ...(verificationPassed !== undefined && { verificationPassed }),
     })
 
     clack.outro(

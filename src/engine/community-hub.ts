@@ -47,6 +47,8 @@ export interface SquadManifest {
   domain: string
   description: string
   files: string[]
+  /** Whether a BuildPact maintainer has reviewed this squad. Defaults to false (safe). */
+  reviewed: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +168,7 @@ export function parseSquadManifest(json: string): Result<SquadManifest> {
     domain: String(m['domain'] ?? 'custom'),
     description: String(m['description'] ?? ''),
     files: Array.isArray(m['files']) ? (m['files'] as unknown[]).map(String) : [],
+    reviewed: m['reviewed'] === true,
   })
 }
 

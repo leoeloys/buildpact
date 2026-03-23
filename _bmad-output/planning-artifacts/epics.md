@@ -5,6 +5,9 @@ inputDocuments:
   - _bmad-output/planning-artifacts/architecture.md
 status: complete
 completedAt: '2026-03-15'
+v1_v2_epics_added: '2026-03-22'
+v1_v2_epics_scope: 'Epics 18-25 (v1.0 + v2.0) — 8 epics, 30 stories'
+v1_v2_methods: 'First Principles Analysis, User Persona Focus Group, Party Mode review'
 ---
 
 # BuildPact - Epic Breakdown
@@ -366,6 +369,36 @@ FR-1401: Epic 13 — Squad AutoResearch mode (/bp:optimize-squad)
 FR-1402: Epic 13 — Benchmark sets (10+ golden input-output pairs)
 FR-1403: Epic 13 — Optimization isolation on dedicated Git branch
 FR-1404: Epic 13 — Optimization report (optimization-report.md)
+FR-1501: Epic 18 — Documentation site (VitePress + i18n)
+FR-1502: Epic 18 — Squad creation guide
+FR-1503: Epic 18 — Migration guides (BMAD/GSD/SpecKit)
+FR-1504: Epic 18 — Performance budget validation
+FR-1505: Epic 19 — Non-interactive CI mode (--ci flag)
+FR-1506: Epic 19 — GitHub Actions adapter
+FR-1507: Epic 19 — Webhook notifications
+FR-1508: Epic 20 — Hub search & discovery
+FR-1509: Epic 20 — Squad quality scores
+FR-1510: Epic 21 — Onboarding learn command
+FR-1511: Epic 21 — GitHub Sponsors & contributor infrastructure
+FR-1512: Epic 21 — Release validation & readonly mode
+FR-2001: Epic 22 — Agent Mode CLI supervisor
+FR-2002: Epic 22 — Auto-advance walk-away execution
+FR-2003: Epic 22 — Event bus (pub/sub + advanced routing)
+FR-2004: Epic 22 — Real-time execution dashboard
+FR-2005: Epic 22 — State persistence & recovery
+FR-2006: Epic 22 — Prompt-to-agent migration command
+FR-2007: Epic 23 — Squad optimization with A/B testing
+FR-2008: Epic 23 — Domain-specific benchmark sets
+FR-2009: Epic 23 — Optimization isolation
+FR-2010: Epic 23 — Statistical optimization reports
+FR-2011: Epic 24 — RBAC middleware & permission guards
+FR-2012: Epic 24 — Centralized constitution management
+FR-2013: Epic 24 — Marketplace ratings & reviews
+FR-2014: Epic 24 — Squad certification program
+FR-2015: Epic 25 — Cross-project learning
+FR-2016: Epic 25 — Multi-language localization
+FR-2017: Epic 25 — Domain expansion packs
+FR-2018: Epic 25 — Org-level memory tiers
 
 ## Epic List
 
@@ -1667,3 +1700,927 @@ So that I can make an informed decision about which optimizations to merge into 
 **When** I proceed with the merge
 **Then** the report clearly indicates which branch to merge and the expected metric impact
 **And** the `results.tsv` append-only log contains the full experiment history for audit purposes
+
+---
+
+# ═══════════════════════════════════════════════════
+# v1.0 MILESTONE — Production Grade
+# ═══════════════════════════════════════════════════
+
+## Epic 18: Documentation & Developer Experience
+
+New users and squad creators find comprehensive, well-structured documentation that makes adoption and contribution effortless.
+
+**FRs covered:** FR-1501, FR-1502, FR-1503, FR-1504
+**NFRs:** NFR-14, NFR-17, NFR-20
+**Stories:** 18.1, 18.2, 18.3, 18.4
+**Phase:** v1.0
+
+---
+
+### Story 18.1: Documentation Site with VitePress & i18n
+
+As a new BuildPact user,
+I want a comprehensive documentation site with tutorials, API reference, and conceptual guides,
+So that I can learn the framework without reading source code.
+
+**Acceptance Criteria:**
+
+**Given** a user visits the docs site
+**When** they browse the navigation
+**Then** they find sections for: Quick Start, Tutorials (step-by-step), CLI Reference (all commands), Architecture Overview, and FAQ
+**And** each CLI command has usage examples, options, and expected output
+
+**Given** the docs site infrastructure
+**When** a developer inspects the setup
+**Then** it uses VitePress with i18n folder structure (`docs/en/`, `docs/pt-br/`) configured from day 1
+**And** language switching works between EN and PT-BR
+
+**Given** a Portuguese-speaking user visits the docs
+**When** they toggle the language selector
+**Then** all content is available in PT-BR with native-quality translations
+
+**Given** a user follows the Quick Start tutorial
+**When** they complete all steps
+**Then** they have a working BuildPact project with a squad installed and their first `buildpact quick` task completed in under 5 minutes
+
+**Given** the documentation source files
+**When** deployed
+**Then** the site is hosted on GitHub Pages with automatic deployment from the `docs/` branch
+
+---
+
+### Story 18.2: Squad Creation Guide
+
+As a domain expert wanting to create a custom squad,
+I want a comprehensive guide with examples explaining the 6-layer agent structure, voice DNA, and squad.yaml configuration,
+So that I can create production-quality squads without guessing.
+
+**Acceptance Criteria:**
+
+**Given** a user reads the Squad Creation Guide
+**When** they follow it end-to-end
+**Then** they can create a complete squad with: squad.yaml, at least 2 agent markdown files with all 6 layers, and voice DNA with 5 subsections
+
+**Given** the guide content
+**When** a user looks for examples
+**Then** each concept includes a concrete example from the built-in software squad and at least one non-software domain example
+
+**Given** a user creates a squad following the guide
+**When** they run `buildpact doctor --smoke`
+**Then** the squad passes all structural validation checks
+
+**Given** the guide covers voice DNA creation
+**When** a user reads the voice DNA section
+**Then** it explains lexicon, tone, cadence, signature-phrases, and anti-patterns with before/after examples showing the difference good voice DNA makes
+
+---
+
+### Story 18.3: Migration Guides
+
+As a developer currently using BMAD, GSD, or SpecKit,
+I want a migration guide that maps my existing workflow concepts to BuildPact equivalents,
+So that I can adopt BuildPact without losing my investment in my current framework.
+
+**Acceptance Criteria:**
+
+**Given** a BMAD user reads the BMAD migration guide
+**When** they look for concept mapping
+**Then** they find a table mapping: BMAD agents → BuildPact squad agents, BMAD workflows → BuildPact pipeline phases, BMAD artifacts → BuildPact output structure
+
+**Given** a GSD user reads the GSD migration guide
+**When** they look for workflow equivalents
+**Then** they find mappings for: GSD phases → BuildPact pipeline, GSD roadmap → BuildPact plan, GSD executor → BuildPact execute
+
+**Given** a SpecKit user reads the SpecKit migration guide
+**When** they look for setup equivalents
+**Then** they find: SpecKit rules → BuildPact constitution, SpecKit templates → BuildPact commands, SpecKit cursorrules → BuildPact IDE config
+
+**Given** any migration guide
+**When** a user follows the step-by-step instructions
+**Then** they can migrate an existing project to BuildPact in under 30 minutes with their existing artifacts preserved
+
+---
+
+### Story 18.4: Performance Budget Validation
+
+As a tech lead evaluating BuildPact for production use,
+I want automated benchmarks that validate BuildPact meets its stated performance budgets,
+So that I can trust it won't degrade my team's workflow.
+
+**Acceptance Criteria:**
+
+**Given** the performance benchmark suite
+**When** `npm run benchmark` is executed
+**Then** it measures and reports: CLI startup time (target: <500ms), command parse time (target: <50ms), squad load time (target: <100ms), constitution check time (target: <200ms), audit write time (target: <10ms)
+
+**Given** any measurement exceeds its target
+**When** the benchmark report is generated
+**Then** the failing metric is highlighted with the actual value vs target, and the overall benchmark exits with code 1
+
+**Given** the benchmark suite
+**When** it runs in CI (GitHub Actions)
+**Then** it produces a machine-readable JSON report compatible with benchmark tracking tools
+
+**Given** the memory usage benchmark
+**When** a standard operation runs (single squad, 50 tasks)
+**Then** resident memory stays below 256MB as measured by process.memoryUsage().rss
+
+---
+
+## Epic 19: CI/CD Integration & Automation
+
+Teams can run BuildPact in automated pipelines with GitHub Actions, receive execution notifications, and trust all commands work non-interactively.
+
+**FRs covered:** FR-1505, FR-1506, FR-1507
+**NFRs:** NFR-09, NFR-15
+**Stories:** 19.1, 19.2, 19.3
+**Phase:** v1.0
+
+---
+
+### Story 19.1: Non-Interactive Mode Hardening
+
+As a developer running BuildPact in CI,
+I want all commands to work without interactive prompts when `--ci` flag is set,
+So that automated pipelines never hang waiting for user input.
+
+**Acceptance Criteria:**
+
+**Given** any BuildPact command is invoked with `--ci` flag or `BP_CI=true` environment variable
+**When** the command would normally display an interactive prompt
+**Then** the command uses the defined CI defaults and logs the auto-selected choice
+
+**Given** `buildpact plan --ci` is invoked
+**When** the plan handler encounters interactive steps
+**Then** it: skips research phase (too expensive for CI), skips Nyquist validation, auto-accepts the generated plan
+**And** logs `[ci] auto-skipped: research phase` for each skipped step
+
+**Given** `buildpact specify --ci` is invoked with `--description "Build a REST API"`
+**When** the specify handler runs
+**Then** it uses the provided description literally, skips ambiguity resolution, skips maturity assessment
+
+**Given** `buildpact execute --ci` is invoked
+**When** the execute handler runs
+**Then** it auto-confirms execution start, enforces budget guard strictly (no override prompt)
+**And** exit code is 0 for success and non-zero for any task failure
+
+**Given** `buildpact quick --ci` is invoked with `--description "Add login endpoint"`
+**When** the quick handler runs
+**Then** it uses the description literally, skips discussion flow
+
+**Given** a developer audits the codebase for interactive calls
+**When** they grep for `clack.confirm`, `clack.select`, `clack.text`, and `isCancel`
+**Then** every occurrence (13 known locations across 5 handlers) has a CI-mode guard that bypasses the interactive call
+
+---
+
+### Story 19.2: GitHub Actions Adapter
+
+As a team lead integrating BuildPact into our GitHub Actions workflow,
+I want a reusable GitHub Action that runs BuildPact commands and reports results as check annotations,
+So that AI-assisted tasks are part of our automated CI/CD pipeline.
+
+**Acceptance Criteria:**
+
+**Given** a repository with a GitHub Actions workflow
+**When** the workflow includes `uses: buildpact/action@v1` with `command: plan`
+**Then** BuildPact installs, runs `buildpact plan --ci`, and completes without manual intervention
+
+**Given** the action configuration
+**When** the user specifies `budget: 1.00`
+**Then** the budget guard is enforced and execution halts if projected costs exceed $1.00
+
+**Given** a BuildPact execution fails in CI
+**When** the action completes
+**Then** failed tasks appear as GitHub check annotations with file paths, error messages, and fix suggestions
+
+**Given** the action runs successfully on a pull_request event
+**When** the workflow completes
+**Then** an execution summary is posted as a PR comment containing: tasks completed, cost incurred, and time elapsed
+
+**Given** the action source code
+**When** a developer inspects it
+**Then** it is a composite action defined in `action.yml` with inputs: `command` (required), `plan` (optional path), `budget` (optional, default 1.00), and `ci-mode` (default true)
+
+---
+
+### Story 19.3: Webhook Notifications
+
+As a team using Slack/Discord for project communication,
+I want BuildPact to send execution event notifications to a webhook URL,
+So that my team is notified when pipeline stages complete or fail.
+
+**Acceptance Criteria:**
+
+**Given** a webhook URL is configured in `.buildpact/config.yaml` under `notifications.webhook`
+**When** a pipeline stage completes (specify, plan, execute, verify)
+**Then** a POST request is sent with JSON payload containing: `event`, `status`, `timestamp`, `summary` (task count, cost, duration), and `projectName`
+
+**Given** the webhook URL points to a Slack-compatible endpoint
+**When** the notification is sent
+**Then** the payload format is compatible with Slack's incoming webhook API (includes `text` field)
+
+**Given** the webhook endpoint is unreachable
+**When** the notification fails
+**Then** BuildPact logs a warning but does NOT fail the pipeline (fire-and-forget with single retry)
+
+**Given** a user wants selective notifications
+**When** they set `notifications.events: [execute, verify]`
+**Then** only execute and verify completions trigger notifications
+
+**Given** `notifications.webhook` is not configured
+**When** any pipeline stage completes
+**Then** no webhook request is attempted
+
+---
+
+## Epic 20: Community Hub Enhancement
+
+Squad authors and consumers have a better discovery experience with search filters, quality signals, and automated trust scoring.
+
+**FRs covered:** FR-1508, FR-1509
+**Stories:** 20.1, 20.2
+**Phase:** v1.0
+
+---
+
+### Story 20.1: Hub Search & Discovery
+
+As a developer looking for a squad for my domain,
+I want to search and filter the Community Hub by domain, popularity, and compatibility,
+So that I find the right squad quickly instead of browsing a flat list.
+
+**Acceptance Criteria:**
+
+**Given** a user runs `buildpact hub search "mobile app"`
+**When** the Hub has squads tagged with "mobile" or "app"
+**Then** results are returned ranked by relevance, showing: squad name, description, author, download count, and compatibility badge
+
+**Given** a user runs `buildpact hub search --domain healthcare`
+**When** the Hub has squads in the healthcare category
+**Then** only healthcare-tagged squads are returned
+
+**Given** a user runs `buildpact hub search --sort downloads`
+**When** results are returned
+**Then** they are sorted by download count descending
+
+**Given** the Hub has no matching squads
+**When** the search returns empty
+**Then** a helpful message suggests broadening the search or visiting the Hub website
+
+**Given** a user runs `buildpact hub info <squad-name>`
+**When** the squad exists
+**Then** a detailed card shows: full description, agent list, author info, version history, quality score, and installation command
+
+---
+
+### Story 20.2: Squad Quality Scores
+
+As a developer evaluating a community squad,
+I want to see an automated quality score based on objective checks,
+So that I can trust the squad before installing it.
+
+**Acceptance Criteria:**
+
+**Given** a squad is published to the Hub
+**When** the CI validation pipeline runs
+**Then** it produces a quality score (0-100) based on: structural completeness (30%), voice DNA completeness (20%), smoke test pass rate (20%), documentation coverage (15%), and test fixture presence (15%)
+
+**Given** the quality score is calculated
+**When** a user views the squad in search results or `hub info`
+**Then** the score is displayed as: Gold (90-100), Silver (70-89), Bronze (50-69), or Unrated (<50)
+
+**Given** a squad author publishes an update
+**When** the quality score changes
+**Then** the author is notified with the new score and improvement suggestions
+
+**Given** a user runs `buildpact adopt <squad>` for a squad scoring below 50
+**When** the install begins
+**Then** a warning is shown: "Low quality score (XX/100). Install anyway? [y/N]"
+
+---
+
+## Epic 21: v1.0 Release & Stabilization
+
+BuildPact v1.0 launches as a polished, adoption-ready product with onboarding, sponsorship infrastructure, and a verified release.
+
+**FRs covered:** FR-1510, FR-1511, FR-1512
+**NFRs:** NFR-18, TEST-01 through TEST-05
+**Stories:** 21.1, 21.2, 21.3
+**Phase:** v1.0
+
+---
+
+### Story 21.1: Onboarding Learn Command
+
+As a first-time BuildPact user,
+I want a `buildpact learn` command that opens the getting started tutorial,
+So that I can quickly find the guided learning path.
+
+**Acceptance Criteria:**
+
+**Given** a user runs `buildpact learn`
+**When** the command executes
+**Then** it opens the docs site tutorial page (`https://buildpact.dev/guide/getting-started`) in the default browser
+**And** prints a terminal summary: "Opening BuildPact tutorial... If the browser didn't open, visit: https://buildpact.dev/guide/getting-started"
+
+**Given** the user is in a non-GUI environment (SSH, CI)
+**When** `buildpact learn` cannot open a browser
+**Then** it prints the URL to stdout without attempting to open
+
+**Given** a PT-BR locale is active
+**When** `buildpact learn` runs
+**Then** it opens the PT-BR version of the tutorial (`https://buildpact.dev/pt-br/guide/getting-started`)
+
+---
+
+### Story 21.2: GitHub Sponsors & Contributor Onboarding
+
+As the BuildPact maintainer,
+I want GitHub Sponsors configured with clear tiers and a CONTRIBUTING.md that guides new contributors,
+So that the project is financially sustainable and community-driven.
+
+**Acceptance Criteria:**
+
+**Given** the GitHub Sponsors configuration
+**When** a potential sponsor visits the Sponsors page
+**Then** they see tiers: Individual ($5/mo), Supporter ($25/mo), Organization ($100/mo) with clear benefits per tier
+
+**Given** a developer wants to contribute
+**When** they read CONTRIBUTING.md
+**Then** they find: development setup, code style guide, PR process, and architecture overview
+
+**Given** a first-time contributor opens a PR
+**When** CI runs on their branch
+**Then** all tests pass, linting passes, and a bot comments with a welcome message
+
+**Given** the project README
+**When** a visitor reads it
+**Then** it includes: value proposition, installation one-liner, 30-second demo GIF, CI/npm/sponsors badges, and docs links
+
+---
+
+### Story 21.3: v1.0 Release Checklist
+
+As the BuildPact maintainer,
+I want a comprehensive release checklist that validates v1.0 is production-ready,
+So that the first stable release meets all quality gates.
+
+**Acceptance Criteria:**
+
+**Given** the release checklist script `npm run release:check`
+**When** executed
+**Then** it validates: all tests pass, coverage thresholds met (80% line, 70% branch), zero critical npm audit vulnerabilities, all commands work with `--ci`, performance benchmarks pass, CHANGELOG.md is current, package.json version matches tag
+
+**Given** all checks pass
+**When** `npm run release:publish` is executed
+**Then** it publishes to npm as `buildpact@1.0.0`, creates a GitHub release, and tags `v1.0.0`
+
+**Given** the release includes readonly access control
+**When** a user sets `readonly: true` in `.buildpact/config.yaml`
+**Then** state-modifying commands (`execute`, `plan --write`, `specify --write`) are blocked with `BP210: Project is in readonly mode`
+
+**Given** the v1.0 announcement
+**When** published
+**Then** it includes: what's new since beta, migration notes, known limitations, and roadmap link
+
+---
+
+# ═══════════════════════════════════════════════════
+# v2.0 MILESTONE — Agent Mode & Scale
+# ═══════════════════════════════════════════════════
+
+## Epic 22: Agent Mode Runtime
+
+Users can launch persistent AI agents that react to events, communicate with each other, and survive restarts — enabling walk-away autonomous execution.
+
+**FRs covered:** FR-2001, FR-2002, FR-2003, FR-2004, FR-2005, FR-2006
+**Architecture:** Agent Supervisor, Event Bus, state persistence, health metrics, recovery policies
+**Stories:** 22.1, 22.2, 22.3a, 22.3b, 22.4, 22.5, 22.6
+**Phase:** v2.0
+
+---
+
+### Story 22.1: Agent Mode TypeScript CLI
+
+As a power user wanting autonomous AI execution,
+I want a `buildpact agent` command that launches a persistent agent supervisor,
+So that I can start long-running AI workflows that outlive a single command invocation.
+
+**Acceptance Criteria:**
+
+**Given** a user runs `buildpact agent start`
+**When** the supervisor launches
+**Then** a persistent process starts in the background, writes its PID to `.buildpact/agent.pid`, and logs startup to `.buildpact/agent.log`
+
+**Given** the supervisor is running
+**When** the user runs `buildpact agent status`
+**Then** it shows: supervisor PID, uptime, active agents, total tasks processed, and memory usage
+
+**Given** the supervisor is running
+**When** the user runs `buildpact agent stop`
+**Then** all agents complete their current task (graceful shutdown with 30s timeout), PID file is removed, and shutdown summary is logged
+
+**Given** the supervisor process crashes
+**When** the user runs `buildpact agent start` again
+**Then** it detects the stale PID file, cleans up, and starts fresh with a warning
+
+---
+
+### Story 22.2: Auto-Advance Walk-Away Execution
+
+As a developer with a large plan,
+I want the agent supervisor to automatically advance through plan waves,
+So that I can start execution and walk away while the AI completes all waves.
+
+**Acceptance Criteria:**
+
+**Given** a plan with multiple waves
+**When** `buildpact agent execute --plan <path>` is invoked
+**Then** the supervisor processes waves sequentially: execute → validate → advance → repeat until complete
+
+**Given** a task fails during auto-advance
+**When** retries are exhausted
+**Then** execution pauses, writes `.buildpact/agent-paused.json` with failure details
+
+**Given** execution is paused
+**When** the user runs `buildpact agent resume`
+**Then** execution resumes from the failed wave
+
+**Given** the budget guard triggers
+**When** projected cost exceeds the limit
+**Then** execution pauses, the user is notified via webhook if configured, and cost summary is written to pause file
+
+---
+
+### Story 22.3a: Event Bus — Basic Pub/Sub
+
+As a system running multiple agents,
+I want agents to publish and subscribe to topics,
+So that agents can be notified when relevant events occur.
+
+**Acceptance Criteria:**
+
+**Given** the event bus is initialized
+**When** agent A publishes to topic `task.completed`
+**Then** all agents subscribed to `task.completed` receive the message with: `id`, `from`, `type`, `topic`, `payload`, and `timestamp`
+
+**Given** agent A sends a direct message to agent B
+**When** `to` is set to agent B's name
+**Then** only agent B receives the message
+
+**Given** an agent publishes with `to: '*'` (broadcast)
+**When** the bus routes the message
+**Then** all active agents receive it
+
+**Given** the event bus
+**When** inspected by a developer
+**Then** it is an in-process EventEmitter-based implementation with typed message schemas, no external dependencies
+
+---
+
+### Story 22.3b: Event Bus — Advanced Routing
+
+As a system with high-throughput agent communication,
+I want message priorities, TTL, and correlation tracking,
+So that critical messages are processed first and stale messages don't clog the system.
+
+**Acceptance Criteria:**
+
+**Given** a message is published with `priority: 'critical'`
+**When** the recipient has queued messages
+**Then** the critical message is processed before lower-priority messages
+
+**Given** a message has `ttl: 30000` (30 seconds)
+**When** the message is not consumed within 30 seconds
+**Then** it is discarded and logged as expired
+
+**Given** a request-response pattern
+**When** agent A sends a message with `correlationId`
+**Then** agent B's response includes the same `correlationId` for matching
+
+**Given** the priority system
+**When** messages arrive with priorities low, normal, high, critical
+**Then** processing order is: critical > high > normal > low within each subscription
+
+---
+
+### Story 22.4: Real-Time Execution Dashboard
+
+As a user monitoring agent execution,
+I want a terminal dashboard showing real-time progress,
+So that I can see what's happening without reading log files.
+
+**Acceptance Criteria:**
+
+**Given** agent execution is in progress
+**When** `buildpact agent dashboard` is invoked
+**Then** a terminal UI shows: active agents (name + current task), wave progress, cost accumulator, and elapsed time
+
+**Given** the dashboard is running
+**When** an agent completes a task
+**Then** the display updates within 1 second
+
+**Given** a non-TTY environment
+**When** `buildpact agent dashboard --json` is used
+**Then** a JSON snapshot is printed to stdout
+
+**Given** the dashboard is running
+**When** the user presses `q`
+**Then** the dashboard closes but agent execution continues
+
+---
+
+### Story 22.5: State Persistence — ADR & Implementation
+
+As a user whose agent process was interrupted,
+I want the supervisor to recover its full state from persistent storage,
+So that no work is lost and execution resumes where it left off.
+
+> **Note:** This story begins with an Architecture Decision Record (ADR) evaluating state persistence options: (1) SQLite via better-sqlite3, (2) flat-file JSON with WAL pattern, (3) LevelDB via classic-level. The chosen technology is then implemented.
+
+**Acceptance Criteria:**
+
+**Given** the ADR phase
+**When** the developer evaluates persistence options
+**Then** an ADR document is produced at `.buildpact/docs/adr-state-persistence.md` comparing: native dependency burden, Node.js version compatibility, performance characteristics, and recovery guarantees
+
+**Given** the chosen persistence technology
+**When** the agent supervisor runs with active tasks
+**Then** state is periodically checkpointed (every 10 seconds and after each task completion)
+
+**Given** a crashed supervisor
+**When** `buildpact agent start` is invoked
+**Then** it detects the state store, loads the last checkpoint, and presents: "Previous session found. Resume? [Y/n]"
+
+**Given** the user chooses to resume
+**When** the supervisor restarts
+**Then** completed tasks are NOT re-executed, pending tasks resume from their checkpoint, and cost accumulator continues from the persisted total
+
+---
+
+### Story 22.6: Prompt-to-Agent Migration Command
+
+As a user currently using BuildPact in prompt mode,
+I want a migration command that converts my setup to agent mode,
+So that I can upgrade without starting over.
+
+**Acceptance Criteria:**
+
+**Given** a project with prompt-mode configuration
+**When** `buildpact migrate --to agent-mode` runs
+**Then** the migration: validates existing files, generates `agent.yaml`, preserves all artifacts, and reports a compatibility summary
+
+**Given** the migration completes
+**When** `buildpact agent start` is invoked
+**Then** the supervisor starts successfully with the migrated configuration
+
+**Given** incompatible configurations are found
+**When** a conflict is detected
+**Then** the migration reports the specific issue and suggests a manual fix
+
+---
+
+## Epic 23: Self-Optimizing Squads
+
+Squads automatically improve prompt performance through A/B testing with statistical validation.
+
+**FRs covered:** FR-2007, FR-2008, FR-2009, FR-2010
+**Architecture:** Execution metrics, optimization loop, prompt variant tracking
+**Stories:** 23.1, 23.2, 23.3, 23.4
+**Phase:** v2.0
+**Dependency:** Requires Epic 22 (agent runtime for execution)
+
+---
+
+### Story 23.1: Squad Optimization Command
+
+As a squad author wanting to improve agent quality,
+I want a `buildpact optimize` command that runs controlled experiments,
+So that I can objectively measure and improve my squad's performance.
+
+**Acceptance Criteria:**
+
+**Given** `buildpact optimize --squad software --target developer --metric quality`
+**When** the optimization loop starts
+**Then** it loads the baseline, generates N variants (default 3), executes each against benchmarks, and reports results
+
+**Given** a variant outperforms baseline with p < 0.05
+**When** results are presented
+**Then** the user is prompted: "Variant N improved quality by X%. Apply? [y/N]"
+
+**Given** a budget is configured
+**When** cost reaches the limit
+**Then** the loop stops, preserves results, and reports partial findings
+
+**Given** experiments run
+**When** the optimizer creates files
+**Then** all work happens on branch `optimize/<squad>/<agent>/<timestamp>`
+
+---
+
+### Story 23.2: Benchmark Sets
+
+As a squad author running optimization,
+I want domain-specific benchmark tasks,
+So that optimization measures real capability.
+
+**Acceptance Criteria:**
+
+**Given** the software squad benchmark
+**When** loaded
+**Then** it contains at least 5 tasks: code generation, bug fixing, test writing, documentation, refactoring
+
+**Given** a custom benchmark at `.buildpact/benchmarks/<name>.yaml`
+**When** the optimizer runs
+**Then** it uses the custom benchmark instead of built-in
+
+**Given** each benchmark task
+**When** evaluation criteria are defined
+**Then** they include: expected output patterns, quality rubric (0-10), and max cost per task
+
+---
+
+### Story 23.3: Optimization Isolation
+
+As a user running experiments on production squads,
+I want optimization to never modify my working squad until approval,
+So that experiments can't break my workflow.
+
+**Acceptance Criteria:**
+
+**Given** an optimization session starts
+**When** variants are created
+**Then** all variant files are in a temporary directory, never in `.buildpact/squad/`
+
+**Given** the user approves a winner
+**When** the session ends
+**Then** a git commit applies the variant with message `optimize(agent): improve metric X.X → Y.Y`
+
+**Given** the user rejects all variants
+**When** the session ends
+**Then** the temporary directory is deleted and no changes are made
+
+---
+
+### Story 23.4: Optimization Reports
+
+As a squad author reviewing results,
+I want a detailed report comparing variants with statistical analysis,
+So that I can make informed decisions.
+
+**Acceptance Criteria:**
+
+**Given** an optimization session completes
+**When** the report is generated
+**Then** `optimization-report.md` contains: experiment summary, per-variant metrics (mean, std dev, p-value), winning variant diff, and cost summary
+
+**Given** a variant's p-value > 0.05
+**When** displayed
+**Then** it is marked "Not statistically significant" with a recommendation to run more trials
+
+**Given** machine-readable data is needed
+**When** the report generates
+**Then** `optimization-results.json` is also produced with raw metrics
+
+---
+
+## Epic 24: Enterprise & Marketplace
+
+Enterprises get full RBAC and centralized governance, while the community gets a mature marketplace with ratings and certification.
+
+**FRs covered:** FR-2011, FR-2012, FR-2013, FR-2014
+**Architecture:** RBAC model, org-level config, marketplace extensions
+**Stories:** 24.1a, 24.1b, 24.2, 24.3, 24.4
+**Phase:** v2.0
+
+---
+
+### Story 24.1a: RBAC Middleware & Role Resolution
+
+As an enterprise architect,
+I want a role-based access control engine that resolves user roles and checks permissions,
+So that access decisions are centralized and consistent.
+
+**Acceptance Criteria:**
+
+**Given** `.buildpact/rbac.yaml` defines roles (admin, lead, member, viewer) with permission sets
+**When** the RBAC middleware loads
+**Then** it parses the config and provides a `checkPermission(user, permission): boolean` function
+
+**Given** a user identity is determined from environment (`BP_USER` or git config)
+**When** the middleware resolves their role
+**Then** the role's permissions are loaded and cached for the session
+
+**Given** no `rbac.yaml` exists
+**When** the middleware initializes
+**Then** all users are treated as admin (backward compatible, no restrictions)
+
+**Given** the RBAC engine
+**When** inspected by a developer
+**Then** it is a standalone module at `src/engine/rbac.ts` with ≥90% test coverage
+
+---
+
+### Story 24.1b: RBAC Command Permission Guards
+
+As an enterprise admin,
+I want every BuildPact command to check permissions before executing,
+So that unauthorized actions are blocked with clear error messages.
+
+**Acceptance Criteria:**
+
+**Given** a user with "member" role runs `buildpact execute`
+**When** their role allows `squad.execute`
+**Then** the command proceeds
+
+**Given** a user with "viewer" role runs `buildpact execute`
+**When** their role lacks `squad.execute`
+**Then** the command fails with: `BP300: Permission denied. Role 'viewer' lacks 'squad.execute'. Contact your admin.`
+
+**Given** the permissions enforced per command
+**When** all commands are audited
+**Then** guards exist for: `squad.install` (adopt), `squad.execute` (execute, quick), `config.write` (specify, plan), `audit.read` (audit), `budget.set` (config changes), `budget.override` (execute with override)
+
+**Given** an access violation
+**When** logged
+**Then** the audit trail records: user, role, denied permission, timestamp, and command
+
+---
+
+### Story 24.2: Centralized Constitution Management
+
+As an enterprise architect managing multiple projects,
+I want an organization-level constitution that all projects inherit,
+So that company-wide standards are enforced consistently.
+
+**Acceptance Criteria:**
+
+**Given** `.buildpact-org/constitution.md` exists
+**When** a project's pipeline runs
+**Then** org rules merge with project rules (org takes precedence on conflict)
+
+**Given** the org constitution has `no-external-apis: true`
+**When** a project tries to override with `no-external-apis: false`
+**Then** the org rule wins with warning: "Organization rule cannot be overridden"
+
+**Given** `.buildpact-org/` structure
+**When** inspected
+**Then** it contains: `constitution.md`, `approved-squads.yaml`, `defaults.yaml`
+
+---
+
+### Story 24.3: Marketplace Ratings & Reviews
+
+As a developer who used a community squad,
+I want to rate and review it,
+So that others benefit from my experience.
+
+**Acceptance Criteria:**
+
+**Given** a user has used a squad for at least one execution
+**When** `buildpact hub review <name> --rating 4 --comment "Great"`
+**Then** the review is submitted with verified identity
+
+**Given** multiple reviews exist
+**When** `buildpact hub info <name>` is viewed
+**Then** average rating, count, and 3 most recent reviews are shown
+
+**Given** inappropriate content
+**When** the filter detects it
+**Then** the review is flagged for moderation
+
+---
+
+### Story 24.4: Squad Certification Program
+
+As a squad author wanting to demonstrate quality,
+I want a certification process with rigorous criteria,
+So that users trust "Certified" squads.
+
+**Acceptance Criteria:**
+
+**Given** `buildpact hub certify <name>` is invoked
+**When** the pipeline runs
+**Then** it validates: quality score ≥ 90, all 6 layers present, voice DNA complete, ≥3 examples per agent, smoke test passes, README with usage
+
+**Given** all checks pass
+**When** submitted
+**Then** the squad receives a "Certified" badge in search and `hub info`
+
+**Given** a certified squad update breaks criteria
+**When** CI re-validates
+**Then** the badge is revoked with notification to the author
+
+---
+
+## Epic 25: Cross-Project Intelligence & Expansion
+
+BuildPact learns across projects, speaks more languages, and provides domain expansion packs.
+
+**FRs covered:** FR-2015, FR-2016, FR-2017, FR-2018
+**Architecture:** Project fingerprints, pattern matching, differential privacy
+**Stories:** 25.1, 25.2, 25.3, 25.4
+**Phase:** v2.0
+**Dependency:** Requires Epic 22 (agent persistence for fingerprint storage)
+
+---
+
+### Story 25.1: Cross-Project Learning
+
+As an organization running multiple BuildPact projects,
+I want the system to suggest patterns from successful projects,
+So that new projects benefit from organizational knowledge.
+
+**Acceptance Criteria:**
+
+**Given** a project completes a full pipeline
+**When** execution finishes
+**Then** a fingerprint is generated: domain, tech stack, complexity, scale, successful pattern hashes
+
+**Given** a new project starts planning
+**When** fingerprints are compared (similarity > 0.7)
+**Then** successful patterns from similar projects are suggested during planning
+
+**Given** privacy mode is active (default)
+**When** data is stored
+**Then** differential privacy (epsilon=1.0) is applied and identifiers are hashed
+
+**Given** a user sets `crossProject.enabled: false`
+**When** configured
+**Then** no fingerprints are generated or shared
+
+---
+
+### Story 25.2: Multi-Language Localization
+
+As a non-English speaking user,
+I want BuildPact in my language,
+So that I can use the framework without language barriers.
+
+**Acceptance Criteria:**
+
+**Given** the localization infrastructure
+**When** a contributor wants to add Spanish
+**Then** they create `locales/es.yaml` following `en.yaml` structure and submit a PR
+
+**Given** `LANG=es` or `BP_LOCALE=es` is set
+**When** any command runs
+**Then** all strings are in Spanish
+
+**Given** v2.0 launches
+**When** language support is counted
+**Then** at minimum ES, FR, DE, JA are available as community translations
+
+**Given** a locale file is incomplete
+**When** a key is missing
+**Then** English fallback is used for that key with a debug log
+
+---
+
+### Story 25.3: Domain Expansion Packs
+
+As a domain expert wanting quick adoption,
+I want pre-built expansion packs with squads, constitutions, and templates,
+So that I get domain-specific tooling out of the box.
+
+**Acceptance Criteria:**
+
+**Given** `buildpact adopt --pack legal`
+**When** the legal pack installs
+**Then** it provides: a legal squad, domain constitution rules, and example specifications
+
+**Given** the pack registry
+**When** browsed
+**Then** packs for at least healthcare, legal, education, and fintech are available
+
+**Given** a user already has a squad
+**When** a pack is installed
+**Then** pack constitution merges with existing (not replaces) and pack squad installs alongside (not overwrites)
+
+---
+
+### Story 25.4: Advanced Memory Tiers
+
+As an organization wanting to share learnings across teams,
+I want org-level memory that captures cross-team insights,
+So that lessons from one team are available to all.
+
+**Acceptance Criteria:**
+
+**Given** org-level memory at `.buildpact-org/memory/`
+**When** a project identifies a reusable pattern
+**Then** `buildpact memory promote --to org "pattern-name"` copies it to org level
+
+**Given** org memory has promoted patterns
+**When** any project runs `buildpact plan`
+**Then** relevant org patterns are included in planning context
+
+**Given** `buildpact memory --scope org`
+**When** queried
+**Then** all org entries are listed with anonymized source, date, and tags
+
+**Given** privacy concerns
+**When** promoting to org memory
+**Then** project-specific details (paths, variables) are stripped, preserving only abstract patterns

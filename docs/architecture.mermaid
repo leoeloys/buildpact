@@ -1,0 +1,183 @@
+%% BuildPact Architecture Diagram
+%% Generated: 2026-03-21
+
+flowchart TD
+    %% ===== USER ENTRY POINTS =====
+    subgraph UserEntry["User Entry Points"]
+        direction LR
+        QuickCmd["bp quick\n(zero-ceremony)"]
+        FullPipeline["bp specify -> plan -> execute -> verify\n(full pipeline)"]
+        AdoptCmd["bp adopt\n(brownfield)"]
+        InitCmd["bp init\n(greenfield)"]
+    end
+
+    %% ===== PIPELINE FLOW =====
+    subgraph Pipeline["Pipeline Phases"]
+        direction LR
+        Specify["Specify\nNL -> Structured Spec"]
+        Plan["Plan\nResearch -> Waves -> Validate"]
+        Execute["Execute\nWave Dispatch -> Commits"]
+        Verify["Verify\nUAT -> Fix Plan -> Memory"]
+    end
+
+    QuickCmd -->|"scale assessment"| ScaleRouter
+    FullPipeline --> Specify
+    Specify --> Plan
+    Plan --> ReadinessGate
+    ReadinessGate -->|"pass"| Execute
+    ReadinessGate -->|"fail"| Plan
+    Execute --> Verify
+    Verify -->|"issues found"| FixPlan["Auto Fix Plan"]
+    FixPlan --> Execute
+
+    %% ===== LAYER ARCHITECTURE =====
+    subgraph CLI["CLI Layer"]
+        direction LR
+        Registry["Command Registry"]
+        I18n["i18n (en / pt-br)"]
+        Doctor["Doctor / Diagnostics"]
+    end
+
+    subgraph Commands["Commands Layer"]
+        direction LR
+        CmdSpecify["specify"]
+        CmdPlan["plan"]
+        CmdExecute["execute"]
+        CmdVerify["verify"]
+        CmdQuick["quick"]
+        CmdSquad["squad"]
+        CmdExportWeb["export-web"]
+        CmdOptimize["optimize"]
+        CmdAdopt["adopt"]
+        CmdUpgrade["upgrade"]
+        CmdMemory["memory"]
+        CmdConstitution["constitution"]
+    end
+
+    subgraph Engine["Engine Layer"]
+        direction TB
+
+        subgraph Orchestration["Orchestration"]
+            Orchestrator["Orchestrator\n(size-limited context)"]
+            Subagent["Subagent Isolation\n(session reset per task)"]
+            WaveExecutor["Wave Executor\n(parallel dispatch)"]
+        end
+
+        subgraph SafetyGates["Safety Gates"]
+            ScaleRouter["Scale Router\n(complexity scoring)"]
+            ConstitutionEnforcer["Constitution Enforcer"]
+            ReadinessGate["Readiness Gate"]
+            ExecutionLock["Execution Lock\n(single-writer)"]
+            BudgetGuard["Budget Guard\n(daily spend caps)"]
+            Conclave["Conclave\n(adversarial review)"]
+        end
+
+        subgraph Planning["Planning"]
+            PlanValidator["Plan Validator\n(Nyquist multi-perspective)"]
+            WaveVerifier["Wave Verifier\n(goal-backward ACs)"]
+            AtomicCommit["Atomic Commit\n(one commit per task)"]
+            Recovery["Crash Recovery\n(strategy rotation)"]
+        end
+
+        subgraph Memory["3-Tier Memory"]
+            SessionFeedback["Tier 1: Session Feedback\n(FIFO capped)"]
+            LessonsDistiller["Tier 2: Lessons & Patterns\n(auto-distilled)"]
+            DecisionsLog["Tier 3: Decisions Log\n(ADR format)"]
+        end
+
+        subgraph AgentSystem["Agent System"]
+            LazyLoader["Lazy Agent Loader\n(on-demand, index-first)"]
+            AutonomyMgr["Autonomy Manager\n(L0-L4 leveling)"]
+            SquadScaffolder["Squad Scaffolder"]
+            CommunityHub["Community Hub\n(registry download)"]
+        end
+
+        subgraph Profiles["Model Profiles"]
+            ModelProfileMgr["Model Profile Manager\n(failover chains)"]
+            ConstitutionVersioner["Constitution Versioner"]
+            CfmGate["CFM Compliance Gate"]
+        end
+    end
+
+    subgraph Foundation["Foundation Layer"]
+        direction LR
+        Installer["Installer\n(init / adopt)"]
+        Constitution["Constitution\n(immutable rules)"]
+        Scanner["Scanner\n(project analysis)"]
+        Sharding["Sharding\n(document splitting)"]
+        Audit["Audit Logger"]
+        Monitor["Context Monitor"]
+        Bundle["Web Bundle"]
+        I18nCore["i18n Core"]
+        Context["Context Builder"]
+        Profile["Profile Loader"]
+        VersionGuard["Version Guard"]
+        Migrator["Migrator"]
+        Diagnostician["Diagnostician"]
+    end
+
+    subgraph Contracts["Contracts Layer (Type-Only)"]
+        direction LR
+        TaskTypes["TaskDispatchPayload\nTaskResult"]
+        ConstitutionTypes["ConstitutionPrinciple\nConstitutionViolation"]
+        SquadTypes["SquadManifest\nAgentDefinition"]
+        ProfileTypes["ModelProfile\nFailoverChain"]
+        BudgetTypes["BudgetConfig\nBudgetGuardResult"]
+        ErrorTypes["CliError\nResult<T>"]
+    end
+
+    %% Layer connections
+    CLI --> Commands
+    Commands --> Engine
+    Engine --> Foundation
+    Foundation --> Contracts
+
+    %% ===== SQUAD SYSTEM =====
+    subgraph SquadSystem["Squad System"]
+        direction TB
+
+        subgraph SquadDef["Squad Definition (YAML)"]
+            SquadManifest["Squad Manifest\n(name, domain, version)"]
+            PhaseRouting["Phase Routing\n(specify->PM, plan->Architect, etc.)"]
+            WorkflowChains["Workflow Chains\n(deterministic handoffs)"]
+            SmokeTests["Smoke Tests\n(behavioral validation)"]
+        end
+
+        subgraph Agents["6-Layer Agent Definition"]
+            AgentRole["Role & Identity"]
+            AgentVoice["Voice DNA\n(5-section template)"]
+            AgentRules["Rules & Constraints"]
+            AgentTools["Tools & Capabilities"]
+            AgentContext["Context Requirements"]
+            AgentAutonomy["Autonomy Level (L0-L4)"]
+        end
+
+        subgraph ReferenceSquads["Reference Squads"]
+            Software["Software\n(PM, Architect, Dev, QA, Writer)"]
+            MedicalMkt["Medical Marketing\n(CFM-compliant)"]
+            Research["Scientific Research"]
+            Clinic["Clinic Management"]
+            AgentBuilder["Agent Builder\n(meta-squad)"]
+        end
+    end
+
+    SquadManifest --> Agents
+    PhaseRouting --> Agents
+    LazyLoader --> Agents
+    SquadScaffolder --> SquadDef
+    CommunityHub --> ReferenceSquads
+
+    %% Scale routing detail
+    ScaleRouter -->|"trivial/small"| QuickPath["Quick Path\n(skip planning)"]
+    ScaleRouter -->|"medium/large/epic"| FullPath["Full Pipeline\n(all phases)"]
+
+    %% Styling
+    classDef gate fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    classDef memory fill:#4ecdc4,stroke:#087f5b,color:#fff
+    classDef agent fill:#a78bfa,stroke:#6d28d9,color:#fff
+    classDef entry fill:#ffd43b,stroke:#e67700,color:#333
+
+    class ScaleRouter,ConstitutionEnforcer,ReadinessGate,ExecutionLock,BudgetGuard,Conclave gate
+    class SessionFeedback,LessonsDistiller,DecisionsLog memory
+    class LazyLoader,AutonomyMgr,SquadScaffolder,CommunityHub agent
+    class QuickCmd,FullPipeline,AdoptCmd,InitCmd entry

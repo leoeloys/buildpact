@@ -203,6 +203,27 @@ describe('parseSquadManifest', () => {
       expect(result.value.domain).toBe('custom')
     }
   })
+
+  it('parses reviewed: true when present', () => {
+    const json = JSON.stringify({ name: 'software', files: [], reviewed: true })
+    const result = parseSquadManifest(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value.reviewed).toBe(true)
+  })
+
+  it('defaults reviewed to false when field is absent (safe default)', () => {
+    const json = JSON.stringify({ name: 'software', files: [] })
+    const result = parseSquadManifest(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value.reviewed).toBe(false)
+  })
+
+  it('treats reviewed: false explicitly as false', () => {
+    const json = JSON.stringify({ name: 'software', files: [], reviewed: false })
+    const result = parseSquadManifest(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value.reviewed).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------

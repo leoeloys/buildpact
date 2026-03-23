@@ -22,6 +22,9 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { slugify } from '../../foundation/sharding.js'
 import { resolveConstitutionPath } from '../../engine/constitution-enforcer.js'
 import { buildTaskPayload } from '../../engine/subagent.js'
+import { enforceConstitutionOnOutput } from '../../engine/orchestrator.js'
+import { guardConstitutionModification } from '../registry.js'
+import { isCiMode, ciLog } from '../../foundation/ci.js'
 
 // ---------------------------------------------------------------------------
 // Squad domain-aware question templates
@@ -991,15 +994,29 @@ export const handler: CommandHandler = {
     const lang = await readLanguage(projectDir)
     const i18n = createI18n(lang)
     const audit = new AuditLogger(join(projectDir, '.buildpact', 'audit', 'cli.jsonl'))
+    const isCi = isCiMode(args)
 
     const [experienceLevel, isWebBundle] = await Promise.all([
       readExperienceLevel(projectDir),
       readWebBundleMode(projectDir),
     ])
-    const isBeginnerMode = experienceLevel === 'beginner'
+    // CI mode forces expert mode (skip beginner wizard)
+    const isBeginnerMode = isCi ? false : experienceLevel === 'beginner'
+    if (isCi && experienceLevel === 'beginner') {
+      ciLog('auto-selected', 'expert mode')
+    }
 
     // Accept description from CLI args
     const descriptionArg = args.filter((a) => !a.startsWith('--')).join(' ').trim()
+
+    // CI mode requires --description
+    if (isCi && !descriptionArg) {
+      return err({
+        code: ERROR_CODES.MISSING_ARG,
+        i18nKey: 'cli.specify.no_description',
+        params: {},
+      })
+    }
 
     clack.intro(i18n.t(isBeginnerMode ? 'cli.specify.welcome_beginner' : 'cli.specify.welcome'))
 
@@ -1034,17 +1051,21 @@ export const handler: CommandHandler = {
       })
 
       // Ambiguity detection on combined wizard answers
-      const allWizardText = Object.values(wizardAnswers).join(' ')
-      const wizardAmbiguities = detectAmbiguities(allWizardText)
       let wizardClarifications: ClarificationAnswer[] | undefined
-      if (wizardAmbiguities.length > 0) {
-        clack.log.info(i18n.t('cli.specify.ambiguity_detected'))
-        const answers = await runClarificationFlow(wizardAmbiguities, i18n, isWebBundle)
-        if (answers === undefined) {
-          clack.outro(i18n.t('cli.specify.cancelled'))
-          return ok(undefined)
+      if (isCi) {
+        ciLog('auto-skipped', 'ambiguity clarification')
+      } else {
+        const allWizardText = Object.values(wizardAnswers).join(' ')
+        const wizardAmbiguities = detectAmbiguities(allWizardText)
+        if (wizardAmbiguities.length > 0) {
+          clack.log.info(i18n.t('cli.specify.ambiguity_detected'))
+          const answers = await runClarificationFlow(wizardAmbiguities, i18n, isWebBundle)
+          if (answers === undefined) {
+            clack.outro(i18n.t('cli.specify.cancelled'))
+            return ok(undefined)
+          }
+          wizardClarifications = answers
         }
-        wizardClarifications = answers
       }
 
       specInput = {
@@ -1092,16 +1113,20 @@ export const handler: CommandHandler = {
       })
 
       // Ambiguity detection and clarification flow
-      const ambiguities = detectAmbiguities(description)
       let clarifications: ClarificationAnswer[] | undefined
-      if (ambiguities.length > 0) {
-        clack.log.info(i18n.t('cli.specify.ambiguity_detected'))
-        const answers = await runClarificationFlow(ambiguities, i18n, isWebBundle)
-        if (answers === undefined) {
-          clack.outro(i18n.t('cli.specify.cancelled'))
-          return ok(undefined)
+      if (isCi) {
+        ciLog('auto-skipped', 'ambiguity clarification')
+      } else {
+        const ambiguities = detectAmbiguities(description)
+        if (ambiguities.length > 0) {
+          clack.log.info(i18n.t('cli.specify.ambiguity_detected'))
+          const answers = await runClarificationFlow(ambiguities, i18n, isWebBundle)
+          if (answers === undefined) {
+            clack.outro(i18n.t('cli.specify.cancelled'))
+            return ok(undefined)
+          }
+          clarifications = answers
         }
-        clarifications = answers
       }
 
       specInput = {
@@ -1116,37 +1141,61 @@ export const handler: CommandHandler = {
     }
 
     // Squad domain-aware question injection
-    const activeSquad = await readActiveSquad(projectDir)
-    if (activeSquad) {
-      const squadQuestions = getSquadQuestions(activeSquad.domain)
-      if (squadQuestions.length > 0) {
-        clack.log.info(i18n.t('cli.specify.squad_active', { name: activeSquad.name, domain: activeSquad.domain }))
-        const squadAnswers = await runSquadFlow(squadQuestions, i18n, isWebBundle)
-        if (squadAnswers === undefined) {
-          clack.outro(i18n.t('cli.specify.cancelled'))
-          return ok(undefined)
-        }
-        specInput = {
-          ...specInput,
-          squadConstraints: {
-            squadName: activeSquad.name,
-            domain: activeSquad.domain,
-            answers: squadAnswers,
-          },
+    if (isCi) {
+      ciLog('auto-skipped', 'squad questions')
+    } else {
+      const activeSquad = await readActiveSquad(projectDir)
+      if (activeSquad) {
+        const squadQuestions = getSquadQuestions(activeSquad.domain)
+        if (squadQuestions.length > 0) {
+          clack.log.info(i18n.t('cli.specify.squad_active', { name: activeSquad.name, domain: activeSquad.domain }))
+          const squadAnswers = await runSquadFlow(squadQuestions, i18n, isWebBundle)
+          if (squadAnswers === undefined) {
+            clack.outro(i18n.t('cli.specify.cancelled'))
+            return ok(undefined)
+          }
+          specInput = {
+            ...specInput,
+            squadConstraints: {
+              squadName: activeSquad.name,
+              domain: activeSquad.domain,
+              answers: squadAnswers,
+            },
+          }
         }
       }
     }
 
     // Automation Maturity Assessment
-    const maturityResult = await assessAutomationMaturity(i18n, isWebBundle)
-    if (maturityResult === undefined) {
-      clack.outro(i18n.t('cli.specify.cancelled'))
-      return ok(undefined)
+    let maturityResult: MaturityAssessmentResult | undefined
+    if (isCi) {
+      ciLog('auto-skipped', 'maturity assessment, default Stage 3')
+      maturityResult = scoreMaturity({ frequency: 'weekly', predictability: 'mostly_predictable', humanDecisions: 'minor' })
+    } else {
+      maturityResult = await assessAutomationMaturity(i18n, isWebBundle)
+      if (maturityResult === undefined) {
+        clack.outro(i18n.t('cli.specify.cancelled'))
+        return ok(undefined)
+      }
     }
     specInput = { ...specInput, maturityAssessment: maturityResult }
 
     // Build and write the spec
     const specContent = buildSpecContent(specInput)
+
+    // Constitution enforcement — validate output before writing (FR-202)
+    const guardResult = await guardConstitutionModification(specContent, projectDir, i18n)
+    if (!guardResult.ok) return guardResult
+    const enforcement = await enforceConstitutionOnOutput(specContent, projectDir, i18n)
+    if (enforcement.ok && enforcement.value.hasViolations) {
+      const { formatViolationWarning } = await import('../../foundation/constitution.js')
+      const { readExperienceLevel } = await import('../../foundation/context.js')
+      const beginnerMode = (await readExperienceLevel(projectDir)) === 'beginner'
+      for (const v of enforcement.value.violations) {
+        clack.log.warn(formatViolationWarning(v, beginnerMode, i18n))
+      }
+    }
+
     const specDir = join(projectDir, '.buildpact', 'specs', specInput.slug)
     const specPath = join(specDir, 'spec.md')
 

@@ -54,11 +54,12 @@ describe('Software Squad — squad.yaml', () => {
 // ---------------------------------------------------------------------------
 
 describe('Software Squad — agent files', () => {
-  it('has exactly 5 agent files', async () => {
+  it('has exactly 6 agent files (5 specialists + pact orchestrator)', async () => {
     const agentsDir = join(SOFTWARE_SQUAD_DIR, 'agents')
     const files = await readdir(agentsDir)
     const mdFiles = files.filter(f => f.endsWith('.md'))
-    expect(mdFiles).toHaveLength(5)
+    expect(mdFiles).toHaveLength(6)
+    expect(mdFiles).toContain('pact.md')
     expect(mdFiles).toContain('pm.md')
     expect(mdFiles).toContain('architect.md')
     expect(mdFiles).toContain('developer.md')
@@ -66,9 +67,13 @@ describe('Software Squad — agent files', () => {
     expect(mdFiles).toContain('tech-writer.md')
   })
 
-  const agents = ['pm.md', 'architect.md', 'developer.md', 'qa.md', 'tech-writer.md']
+  // pact.md is the orchestrator/meta-agent — it follows 6-layer anatomy but has
+  // additional orchestrator-specific sections (Greeting Protocol, Routing Logic,
+  // Handoff Protocol). It's validated separately below with orchestrator-appropriate
+  // assertions rather than the specialist persona checks (e.g. VETO heuristics).
+  const specialistAgents = ['pm.md', 'architect.md', 'developer.md', 'qa.md', 'tech-writer.md']
 
-  for (const agentFile of agents) {
+  for (const agentFile of specialistAgents) {
     describe(`agents/${agentFile}`, () => {
       it('has all 6 required layers', async () => {
         const content = await readFile(join(SOFTWARE_SQUAD_DIR, 'agents', agentFile), 'utf-8')
@@ -138,6 +143,42 @@ describe('Software Squad — agent files', () => {
 })
 
 // ---------------------------------------------------------------------------
+// pact.md — orchestrator agent validation
+// ---------------------------------------------------------------------------
+
+describe('Software Squad — agents/pact.md (orchestrator)', () => {
+  it('has all 6 required layers', async () => {
+    const content = await readFile(join(SOFTWARE_SQUAD_DIR, 'agents', 'pact.md'), 'utf-8')
+    const layers = ['## Identity', '## Persona', '## Voice DNA', '## Heuristics', '## Examples', '## Handoffs']
+    for (const layer of layers) {
+      expect(content, `Missing ${layer}`).toContain(layer)
+    }
+  })
+
+  it('has Voice DNA subsections including orchestrator-specific sections', async () => {
+    const content = await readFile(join(SOFTWARE_SQUAD_DIR, 'agents', 'pact.md'), 'utf-8')
+    // Standard Voice DNA sections
+    expect(content).toContain('### Personality Anchors')
+    expect(content).toContain('### Opinion Stance')
+    expect(content).toContain('### Anti-Patterns')
+    expect(content).toContain('### Never-Do Rules')
+    expect(content).toContain('### Inspirational Anchors')
+    // Orchestrator-specific sections
+    expect(content).toContain('### Greeting Protocol')
+    expect(content).toContain('### Routing Logic')
+    expect(content).toContain('### Handoff Protocol')
+  })
+
+  it('has routing table for pipeline commands', async () => {
+    const content = await readFile(join(SOFTWARE_SQUAD_DIR, 'agents', 'pact.md'), 'utf-8')
+    expect(content).toContain('/bp:specify')
+    expect(content).toContain('/bp:plan')
+    expect(content).toContain('/bp:execute')
+    expect(content).toContain('/bp:verify')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // validateSquadStructure — full validation pass
 // ---------------------------------------------------------------------------
 
@@ -146,7 +187,7 @@ describe('Software Squad — validateSquadStructure', () => {
     const result = await validateSquadStructure(SOFTWARE_SQUAD_DIR)
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value.errors).toHaveLength(0)
+      expect(result.value.errors, `Validation errors: ${JSON.stringify(result.value.errors)}`).toHaveLength(0)
     }
   })
 })

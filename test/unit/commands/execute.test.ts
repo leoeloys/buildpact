@@ -13,8 +13,8 @@ import type { WaveExecutionResult } from '../../../src/engine/wave-executor.js'
 vi.mock('@clack/prompts', () => ({
   intro: vi.fn(),
   outro: vi.fn(),
-  spinner: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
-  log: { info: vi.fn(), success: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  spinner: vi.fn(() => ({ start: vi.fn(), stop: vi.fn(), message: vi.fn() })),
+  log: { info: vi.fn(), success: vi.fn(), warn: vi.fn(), error: vi.fn(), step: vi.fn() },
   isCancel: vi.fn(() => false),
   confirm: vi.fn(async () => true),
   select: vi.fn(async () => 'proceed'),

@@ -281,7 +281,7 @@ claude-sonnet-4-6
 - `checkContextAlert()` pure function fully implemented with inclusive boundary semantics per FR-303.
 - Both `getContextUsage()` and `getCostState()` are Alpha stubs returning `err(NOT_IMPLEMENTED)` with `phase: 'Alpha — FR-303'`.
 - Updated `src/foundation/index.ts` barrel with all monitor exports (functions, types, constants).
-- Created `test/unit/foundation/monitor.test.ts` with 13 tests covering all 7 boundary cases for `checkContextAlert` + 3 tests each for the two stubs.
+- Created `test/unit/foundation/monitor.test.ts` with 9 tests covering all 7 boundary cases for `checkContextAlert` + 1 consolidated test each for the two stubs (reduced from 13 after review fix consolidated stub assertions).
 - `monitor.ts` achieves 100% statement/branch/function/line coverage — well above the 85% threshold.
 - All 84 tests pass (71 existing + 13 new). Zero regressions.
 - No new npm dependencies added.

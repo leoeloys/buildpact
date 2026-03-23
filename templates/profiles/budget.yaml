@@ -1,0 +1,48 @@
+# BuildPact Model Profile — budget
+# Uses cheapest available model at every phase to minimise AI costs.
+name: budget
+phases:
+  research:
+    primary: "claude-haiku-4-5-20251001"
+    failover:
+      models: ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+      retry_delay_ms: 200
+      max_wait_ms: 10000
+    operations:
+      - operation: research
+        model: "claude-haiku-4-5-20251001"
+      - operation: plan-writing
+        model: "claude-haiku-4-5-20251001"
+      - operation: validation
+        model: "claude-haiku-4-5-20251001"
+  plan:
+    primary: "claude-haiku-4-5-20251001"
+    failover:
+      models: ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+      retry_delay_ms: 200
+      max_wait_ms: 10000
+    operations:
+      - operation: research
+        model: "claude-haiku-4-5-20251001"
+      - operation: plan-writing
+        model: "claude-haiku-4-5-20251001"
+      - operation: validation
+        model: "claude-haiku-4-5-20251001"
+  execute:
+    primary: "claude-haiku-4-5-20251001"
+    failover:
+      models: ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+      retry_delay_ms: 200
+      max_wait_ms: 10000
+  verify:
+    primary: "claude-haiku-4-5-20251001"
+    failover:
+      models: ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+      retry_delay_ms: 200
+      max_wait_ms: 10000
+  specify:
+    primary: "claude-haiku-4-5-20251001"
+    failover:
+      models: ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+      retry_delay_ms: 200
+      max_wait_ms: 10000

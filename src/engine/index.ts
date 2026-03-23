@@ -8,7 +8,14 @@
 
 export { buildTaskPayload, validatePayloadSize, serializePayload } from './subagent.js'
 export { loadOrchestratorTemplate, validateOrchestratorFile } from './orchestrator.js'
-export { executeWave } from './wave-executor.js'
+export { executeWave, executeWaves } from './wave-executor.js'
+export type { WaveTask, TaskExecutionResult, WaveExecutionResult, WaveExecutionOptions } from './wave-executor.js'
+export { createLimiter, withTimeout } from './concurrency.js'
+export type { CancellableLimiter } from './concurrency.js'
+export { WaveProgressRenderer, formatElapsed } from './progress-renderer.js'
+export type { TuiAdapter } from './progress-renderer.js'
+export { validateTaskResult, simplifyPayload } from './result-validator.js'
+export { estimateExecutionCost, formatCostProjection, calculateProfileComparison, formatExecutionCostSummary, persistToAudit } from './cost-projector.js'
 export {
   mapAcsToWave,
   verifyWaveAcs,
@@ -95,3 +102,15 @@ export {
   REGISTRY_BASE_URL,
   SQUAD_MANIFEST_FILE,
 } from './community-hub.js'
+export {
+  notifyStageCompletion,
+  readNotificationConfig,
+  buildWebhookPayload,
+  sendWithRetry,
+} from './webhook-notifier.js'
+export type {
+  WebhookEvent,
+  WebhookStatus,
+  WebhookPayload,
+  NotificationConfig,
+} from './webhook-notifier.js'

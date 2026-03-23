@@ -7,6 +7,13 @@ domain: software
 description: "Agent Builder Squad — Agent Designer, Workflow Architect, Squad Tester"
 initial_level: L2
 
+collaboration:
+  provides:
+    - squad-definitions
+    - agent-templates
+    - workflow-blueprints
+  consumes: []
+
 bundle_disclaimers:
   pt-br: "Este Squad gerado por IA deve ser revisado por um especialista de domínio antes de uso em produção."
   en: "This AI-generated Squad must be reviewed by a domain expert before production use."

@@ -11,19 +11,85 @@ import { resolve, join } from 'node:path'
 import { createI18n } from '../foundation/i18n.js'
 import { install } from '../foundation/installer.js'
 import { AuditLogger } from '../foundation/audit.js'
+import { checkProjectVersion } from '../foundation/version-guard.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
 import type { IdeId } from '../foundation/installer.js'
 
-const VERSION = '0.1.0-alpha.5'
+const VERSION = '2.0.0'
+
+/** Minimum Node.js major version required by BuildPact */
+const MIN_NODE_MAJOR = 20
+
+/**
+ * Check Node.js version at startup.
+ * Prints a warning if below minimum but does not crash.
+ */
+function checkNodeVersion(): void {
+  const major = parseInt(process.version.slice(1).split('.')[0]!, 10)
+  if (major < MIN_NODE_MAJOR) {
+    console.warn(
+      `Warning: BuildPact requires Node.js >= ${MIN_NODE_MAJOR}. ` +
+      `You are running ${process.version}. Some features may not work correctly.`,
+    )
+  }
+}
 
 async function main(): Promise<void> {
-  const [, , command, ...args] = process.argv
+  // Check Node.js version early — warn but don't crash
+  checkNodeVersion()
+
+  // Detect --ci flag: may appear before or after the command name
+  const rawArgs = process.argv.slice(2)
+  const ciActive = rawArgs.includes('--ci') || process.env.BP_CI === 'true'
+  // Strip --ci from position 0 to prevent it from being interpreted as the command name
+  const cleanedArgs = rawArgs[0] === '--ci' ? rawArgs.slice(1) : rawArgs
+  const [command, ...args] = cleanedArgs
+
+  if (ciActive) {
+    console.log('[ci] non-interactive mode enabled')
+  }
 
   // Handle pipeline commands: buildpact <command> [args]
   if (command && command !== 'init') {
     const { resolveCommand } = await import('../commands/registry.js')
     const audit = new AuditLogger(join(process.cwd(), '.buildpact', 'audit', 'cli.jsonl'))
     await audit.log({ action: 'cli.command.start', agent: 'cli', files: [], outcome: 'success' })
+
+    // Version guard: check project schema compatibility before running commands
+    // Skip for commands that don't require an existing project
+    const SKIP_VERSION_GUARD = ['doctor', 'adopt', 'help', 'completion', 'hub', 'learn', 'agent']
+    if (!SKIP_VERSION_GUARD.includes(command)) {
+      const versionCheck = await checkProjectVersion(process.cwd())
+      if (versionCheck.status === 'cli_too_old') {
+        console.error(
+          `Error: Project uses schema v${versionCheck.projectSchema} but this CLI ` +
+          `supports up to v${versionCheck.cliSchema}. Run: npm update -g buildpact`,
+        )
+        process.exit(1)
+      }
+      if (versionCheck.status === 'upgrade_required') {
+        console.error(
+          `Error: Project schema v${versionCheck.projectSchema} is incompatible ` +
+          `with this CLI (v${versionCheck.cliSchema}). Run: buildpact upgrade`,
+        )
+        process.exit(1)
+      }
+      if (versionCheck.status === 'upgrade_available') {
+        console.warn(
+          `Notice: Project schema v${versionCheck.projectSchema} can be upgraded ` +
+          `to v${versionCheck.cliSchema}. Run 'buildpact upgrade' when convenient.`,
+        )
+      }
+    }
+
+    // Readonly mode guard
+    const { checkReadonly } = await import('../foundation/readonly-guard.js')
+    const readonlyCheck = checkReadonly(process.cwd(), command)
+    if (!readonlyCheck.ok) {
+      console.error(`Error: ${readonlyCheck.error.code} — ${readonlyCheck.error.i18nKey}`)
+      process.exit(1)
+    }
+
     const result = await resolveCommand(command)
     if (!result.ok) {
       const { listCommands } = await import('../commands/registry.js')

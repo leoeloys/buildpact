@@ -146,8 +146,8 @@ describe('parsePlatform', () => {
     expect(parsePlatform(['GEMINI'])).toBe('gemini')
   })
 
-  it('defaults to claude for unknown platform', () => {
-    expect(parsePlatform(['unknown'])).toBe('claude')
+  it('returns undefined for unknown platform', () => {
+    expect(parsePlatform(['unknown'])).toBeUndefined()
   })
 })
 

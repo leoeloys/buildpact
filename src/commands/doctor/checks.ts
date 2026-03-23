@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { access, readdir, readFile } from 'node:fs/promises'
+import { access, readdir, readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { I18nResolver } from '../../contracts/i18n.js'
 import type { CheckResult } from './types.js'
+import { loadConstitution } from '../../foundation/constitution.js'
+import { detectConflicts, formatConflictReportMarkdown } from '../../engine/constitution-conflict-detector.js'
 
 const VALID_AUTOMATION_LEVELS = ['L1', 'L2', 'L3', 'L4']
 
@@ -192,23 +194,18 @@ export async function checkSquadIntegrity(projectDir: string, i18n: I18nResolver
       errors.push(`${entry}: invalid initial_level '${parsed['initial_level']}' (expected L1-L4)`)
     }
 
-    // Check agent files exist
-    const agentsDir = join(squadsDir, entry, 'agents')
-    try {
-      await access(agentsDir)
-      const agentEntries = Object.entries(parsed)
-        .filter(([k]) => k.startsWith('agents.'))
-        .map(([, v]) => v)
+    // Check agent files exist — file paths are relative to the squad directory
+    const squadEntryDir = join(squadsDir, entry)
+    const agentEntries = Object.entries(parsed)
+      .filter(([k]) => k.startsWith('agents.') && k.endsWith('.file'))
+      .map(([, v]) => v)
 
-      for (const agentFile of agentEntries) {
-        try {
-          await access(join(agentsDir, agentFile))
-        } catch {
-          errors.push(`${entry}: agent file '${agentFile}' not found`)
-        }
+    for (const agentFile of agentEntries) {
+      try {
+        await access(join(squadEntryDir, agentFile))
+      } catch {
+        errors.push(`${entry}: agent file '${agentFile}' not found`)
       }
-    } catch {
-      // agents/ directory missing — not necessarily an error if no agents defined
     }
   }
 
@@ -234,5 +231,54 @@ export async function checkSquadIntegrity(projectDir: string, i18n: I18nResolver
     }
   } catch {
     return { status: 'pass', message: i18n.t('cli.doctor.squad_pass', { name: entries[0]!, version: 'unknown' }) }
+  }
+}
+
+/** Check constitution for internal conflicts */
+export async function checkConstitutionConflicts(projectDir: string, i18n: I18nResolver): Promise<CheckResult> {
+  const loadResult = await loadConstitution(projectDir)
+  if (!loadResult.ok) {
+    return {
+      status: 'warn',
+      message: i18n.t('cli.doctor.constitution_not_found'),
+    }
+  }
+
+  const conflictsResult = detectConflicts(loadResult.value)
+  if (!conflictsResult.ok) {
+    return {
+      status: 'fail',
+      message: i18n.t('cli.doctor.constitution_check_failed'),
+    }
+  }
+
+  const conflicts = conflictsResult.value
+  if (conflicts.length === 0) {
+    return {
+      status: 'pass',
+      message: i18n.t('cli.doctor.constitution_clean'),
+    }
+  }
+
+  // Write report to .buildpact/reports/
+  const reportsDir = join(projectDir, '.buildpact', 'reports')
+  const reportPath = join(reportsDir, 'constitution-conflicts.md')
+  try {
+    await mkdir(reportsDir, { recursive: true })
+    await writeFile(reportPath, formatConflictReportMarkdown(conflicts), 'utf-8')
+  } catch {
+    // Non-fatal — report display still works
+  }
+
+  const errors = conflicts.filter((c) => c.severity === 'error').length
+  const warnings = conflicts.filter((c) => c.severity === 'warning').length
+
+  return {
+    status: errors > 0 ? 'fail' : 'warn',
+    message: i18n.t('cli.doctor.constitution_conflicts', {
+      errors: String(errors),
+      warnings: String(warnings),
+    }),
+    remediation: i18n.t('cli.doctor.constitution_conflicts_fix', { path: reportPath }),
   }
 }

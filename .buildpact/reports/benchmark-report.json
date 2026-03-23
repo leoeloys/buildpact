@@ -1,0 +1,74 @@
+{
+  "version": "0.1.0-alpha.5",
+  "nodeVersion": "v22.19.0",
+  "platform": "darwin",
+  "timestamp": "2026-03-22T23:47:34.963Z",
+  "overallPass": true,
+  "results": [
+    {
+      "name": "cli-startup",
+      "targetMs": 500,
+      "actualMs": 101.89,
+      "pass": true,
+      "iterations": 5,
+      "medianMs": 101.89,
+      "timestamp": "2026-03-22T23:47:34.791Z"
+    },
+    {
+      "name": "command-parse",
+      "targetMs": 50,
+      "actualMs": 0.06,
+      "pass": true,
+      "iterations": 5,
+      "medianMs": 0.06,
+      "timestamp": "2026-03-22T23:47:34.830Z"
+    },
+    {
+      "name": "squad-load",
+      "targetMs": 100,
+      "actualMs": 0.66,
+      "pass": true,
+      "iterations": 5,
+      "medianMs": 0.66,
+      "timestamp": "2026-03-22T23:47:34.907Z"
+    },
+    {
+      "name": "constitution-check",
+      "targetMs": 200,
+      "actualMs": 0.24,
+      "pass": true,
+      "iterations": 5,
+      "medianMs": 0.24,
+      "timestamp": "2026-03-22T23:47:34.912Z"
+    },
+    {
+      "name": "audit-write",
+      "targetMs": 10,
+      "actualMs": 0.16,
+      "pass": true,
+      "iterations": 5,
+      "medianMs": 0.16,
+      "timestamp": "2026-03-22T23:47:34.915Z"
+    },
+    {
+      "name": "audit-burst-100",
+      "targetMs": 1000,
+      "actualMs": 9.23,
+      "pass": true,
+      "iterations": 3,
+      "medianMs": 9.23,
+      "timestamp": "2026-03-22T23:47:34.958Z"
+    }
+  ],
+  "memoryResults": [
+    {
+      "name": "standard-operation-rss",
+      "targetMB": 256,
+      "actualMB": 44.02,
+      "peakMB": 44.02,
+      "deltaMB": 1.21,
+      "pass": true,
+      "timestamp": "2026-03-22T23:47:34.963Z"
+    }
+  ]
+}

@@ -638,7 +638,7 @@ describe('buildWaveFileContent human/agent tagging', () => {
     expect(content).toContain('[AGENT] Implement login endpoint')
   })
 
-  it('tags human tasks with [HUMAN] and adds manual checklist', async () => {
+  it('tags human tasks with [HUMAN] and adds manual checklist for non-software domain', async () => {
     const { buildWaveFileContent, buildStubFindings, consolidateResearch } = await import('../../../src/commands/plan/handler.js')
     const research = consolidateResearch(
       buildStubFindings('tech_stack', '# Spec'),
@@ -651,9 +651,10 @@ describe('buildWaveFileContent human/agent tagging', () => {
       partSuffix: '',
       tasks: [{ id: 'T1', title: 'Review legal document', dependencies: [], wave: 0 }],
     }
-    const content = buildWaveFileContent(fileSpec, research, 'slug', '2026-03-16T00:00:00.000Z')
+    // Non-software domain enables HUMAN/AGENT tagging by keywords
+    const content = buildWaveFileContent(fileSpec, research, 'slug', '2026-03-16T00:00:00.000Z', 'medical')
     expect(content).toContain('[HUMAN] Review legal document')
-    expect(content).toContain('Confirm step completed manually')
+    expect(content).toContain('Sign off')
   })
 })
 
@@ -798,7 +799,7 @@ describe('plan handler human step and progress', () => {
     expect(Array.isArray(progress.tasks)).toBe(true)
   })
 
-  it('pauses and calls clack.confirm for each HUMAN task', async () => {
+  it('pauses and calls clack.select for each HUMAN task', async () => {
     const specsDir = join(tmpDir, '.buildpact', 'specs', 'review-feature')
     await mkdir(specsDir, { recursive: true })
     // Spec with 1 human task ("review")
@@ -807,22 +808,28 @@ describe('plan handler human step and progress', () => {
       '# Spec\n\n## Acceptance Criteria\n\n- Review compliance documentation with legal\n',
       'utf-8',
     )
+    // Set up a non-software squad so HUMAN tagging is enabled
+    await mkdir(join(tmpDir, '.buildpact', 'squads', 'medical'), { recursive: true })
+    await writeFile(join(tmpDir, '.buildpact', 'squads', 'medical', 'squad.yaml'), 'name: medical\ndomain_type: medical\n', 'utf-8')
+    await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
+    await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), 'active_squad: medical\n', 'utf-8')
 
     const clack = await import('@clack/prompts')
-    vi.mocked(clack.confirm).mockResolvedValue(true)
+    vi.mocked(clack.select).mockResolvedValue('done')
+    vi.mocked(clack.confirm).mockResolvedValue(false)
     vi.mocked(clack.isCancel).mockImplementation(() => false)
 
-    const confirmSpy = vi.mocked(clack.confirm)
-    confirmSpy.mockClear()
+    const selectSpy = vi.mocked(clack.select)
+    selectSpy.mockClear()
 
     const { handler } = await import('../../../src/commands/plan/handler.js')
     await handler.run([])
 
-    // clack.confirm should have been called at least once for the human task
-    expect(confirmSpy).toHaveBeenCalled()
+    // clack.select should have been called at least once for the human task (done/save_and_exit)
+    expect(selectSpy).toHaveBeenCalled()
   })
 
-  it('marks task as completed in progress.json when user confirms', async () => {
+  it('marks task as completed in progress.json when user selects done', async () => {
     const specsDir = join(tmpDir, '.buildpact', 'specs', 'confirm-feature')
     await mkdir(specsDir, { recursive: true })
     await writeFile(
@@ -830,9 +837,14 @@ describe('plan handler human step and progress', () => {
       '# Spec\n\n## Acceptance Criteria\n\n- Review security policy document\n',
       'utf-8',
     )
+    // Set up a non-software squad so HUMAN tagging is enabled
+    await mkdir(join(tmpDir, '.buildpact', 'squads', 'medical'), { recursive: true })
+    await writeFile(join(tmpDir, '.buildpact', 'squads', 'medical', 'squad.yaml'), 'name: medical\ndomain_type: medical\n', 'utf-8')
+    await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), 'active_squad: medical\n', 'utf-8')
 
     const clack = await import('@clack/prompts')
-    vi.mocked(clack.confirm).mockResolvedValue(true)
+    vi.mocked(clack.select).mockResolvedValue('done')
+    vi.mocked(clack.confirm).mockResolvedValue(false)
     vi.mocked(clack.isCancel).mockImplementation(() => false)
 
     const { handler } = await import('../../../src/commands/plan/handler.js')
@@ -994,5 +1006,108 @@ describe('plan handler validation flow', () => {
     const planPath = join(tmpDir, '.buildpact', 'plans', 'revise-feature', 'plan.md')
     const content = await readFile(planPath, 'utf-8')
     expect(content).toContain('# Plan')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// researcher.ts unit tests (Story 5.1, Task 5)
+// ---------------------------------------------------------------------------
+
+describe('spawnResearchAgents', () => {
+  it('dispatches exactly 3 parallel tasks and returns a ResearchSummary', async () => {
+    const { spawnResearchAgents } = await import('../../../src/commands/plan/researcher.js')
+    const summary = await spawnResearchAgents('# Spec\n\nBuild a login page', '')
+    // All 3 domains must be present in the result
+    expect(summary.techStack.domain).toBe('tech-stack')
+    expect(summary.codebase.domain).toBe('codebase')
+    expect(summary.squadConstraints.domain).toBe('squad-constraints')
+  })
+
+  it('returns a summary with findings arrays for all 3 domains', async () => {
+    const { spawnResearchAgents } = await import('../../../src/commands/plan/researcher.js')
+    const summary = await spawnResearchAgents('# Spec\n\nProcess payments', 'Squad: fintech')
+    expect(Array.isArray(summary.techStack.findings)).toBe(true)
+    expect(summary.techStack.findings.length).toBeGreaterThan(0)
+    expect(Array.isArray(summary.codebase.findings)).toBe(true)
+    expect(summary.codebase.findings.length).toBeGreaterThan(0)
+    expect(Array.isArray(summary.squadConstraints.findings)).toBe(true)
+    expect(summary.squadConstraints.findings.length).toBeGreaterThan(0)
+  })
+
+  it('squad context is included in squadConstraints findings when provided', async () => {
+    const { spawnResearchAgents } = await import('../../../src/commands/plan/researcher.js')
+    const summary = await spawnResearchAgents('# Spec\n\nFeature', 'Squad: medical')
+    const squadFinding = summary.squadConstraints.findings.join(' ')
+    expect(squadFinding).toContain('medical')
+  })
+
+  it('handles empty squad context gracefully', async () => {
+    const { spawnResearchAgents } = await import('../../../src/commands/plan/researcher.js')
+    const summary = await spawnResearchAgents('# Spec\n\nFeature', '')
+    // No crash and no-squad message appears in findings
+    const squadFinding = summary.squadConstraints.findings.join(' ')
+    expect(squadFinding).toContain('No active squad')
+  })
+})
+
+describe('consolidateResearch (researcher module)', () => {
+  it('merges 3 ResearchResult items into a ResearchSummary with all domains', async () => {
+    const { consolidateResearch } = await import('../../../src/commands/plan/researcher.js')
+    const results = [
+      { domain: 'tech-stack' as const, findings: ['TS'], relevantPatterns: ['TypeScript'] },
+      { domain: 'codebase' as const, findings: ['layer pattern'], relevantPatterns: ['Result'] },
+      { domain: 'squad-constraints' as const, findings: ['GDPR'], relevantPatterns: ['Constitution'] },
+    ]
+    const summary = consolidateResearch(results)
+    expect(summary.techStack.domain).toBe('tech-stack')
+    expect(summary.codebase.domain).toBe('codebase')
+    expect(summary.squadConstraints.domain).toBe('squad-constraints')
+    expect(summary.techStack.findings).toContain('TS')
+    expect(summary.codebase.findings).toContain('layer pattern')
+    expect(summary.squadConstraints.findings).toContain('GDPR')
+  })
+
+  it('uses empty fallback when a domain result is missing from array', async () => {
+    const { consolidateResearch } = await import('../../../src/commands/plan/researcher.js')
+    const results = [
+      { domain: 'tech-stack' as const, findings: ['TS'], relevantPatterns: [] },
+    ]
+    const summary = consolidateResearch(results)
+    expect(summary.codebase.findings).toEqual([])
+    expect(summary.squadConstraints.findings).toEqual([])
+  })
+
+  it('summary includes a timestamp', async () => {
+    const { consolidateResearch } = await import('../../../src/commands/plan/researcher.js')
+    const summary = consolidateResearch([])
+    expect(typeof summary.timestamp).toBe('string')
+    expect(summary.timestamp.length).toBeGreaterThan(0)
+  })
+})
+
+describe('research agent payload isolation (Story 5.1 AC #4)', () => {
+  it('researchTechStack and researchCodebase produce different findings (isolated context)', async () => {
+    const { researchTechStack, researchCodebase } = await import('../../../src/commands/plan/researcher.js')
+    const spec = '# Spec\n\nBuild a payment gateway'
+    const techResult = await researchTechStack(spec)
+    const codebaseResult = await researchCodebase(spec)
+    // Each agent has its own domain label — they do not share domain context
+    expect(techResult.domain).toBe('tech-stack')
+    expect(codebaseResult.domain).toBe('codebase')
+    // Findings are domain-specific — no cross-contamination
+    expect(techResult.findings).not.toEqual(codebaseResult.findings)
+    expect(techResult.relevantPatterns).not.toEqual(codebaseResult.relevantPatterns)
+  })
+
+  it('researchSquadConstraints receives squad context that other agents do not', async () => {
+    const { researchTechStack, researchSquadConstraints } = await import('../../../src/commands/plan/researcher.js')
+    const spec = '# Spec\n\nBuild a clinic portal'
+    const squadCtx = 'CFM compliance required'
+    const techResult = await researchTechStack(spec)
+    const squadResult = await researchSquadConstraints(spec, squadCtx)
+    // Squad context appears in squad findings
+    expect(squadResult.findings.join(' ')).toContain('CFM compliance')
+    // Tech stack findings do not contain squad-specific info
+    expect(techResult.findings.join(' ')).not.toContain('CFM')
   })
 })

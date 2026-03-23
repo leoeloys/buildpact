@@ -1,0 +1,164 @@
+name: BuildPact Full Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  # Pin the BuildPact version so the pipeline is reproducible.
+  BP_VERSION: 'latest'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Stage 1: Capture or validate the specification.
+  # ---------------------------------------------------------------------------
+  specify:
+    name: Specify
+    runs-on: ubuntu-latest
+    outputs:
+      cost: ${{ steps.bp.outputs.cost }}
+      summary: ${{ steps.bp.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: BuildPact specify
+        id: bp
+        uses: ./
+        with:
+          command: specify
+          budget: '0.50'
+          buildpact-version: ${{ env.BP_VERSION }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bp-specs
+          path: .buildpact/specs/
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Generate the execution plan.
+  # ---------------------------------------------------------------------------
+  plan:
+    name: Plan
+    needs: specify
+    runs-on: ubuntu-latest
+    outputs:
+      cost: ${{ steps.bp.outputs.cost }}
+      summary: ${{ steps.bp.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bp-specs
+          path: .buildpact/specs/
+
+      - name: BuildPact plan
+        id: bp
+        uses: ./
+        with:
+          command: plan
+          budget: '0.75'
+          buildpact-version: ${{ env.BP_VERSION }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bp-plans
+          path: .buildpact/plans/
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Execute the plan in parallel waves.
+  # ---------------------------------------------------------------------------
+  execute:
+    name: Execute
+    needs: plan
+    runs-on: ubuntu-latest
+    outputs:
+      cost: ${{ steps.bp.outputs.cost }}
+      summary: ${{ steps.bp.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bp-plans
+          path: .buildpact/plans/
+
+      - name: BuildPact execute
+        id: bp
+        uses: ./
+        with:
+          command: execute
+          budget: '5.00'
+          buildpact-version: ${{ env.BP_VERSION }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bp-execution
+          path: .buildpact/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Stage 4: Verify the outcomes against the original specification.
+  # ---------------------------------------------------------------------------
+  verify:
+    name: Verify
+    needs: execute
+    runs-on: ubuntu-latest
+    outputs:
+      cost: ${{ steps.bp.outputs.cost }}
+      summary: ${{ steps.bp.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bp-execution
+          path: .buildpact/
+
+      - name: BuildPact verify
+        id: bp
+        uses: ./
+        with:
+          command: verify
+          budget: '0.50'
+          buildpact-version: ${{ env.BP_VERSION }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # Stage 5: Report total pipeline cost.
+  # ---------------------------------------------------------------------------
+  report:
+    name: Report
+    needs: [specify, plan, execute, verify]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Summarise pipeline costs
+        run: |
+          echo "## BuildPact Pipeline Cost Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Stage | Summary |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|---------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Specify | ${{ needs.specify.outputs.summary }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Plan    | ${{ needs.plan.outputs.summary }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Execute | ${{ needs.execute.outputs.summary }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Verify  | ${{ needs.verify.outputs.summary }} |" >> "$GITHUB_STEP_SUMMARY"

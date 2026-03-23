@@ -1,0 +1,22 @@
+{
+  "spec": {
+    "requiredSections": ["User Story", "Acceptance Criteria"],
+    "minHeadings": 2,
+    "minBullets": 1
+  },
+  "plan": {
+    "requiredSections": ["Research Findings", "Wave Plan"],
+    "minHeadings": 3,
+    "minBullets": 1
+  },
+  "waveFile": {
+    "requiredSections": ["Tasks", "Key References"],
+    "minHeadings": 2,
+    "minBullets": 1
+  },
+  "verificationReport": {
+    "requiredSections": ["Verification Report"],
+    "minHeadings": 1,
+    "minBullets": 0
+  }
+}

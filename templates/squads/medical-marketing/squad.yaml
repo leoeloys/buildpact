@@ -7,6 +7,16 @@ domain: health
 description: "Medical marketing squad — Strategist, Copywriter, Designer, Analytics — CFM/ANVISA compliant"
 initial_level: L2
 
+collaboration:
+  provides:
+    - marketing-campaign-data
+    - brand-guidelines
+    - audience-analytics
+  consumes:
+    - compliance-audit-reports
+    - patient-flow-analysis
+    - research-clinical-evidence
+
 bundle_disclaimers:
   pt-br: "Este conteúdo foi gerado por IA e deve ser revisado por profissional de saúde antes do uso."
   en: "This content was AI-generated and must be reviewed by a healthcare professional before use."

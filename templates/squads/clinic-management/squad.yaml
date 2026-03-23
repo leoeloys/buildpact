@@ -7,6 +7,15 @@ domain: health
 description: "Clinic management squad — Operations Manager, Finance Analyst, Compliance Checker, Patient Flow Optimizer"
 initial_level: L2
 
+collaboration:
+  provides:
+    - patient-flow-analysis
+    - compliance-audit-reports
+    - financial-summaries
+  consumes:
+    - marketing-campaign-data
+    - research-clinical-evidence
+
 bundle_disclaimers:
   pt-br: "Este conteúdo foi gerado por IA e deve ser revisado por profissional de saúde qualificado antes do uso."
   en: "This content was AI-generated and must be reviewed by a qualified healthcare professional before use."

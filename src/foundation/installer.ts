@@ -145,6 +145,15 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
         files: ['.buildpact/squads/software'],
         outcome: 'success',
       })
+
+      // Generate squad lock file for version pinning
+      try {
+        const { lockSquad } = await import('../engine/squad-lock.js')
+        await lockSquad(projectDir, 'software')
+        installedResources.push('.buildpact/squad-lock.yaml')
+      } catch (lockErr) {
+        console.warn('Warning: could not generate squad lock file:', (lockErr as Error).message)
+      }
     }
 
     // 7. Write DECISIONS.md to project root

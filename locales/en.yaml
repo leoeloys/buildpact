@@ -41,8 +41,14 @@ cli:
     no_changes: "No changes made"
     confirm_edit: "Modifying the Constitution is permanent. Are you sure you want to continue?"
     edit_consent_denied: "Constitution edit cancelled — no changes made"
-    violation_warning: "Constitution violation [{principle}]: \"{rule}\""
-    violation_warning_beginner: "Warning: The output doesn't follow a rule in \"{principle}\": \"{rule}\". Please review."
+    violation:
+      title_expert: "Constitution violation detected: {principle}"
+      title_beginner: "Your project rules say this isn't allowed"
+      explanation_expert: "Output conflicts with principle '{principle}' in section '{section}'"
+      explanation_beginner: "The AI created something that goes against a rule you set for this project. It conflicts with your rule about '{principle_simple}'. Review the output and decide if you want to keep it."
+      action_expert: "Review output and update Constitution if your intent has changed"
+      action_beginner: "Look at what was created and decide if it looks right to you"
+      modification_blocked: "This action would change your project rules. You must approve it manually."
     reason_prompt: "Why are you making this change?"
     reason_placeholder: "e.g. Updated to align with new compliance requirements"
     checklist_generated: "Update checklist saved to .buildpact/constitution_update_checklist.md"
@@ -56,39 +62,36 @@ cli:
     done: "Quick spec saved to {path} (type: {type})"
     cancelled: "Quick command cancelled — no changes made"
     discuss_welcome: "BuildPact Quick — Context Gathering Mode"
-    discuss_scope_q: "What part of the codebase will this change affect?"
-    discuss_scope_frontend: "Frontend / UI"
-    discuss_scope_backend: "Backend / API"
-    discuss_scope_database: "Database / Schema"
-    discuss_scope_fullstack: "Full-stack (frontend and backend)"
-    discuss_risk_q: "What is the risk level of this change?"
-    discuss_risk_low: "Low — isolated or new code, easy to revert"
-    discuss_risk_medium: "Medium — touches an existing feature"
-    discuss_risk_high: "High — breaking change or critical path"
-    discuss_risk_unknown: "Not sure yet"
-    discuss_done_q: "How will you know this change is complete?"
-    discuss_done_tests: "All existing tests pass"
-    discuss_done_new_tests: "New tests written and passing"
-    discuss_done_manual: "Manual verification by user"
-    discuss_done_deployed: "Deployed and verified in staging"
-    discuss_constraints_q: "Any constraints to keep in mind?"
-    discuss_constraints_none: "No special constraints"
-    discuss_constraints_compat: "Must maintain backwards compatibility"
-    discuss_constraints_perf: "Performance-critical path"
-    discuss_constraints_security: "Security-sensitive change"
-    discuss_opt_other: "Other (I'll describe)"
-    discuss_other_prompt: "Please describe:"
-    discuss_other_placeholder: "e.g. Specific requirement or constraint"
-    discuss_context_header: "Context from Discussion"
     full_welcome: "BuildPact Quick — Full Flow with Plan Verification"
-    full_plan_generating: "Generating plan from spec..."
-    full_validation_passed: "Both validation perspectives passed — plan is sound"
-    full_validation_issues: "{count} validation issue(s) found — review before proceeding"
-    full_risk_warn: "Review the plan above before proceeding with execution"
     full_risk_confirm: "Proceed with execution?"
-    full_verified: "Verification passed — all acceptance criteria are covered"
-    full_verification_failed: "{count} acceptance criterion/criteria not covered — fix plan generated"
-    full_fix_plan_generated: "Fix plan saved to {path} — address the failed criteria and re-run"
+    discuss:
+      intro: "Let me ask a few questions to refine the scope"
+      question_prefix: "Question {n} of {total}"
+      other_option: "Other (free text)"
+      proceeding: "Context gathered — proceeding with refined spec"
+    full:
+      generating_plan: "Generating minimal plan from spec..."
+      validating_plan: "Validating plan from 2 perspectives (completeness + dependencies)..."
+      risk_detected: "{count} risk(s) detected in plan validation"
+      risk_abort: "Plan execution aborted by user"
+      risk_continue: "Proceeding despite validation risks"
+      verifying: "Verifying outcome against original goal..."
+      verification_passed: "Verification passed — changes address the stated goal"
+      verification_failed: "Verification failed: {reason}"
+      fix_plan_generated: "Fix plan generated with {count} step(s)"
+      fix_plan_confirm: "Execute the fix plan?"
+      fix_plan_skip: "Fix plan skipped — manual resolution required"
+    no_description: "No description provided — usage: /bp:quick <description>"
+    executing: "Executing..."
+    constitution_warning: "Constitution violation detected — review before proceeding"
+    confirm_violation: "Proceed despite constitution violation?"
+    complete: "Quick flow complete"
+    commit_created: "Commit created: {message}"
+    scale_too_complex: "This task is {level} ({label}) — too complex for Quick Flow"
+    scale_use_specify: "Use /bp:specify for proper planning, then /bp:plan to create an execution plan"
+    scale_recommend_specify: "This looks moderately complex (L2). Continue with Quick Flow, or use /bp:specify instead? (Y = Quick, N = exit)"
+    scale_assessment: "Scale: {level} — {label}"
+    not_implemented: "This mode is not yet implemented — available in Beta"
   specify:
     welcome: "BuildPact Specify — Natural Language Specification"
     welcome_beginner: "BuildPact Specify — Guided Specification Wizard"
@@ -160,6 +163,9 @@ cli:
     budget_limit_increased: "Budget limit increased to ${limit}"
     budget_profile_switched: "Switched to budget profile — effective limits doubled for this session"
     budget_stopped: "Execution stopped — results preserved"
+    lock_conflict: "Another session is executing this plan — wait or remove the lock file manually"
+    lock_stale_removed: "Stale execution lock detected (>30 min) — removed and continuing"
+    lock_released: "Execution lock released"
   plan:
     welcome: "BuildPact Plan — Automated Parallel Research"
     research_start: "Spawning research agents — tech stack, codebase, domain constraints..."
@@ -183,10 +189,23 @@ cli:
     validation_revised: "Plan auto-revised — critical issues resolved"
     validation_overridden: "Critical issues overridden — plan generated as-is"
     validation_cancelled: "Plan generation cancelled — no files written"
+    validation_issue_critical: "[{perspective}] {message}"
+    validation_issue_warning: "[{perspective}] {message}"
     human_pause: "Human step required: {title}"
     human_confirm: "Have you completed this manual step?"
+    human_done: "Yes, I'm done — continue"
+    human_save_exit: "Save progress and exit for now"
     human_skipped: "Step skipped — marked as pending in progress.json: {title}"
     progress_saved: "Progress saved to {path}"
+    non_software_detected: "Non-software domain detected ({domain_type}). Enabling human/agent step tagging."
+    resume_prompt: "Previous progress found ({completed}/{total} tasks completed). Resume from where you left off?"
+    resume_yes: "Yes, resume from last completed step"
+    resume_no: "No, start fresh"
+    readiness_pass: "✓ Readiness Gate: PASS — plan is ready for execution"
+    readiness_concerns: "Readiness Gate: CONCERNS — some optional checks did not pass"
+    readiness_fail: "Readiness Gate: FAIL — required checks did not pass"
+    readiness_override: "Override concerns and save plan anyway?"
+    readiness_fix_required: "Fix the issues above, then run /bp:plan again"
   verify:
     welcome: "BuildPact Verify — Guided Acceptance Test (UAT)"
     no_spec_found: "No spec found in .buildpact/specs/ — run /bp:specify first"
@@ -231,6 +250,20 @@ cli:
     loop_cost_stop: "Stop and preserve results"
     loop_stopped: "Loop stopped cleanly — {count} experiments run, results preserved"
     loop_no_flag: "Use --loop flag to start the experiment loop, e.g. /bp:optimize {target} --loop"
+  help:
+    welcome: "BuildPact Help — Project Status & Next Steps"
+    scanning: "Scanning project state..."
+    not_initialized: "Project not initialized — run: buildpact init"
+    fresh_project: "Fresh project detected — no specs yet"
+    next_specify: "Next step: /bp:specify to capture your first requirement"
+    next_plan: "Next step: /bp:plan to create an execution plan"
+    next_execute: "Next step: /bp:execute to implement the plan"
+    next_verify: "Next step: /bp:verify to validate the implementation"
+    next_feature: "All verified! Ready for next feature — run /bp:specify"
+    next_fix: "Failures found — run /bp:execute on the fix plan"
+    squad_active: "Active Squad: {name} ({domain})"
+    squad_none: "No active squad configured"
+    done: "Run the suggested command above, or /bp:help anytime"
   doctor:
     title: "BuildPact Doctor — Health Check"
     node_pass: "Node.js {version} (meets minimum ≥20.x)"
@@ -252,6 +285,11 @@ cli:
     squad_fix: "Check squad.yaml structure — required fields: name, version, domain, description, initial_level"
     summary_healthy: "All checks passed — project is healthy"
     summary_issues: "{fail_count} issue(s) found — see above for remediation"
+    constitution_not_found: "Constitution not found — skipping conflict check"
+    constitution_check_failed: "Constitution conflict check failed"
+    constitution_clean: "Constitution has no conflicts — rules are consistent"
+    constitution_conflicts: "Constitution conflicts: {errors} error(s), {warnings} warning(s)"
+    constitution_conflicts_fix: "Review the conflict report at {path} and resolve contradictions"
   squad:
     create_welcome: "BuildPact Squad — Create New Squad"
     create_scaffolding: "Scaffolding Squad '{name}'..."
@@ -300,8 +338,12 @@ cli:
     hub_downloading: "Downloading Squad '{name}' from community hub..."
     hub_downloaded: "Squad '{name}' downloaded from community hub"
     hub_download_failed: "Failed to download Squad '{name}' from community hub"
+    hub:
+      downloading: "Downloading '{name}' from community hub..."
+      install_success: "Squad '{name}' installed to .buildpact/squads/{name}/"
+      unreviewed_warning: "⚠️  Squad '{name}' has not been reviewed by a BuildPact maintainer. Proceeding with install."
     unknown_subcommand: "Unknown squad subcommand: '{subcommand}'"
-    usage_hint: "Usage: buildpact squad create <name> | buildpact squad add <name-or-path> | buildpact squad validate <path>"
+    usage_hint: "Usage: buildpact squad create <name> | buildpact squad add <name-or-path> | buildpact squad validate <path> | buildpact squad level check"
   autonomy:
     l1_write_confirm: "Agent '{agent}' is at L1 (Observer) — confirm write operation: {task}"
     l1_write_cancelled: "Write operation cancelled by user — agent '{agent}' is at L1 and requires confirmation"
@@ -322,6 +364,104 @@ cli:
     report_written: "Compatibility report written to {path}"
     outro: "Review .buildpact/agent-mode.yaml and change mode: prompt → agent when ready to activate"
 
+  adopt:
+    scanning: "Scanning project structure…"
+    scan_complete: "Scan complete"
+    detected_title: "Detected Stack"
+    nothing_detected: "No known project files detected — will create a fresh configuration"
+    existing_detected: "Existing .buildpact/ found — how to handle?"
+    merge_option: "Merge (keep existing, add new)"
+    overwrite_option: "Overwrite (fresh start)"
+    cancel_option: "Cancel"
+    confirm: "Apply changes to this project?"
+    applying: "Setting up BuildPact…"
+    success: "Project adopted successfully"
+    failed: "Adoption failed"
+    created_count: "{count} file(s) created"
+    modified_count: "{count} file(s) modified"
+    skipped_count: "{count} file(s) skipped (already exist)"
+    cancelled: "Adoption cancelled — nothing was changed."
+    run_diagnostic: "Run project diagnostic? (analyzes PRD, phases, code quality)"
+    diagnosing: "Analyzing project — scanning docs, phases, requirements, code…"
+    diagnostic_done: "Diagnostic complete"
+    diag_summary_title: "Project Diagnostic"
+    diag_docs: "{count} document(s) found (PRD, specs, plans)"
+    diag_phases: "{done}/{total} phases complete"
+    diag_reqs: "{count} requirement(s) tracked"
+    diag_files: "source files"
+    diag_recommendations_title: "Recommendations"
+    diag_report_saved: "Full report saved to {path}"
+    outro: "Run 'buildpact doctor' to verify your setup, then 'buildpact specify' to start."
+
+  upgrade:
+    reading_schema: "Reading project schema…"
+    already_current: "Project is already up to date (schema v{version})"
+    no_schema: "Legacy project detected (no schema version) — treating as schema v0"
+    no_project: "No BuildPact project found. Run 'buildpact init' or 'buildpact adopt' first."
+    migrations_planned: "Migrations to run:"
+    dry_run_notice: "Dry run — no changes applied"
+    confirm: "Apply {count} migration(s)?"
+    running: "Running migrations…"
+    success: "Upgraded from schema v{from} to v{to}"
+    migration_failed: "Migration failed"
+
+  version_guard:
+    upgrade_available: "Project schema v{project} can be upgraded to v{cli}. Run 'buildpact upgrade'."
+    upgrade_required: "Project schema v{project} is incompatible. Run 'buildpact upgrade'."
+    cli_too_old: "Project uses schema v{project} but this CLI supports up to v{cli}. Run: npm update -g buildpact"
+    no_schema: "Legacy project detected. Run 'buildpact upgrade' to add version tracking."
+
+  quality:
+    welcome: "BuildPact Quality — ISO 9001-Inspired Quality Report"
+    scanning: "Scanning artifacts for quality metrics..."
+    first_pass_yield: "First-pass yield: {value}%"
+    traceability: "Traceability coverage: {value}%"
+    compliance: "Process compliance: {value}%"
+    adversarial_density: "Adversarial density: {value} findings/spec"
+    no_issues: "No quality issues found — process is healthy"
+    issues_found: "{count} quality issue(s) found"
+    report_saved: "Quality report saved to {path}"
+    done: "Quality audit complete"
+
+  docs:
+    welcome: "BuildPact Docs — Project Documentation Organizer"
+    scanning: "Scanning entire project tree..."
+    suggest_move: "Suggestion: Move {file} → {destination}"
+    suggest_delete: "Suggestion: Delete {file} (stale temp file)"
+    suggest_dedup: "Suggestion: Remove duplicate {file}"
+    approve: "Approve this change?"
+    stale_found: "{count} stale document(s) found (>30 days without updates)"
+    orphans_found: "{count} orphaned artifact(s) found"
+    no_issues: "All documentation is healthy and organized"
+    index_writing: "Writing PROJECT-INDEX.md with {count} file entries..."
+    index_saved: "Project index saved to .buildpact/PROJECT-INDEX.md"
+    index_preview: "Preview index before writing?"
+    done: "Documentation audit complete"
+    suggest_run: "Tip: Run /bp:docs periodically. Agents search PROJECT-INDEX.md to find files."
+    authorization_required: "Authorization required before any file changes"
+
+  orchestrate:
+    welcome_new: "Welcome to BuildPact. I'm Pacto, your project orchestrator."
+    welcome_back: "Welcome back. I'm Pacto. Let me check where we left off..."
+    routing: "I'm handing this to {agent_name}, our {role}."
+    phase_complete: "{agent_name} completed {phase}. Here's what was accomplished:"
+    next_step: "Next step: {recommendation}"
+    all_done: "All phases complete. Great work! Ready for the next feature?"
+
+  investigate:
+    welcome: "BuildPact Investigate — Domain & Codebase Research"
+    scanning: "Investigating..."
+    domain_brief: "Domain investigation brief saved to {path}"
+    codebase_brief: "Codebase investigation brief saved to {path}"
+    tech_brief: "Technology investigation brief saved to {path}"
+    report_saved: "Investigation report saved to {path}"
+    done: "Investigation complete"
+
+  audit:
+    export_done: "Audit export complete — {count} entries"
+    export_written: "Audit export written to {path}"
+    no_entries: "No audit entries match the given filters"
+
   export_web:
     welcome: "BuildPact — Web Bundle Export"
     loading: "Loading Squad, Constitution, and Project Context…"
@@ -333,6 +473,44 @@ cli:
     stale_age: "Existing bundle is more than 7 days old — generating a fresh export"
     stale_source: "Source files have changed since last export — generating a fresh bundle"
     outro: "Paste the .txt file into {platform} to activate your Squad workflow"
+
+  hub:
+    welcome: "BuildPact Hub — Community Squad Discovery"
+    searching: "Searching community hub..."
+    fetch_failed: "Failed to reach community hub"
+    search_done: "Found {count} squad(s)"
+    no_results: "No squads match your search"
+    no_results_hint: "Try broadening your search or visit https://github.com/buildpact/buildpact-squads"
+    results_title: "Search Results ({count})"
+    search_outro: "Run 'buildpact hub info <name>' for details, or 'buildpact squad add <name>' to install"
+    fetching_info: "Fetching details for '{name}'..."
+    squad_not_found: "Squad '{name}' not found in community hub"
+    info_loaded: "Squad info loaded"
+    info_outro: "Run 'buildpact squad add <name>' to install this squad"
+    quality_low_warning: "Low quality score ({score}/100). Install anyway? [y/N]"
+
+  learn:
+    opening: "Opening BuildPact tutorial..."
+    fallback: "If the browser didn't open, visit: {url}"
+    url_only: "BuildPact tutorial: {url}"
+
+  readonly:
+    blocked: "Project is in readonly mode — state-modifying commands are blocked"
+
+  agent:
+    welcome: "BuildPact Agent — Persistent Supervisor"
+    starting: "Starting agent supervisor..."
+    started: "Agent supervisor started (PID: {pid})"
+    stopping: "Stopping agent supervisor..."
+    stopped: "Agent supervisor stopped"
+    status_title: "Agent Supervisor Status"
+    not_running: "Agent supervisor is not running"
+    stale_pid: "Stale PID file detected — cleaning up and starting fresh"
+    already_running: "Agent supervisor already running (PID: {pid})"
+    paused: "Execution paused — {reason}"
+    resumed: "Execution resumed from wave {wave}"
+    auto_advance_complete: "All waves completed successfully"
+    budget_paused: "Budget limit reached — execution paused"
 
 domain:
   software: "Software / Tech"
@@ -361,6 +539,17 @@ ide:
   cursor_hint: "Installs .cursorrules and .cursor/rules/"
   gemini_hint: "Installs .gemini/ config"
   codex_hint: "Installs .codex/ config"
+
+bundle:
+  conversational:
+    welcome: "Hello! I am the {squad_name} assistant. How can I help you today?"
+    phase_specify: "Let's describe what you want to do"
+    phase_plan: "Let me create a plan for this"
+    phase_execute: "Let me execute the plan now"
+    phase_verify: "Let's review the result"
+    choose_option: "Choose an option:"
+    staleness_warning: "Warning: this assistant may be outdated. Ask the creator for a more recent version."
+    bundle_too_large: "This assistant was simplified to work on this platform. Some advanced features were removed."
 
 error:
   recovery:
@@ -393,3 +582,54 @@ error:
   agent:
     load_failed: "Failed to load agent '{path}': {reason}"
     not_in_index: "Agent '{agentId}' not found in squad '{squad}' index"
+  engine:
+    file_read_failed: "Failed to read engine file '{path}'. Check file permissions and try again."
+    orchestrator_too_long: "Orchestrator file exceeds 300-line limit ({lines} lines). Split into smaller modules."
+    missing_orchestrator_header: "Orchestrator file missing required header section. Add a YAML frontmatter block."
+    missing_implementation_notes: "Orchestrator file missing Implementation Notes section. Add notes for developer guidance."
+    payload_too_large: "Task payload ({bytes} bytes) exceeds 20KB limit ({max} bytes). Reduce plan content or codebase context."
+  constitution:
+    not_found: "Constitution file not found at .buildpact/constitution.md. Run 'buildpact constitution' to create one."
+    empty: "Constitution file exists but has no rules. Add coding standards, compliance requirements, or quality gates."
+  sharding:
+    write_failed: "Failed to write sharded document to '{path}'. Check disk space and permissions."
+  stub:
+    not_implemented: "'{feature}' is not yet implemented. Available in {phase}."
+  command:
+    not_found: "Command '{name}' not recognized. Run 'buildpact help' to see available commands."
+  optimize:
+    report_write_failed: "Failed to write optimization report to '{path}'. Check disk space and permissions."
+    tsv_write_failed: "Failed to write optimization results TSV to '{path}'."
+  metrics:
+    custom_exec_failed: "Custom metric script failed: {reason}. Check the script path and permissions."
+    custom_non_numeric: "Custom metric returned non-numeric value '{value}'. Metrics must return a number."
+  ratchet:
+    branch_failed: "Failed to create optimization branch '{branch}'. Check git state."
+    commit_failed: "Failed to commit optimization improvement. Check git state and staging area."
+    revert_failed: "Failed to revert optimization attempt. Manual cleanup may be needed: git checkout ."
+  task:
+    timeout: "Task '{title}' timed out after {seconds}s. Increase execution.task_timeout_seconds in config.yaml."
+    result_invalid: "Task '{title}' returned invalid result: {reason}."
+  lock:
+    version_unsupported: "Squad lockfile version '{version}' is not supported. Expected version 1."
+  smoke:
+    test_failed: "Smoke test failed for squad '{name}': {count} check(s) failed."
+  drift:
+    detected: "Squad '{name}' has drifted from lockfile. Run 'buildpact squad update' to re-lock."
+  provider:
+    api_key_missing: "No API key found for provider '{provider}'. Set {env_var} in your environment."
+    dispatch_failed: "Task dispatch to '{provider}' failed: {reason}"
+  hub:
+    squad_not_found: "Squad '{name}' not found in community hub"
+  readonly:
+    blocked: "Project is in readonly mode. State-modifying commands (execute, plan --write, specify --write) are blocked."
+  adopt:
+    failed: "Failed to adopt project — check file permissions and try again"
+  upgrade:
+    migration_failed: "Migration v{from} → v{to} failed"
+    no_project: "No BuildPact project found — run 'buildpact init' or 'buildpact adopt' first"
+
+warn:
+  webhook:
+    delivery_failed: "Webhook notification failed after retry — pipeline continues normally"
+    invalid_url: "Webhook URL is not a valid HTTP(S) URL — notifications disabled"
