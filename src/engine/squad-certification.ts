@@ -6,7 +6,7 @@
 
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ok, err } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 
 // ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ export async function runCertification(
     return ok(result)
   } catch (e) {
     return err({
-      code: 'CERTIFICATION_FAILED',
+      code: ERROR_CODES.CERTIFICATION_FAILED,
       i18nKey: 'error.certification.failed',
       params: { squadName },
       cause: e,

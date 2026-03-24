@@ -4,13 +4,12 @@
  */
 
 import * as clack from '@clack/prompts'
-import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createI18n } from '../../foundation/i18n.js'
+import { readLanguage } from '../../foundation/config-reader.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { ok } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
-import type { SupportedLanguage } from '../../contracts/i18n.js'
 import {
   fetchRegistryIndex,
   fetchSquadDetail,
@@ -19,21 +18,6 @@ import {
   formatSquadDetail,
 } from '../../engine/hub-search.js'
 import type { HubSearchOptions } from '../../engine/hub-search.js'
-
-/** Read language from config.yaml (sync, with fallback) */
-function readLanguage(projectDir: string): SupportedLanguage {
-  try {
-    const content = readFileSync(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('language:')) {
-        const value = trimmed.slice('language:'.length).trim().replace(/^["']|["']$/g, '')
-        if (value === 'pt-br' || value === 'en') return value
-      }
-    }
-  } catch { /* no config — default to en */ }
-  return 'en'
-}
 
 /**
  * Parse CLI args into hub subcommand + search options.

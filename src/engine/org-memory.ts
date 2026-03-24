@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto'
 import { readFile, writeFile, readdir, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ok, err, type Result } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES, type Result } from '../contracts/errors.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,7 +82,7 @@ export async function promoteToOrg(
     return ok(orgEntry)
   } catch (e) {
     return err({
-      code: 'FILE_WRITE_FAILED',
+      code: ERROR_CODES.FILE_WRITE_FAILED,
       i18nKey: 'error.org_memory.promote_failed',
       cause: e,
     })
@@ -109,7 +109,7 @@ export async function listOrgMemory(
     return ok(entries)
   } catch (e) {
     return err({
-      code: 'FILE_READ_FAILED',
+      code: ERROR_CODES.FILE_READ_FAILED,
       i18nKey: 'error.org_memory.list_failed',
       cause: e,
     })

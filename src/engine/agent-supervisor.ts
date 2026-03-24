@@ -107,6 +107,10 @@ export class AgentSupervisor {
       })
     }
 
+    // Send SIGTERM to the supervised process (skip if it's the current process — e.g. in tests)
+    if (existingPid !== process.pid) {
+      try { process.kill(existingPid, 'SIGTERM') } catch { /* process may already be gone */ }
+    }
     this.removePidFile()
     this.startTime = undefined
     this.tasksProcessed = 0

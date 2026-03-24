@@ -11,6 +11,7 @@ import { execSync } from 'node:child_process'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { findRepoRoot } from './self-updater.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,28 +58,6 @@ function writeCache(cache: UpdateCache): void {
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, JSON.stringify(cache), 'utf-8')
   } catch { /* non-critical */ }
-}
-
-function findRepoRoot(): string | null {
-  try {
-    // Walk up from this file's location to find the BuildPact repo
-    let dir = dirname(fileURLToPath(import.meta.url))
-    for (let i = 0; i < 10; i++) {
-      try {
-        const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
-        if (pkg.name === 'buildpact') {
-          execSync('git rev-parse --show-toplevel', {
-            cwd: dir, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
-          })
-          return dir
-        }
-      } catch { /* keep walking */ }
-      const parent = dirname(dir)
-      if (parent === dir) break
-      dir = parent
-    }
-  } catch { /* can't resolve */ }
-  return null
 }
 
 function getCurrentVersion(): string {

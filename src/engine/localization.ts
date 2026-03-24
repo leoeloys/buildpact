@@ -7,7 +7,7 @@
 
 import { readdir, readFile } from 'node:fs/promises'
 import { join, basename, extname } from 'node:path'
-import { ok, err, type Result } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES, type Result } from '../contracts/errors.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -153,7 +153,7 @@ export async function listAvailableLocales(
     return ok(locales)
   } catch (e) {
     return err({
-      code: 'FILE_READ_FAILED',
+      code: ERROR_CODES.FILE_READ_FAILED,
       i18nKey: 'error.locales.scan_failed',
       cause: e,
     })
@@ -191,7 +191,7 @@ export async function checkLocaleCompleteness(
     return ok({ missing, completeness })
   } catch (e) {
     return err({
-      code: 'FILE_READ_FAILED',
+      code: ERROR_CODES.FILE_READ_FAILED,
       i18nKey: 'error.locales.completeness_failed',
       cause: e,
     })

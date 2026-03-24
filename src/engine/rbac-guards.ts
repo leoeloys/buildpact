@@ -4,7 +4,7 @@
  * @see Epic 24.1b: RBAC Command Permission Guards
  */
 
-import { ok, err } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import { loadRbacConfig, resolveCurrentUser, resolveUserRole, checkPermission } from './rbac.js'
 import type { RbacRole } from './rbac.js'
@@ -70,7 +70,7 @@ export async function guardCommand(projectDir: string, command: string): Promise
 
   if (!allowed) {
     return err({
-      code: 'RBAC_DENIED',
+      code: ERROR_CODES.RBAC_DENIED,
       i18nKey: 'error.rbac.denied',
       params: {
         role,

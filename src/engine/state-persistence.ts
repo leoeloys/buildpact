@@ -9,7 +9,7 @@ import { writeFile, rename, readFile, unlink, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { ok, err } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ export async function checkpoint(stateDir: string, state: AgentState): Promise<R
     return ok(undefined)
   } catch (cause) {
     return err({
-      code: 'FILE_WRITE_FAILED',
+      code: ERROR_CODES.FILE_WRITE_FAILED,
       i18nKey: 'error.state.checkpoint_failed',
       cause,
     })
@@ -89,7 +89,7 @@ export async function loadState(stateDir: string): Promise<Result<AgentState | n
     return ok(state)
   } catch (cause) {
     return err({
-      code: 'FILE_READ_FAILED',
+      code: ERROR_CODES.FILE_READ_FAILED,
       i18nKey: 'error.state.load_failed',
       cause,
     })
@@ -115,7 +115,7 @@ export async function clearState(stateDir: string): Promise<Result<void>> {
     return ok(undefined)
   } catch (cause) {
     return err({
-      code: 'FILE_WRITE_FAILED',
+      code: ERROR_CODES.FILE_WRITE_FAILED,
       i18nKey: 'error.state.clear_failed',
       cause,
     })

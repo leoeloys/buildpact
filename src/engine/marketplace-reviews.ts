@@ -4,7 +4,7 @@
  * @see Epic 24.3: Marketplace Ratings & Reviews
  */
 
-import { ok, err } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import { REGISTRY_BASE_URL } from './community-hub.js'
 
@@ -44,7 +44,7 @@ const REVIEWS_API_PATH = '/api/reviews'
 export function validateReview(review: SquadReview): Result<void> {
   if (!review.author || review.author.trim() === '') {
     return err({
-      code: 'REVIEW_INVALID',
+      code: ERROR_CODES.REVIEW_INVALID,
       i18nKey: 'error.review.author_empty',
       params: { field: 'author' },
     })
@@ -52,7 +52,7 @@ export function validateReview(review: SquadReview): Result<void> {
 
   if (!review.squadName || review.squadName.trim() === '') {
     return err({
-      code: 'REVIEW_INVALID',
+      code: ERROR_CODES.REVIEW_INVALID,
       i18nKey: 'error.review.squad_empty',
       params: { field: 'squadName' },
     })
@@ -60,7 +60,7 @@ export function validateReview(review: SquadReview): Result<void> {
 
   if (!Number.isInteger(review.rating) || review.rating < 1 || review.rating > 5) {
     return err({
-      code: 'REVIEW_INVALID',
+      code: ERROR_CODES.REVIEW_INVALID,
       i18nKey: 'error.review.rating_out_of_range',
       params: { rating: String(review.rating) },
     })
@@ -68,7 +68,7 @@ export function validateReview(review: SquadReview): Result<void> {
 
   if (!review.comment || review.comment.trim() === '') {
     return err({
-      code: 'REVIEW_INVALID',
+      code: ERROR_CODES.REVIEW_INVALID,
       i18nKey: 'error.review.comment_empty',
       params: { field: 'comment' },
     })
@@ -101,7 +101,7 @@ export async function submitReview(
 
     if (!response.ok) {
       return err({
-        code: 'REVIEW_SUBMIT_FAILED',
+        code: ERROR_CODES.REVIEW_SUBMIT_FAILED,
         i18nKey: 'error.review.submit_failed',
         params: { status: String(response.status) },
       })
@@ -110,7 +110,7 @@ export async function submitReview(
     return ok(undefined)
   } catch (e) {
     return err({
-      code: 'REVIEW_SUBMIT_FAILED',
+      code: ERROR_CODES.REVIEW_SUBMIT_FAILED,
       i18nKey: 'error.review.submit_failed',
       params: { status: 'network_error' },
       cause: e,
@@ -135,7 +135,7 @@ export async function getReviewSummary(
 
     if (!response.ok) {
       return err({
-        code: 'REVIEW_FETCH_FAILED',
+        code: ERROR_CODES.REVIEW_FETCH_FAILED,
         i18nKey: 'error.review.fetch_failed',
         params: { squadName, status: String(response.status) },
       })
@@ -159,7 +159,7 @@ export async function getReviewSummary(
     return ok(data)
   } catch (e) {
     return err({
-      code: 'REVIEW_FETCH_FAILED',
+      code: ERROR_CODES.REVIEW_FETCH_FAILED,
       i18nKey: 'error.review.fetch_failed',
       params: { squadName, status: 'network_error' },
       cause: e,

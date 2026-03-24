@@ -128,7 +128,9 @@ export function applyDifferentialPrivacy(
 ): ProjectFingerprint {
   // Laplace noise: sample = -b * sign(u) * ln(1 - 2|u|) where b = 1/epsilon
   const b = 1 / epsilon
-  const u = Math.random() - 0.5
+  // Cryptographically secure uniform [0,1) random
+  const buf = randomBytes(4)
+  const u = buf.readUInt32BE(0) / 0x100000000 - 0.5
   const noise = -b * Math.sign(u) * Math.log(1 - 2 * Math.abs(u))
 
   return {

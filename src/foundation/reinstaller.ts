@@ -33,20 +33,6 @@ export interface ReinstallResult {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve templates directory from CLI installation */
-function resolveTemplatesDir(): string {
-  let dir = dirname(fileURLToPath(import.meta.url))
-  for (let i = 0; i < 5; i++) {
-    const candidate = join(dir, 'templates')
-    try {
-      // We'll verify async in the caller
-      return candidate
-    } catch { /* keep searching */ }
-    dir = join(dir, '..')
-  }
-  return join(dir, 'templates')
-}
-
 /** Read CLI version from package.json */
 function readCliVersion(): string {
   try {

@@ -58,6 +58,7 @@ export class PriorityQueue {
    * Insert a message into the queue sorted by priority (critical first).
    * Messages with equal priority maintain insertion order (stable).
    */
+  // O(n) insertion — acceptable for agent message volumes, use heap if scaling needed
   enqueue(message: AdvancedMessage): void {
     const rank = PRIORITY_RANK[message.priority]
     // Find the first item with lower priority and insert before it

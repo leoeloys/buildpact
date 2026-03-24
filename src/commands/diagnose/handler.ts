@@ -12,31 +12,15 @@
  */
 
 import * as clack from '@clack/prompts'
-import { readFileSync } from 'node:fs'
 import { readFile, writeFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createI18n } from '../../foundation/i18n.js'
+import { readLanguage } from '../../foundation/config-reader.js'
 import { scanProject } from '../../foundation/scanner.js'
 import { diagnoseProject, formatDiagnosticReport } from '../../foundation/diagnostician.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { ok } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
-import type { SupportedLanguage } from '../../contracts/i18n.js'
-
-/** Read language from config.yaml (sync, with fallback) */
-function readLanguage(projectDir: string): SupportedLanguage {
-  try {
-    const content = readFileSync(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('language:')) {
-        const value = trimmed.slice('language:'.length).trim().replace(/^["']|["']$/g, '')
-        if (value === 'pt-br' || value === 'en') return value
-      }
-    }
-  } catch { /* default */ }
-  return 'en'
-}
 
 /** Check if a file exists and how old it is */
 async function fileAge(path: string): Promise<number | null> {

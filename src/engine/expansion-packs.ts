@@ -7,7 +7,7 @@
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ok, err, type Result } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES, type Result } from '../contracts/errors.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,7 +159,7 @@ export async function installPack(
     constitutionMerged = true
   } catch (e) {
     return err({
-      code: 'FILE_WRITE_FAILED',
+      code: ERROR_CODES.FILE_WRITE_FAILED,
       i18nKey: 'error.expansion.constitution_merge_failed',
       cause: e,
     })
@@ -181,7 +181,7 @@ export async function installPack(
     squadInstalled = true
   } catch (e) {
     return err({
-      code: 'FILE_WRITE_FAILED',
+      code: ERROR_CODES.FILE_WRITE_FAILED,
       i18nKey: 'error.expansion.squad_install_failed',
       cause: e,
     })

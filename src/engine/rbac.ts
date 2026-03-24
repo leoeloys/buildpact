@@ -8,7 +8,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { execSync } from 'node:child_process'
-import { ok, err } from '../contracts/errors.js'
+import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 
 // ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ export async function loadRbacConfig(projectDir: string): Promise<Result<RbacCon
     return ok(config)
   } catch (e) {
     return err({
-      code: 'RBAC_CONFIG_INVALID',
+      code: ERROR_CODES.RBAC_CONFIG_INVALID,
       i18nKey: 'error.rbac.config_invalid',
       params: { path: configPath },
       cause: e,

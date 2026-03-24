@@ -538,6 +538,7 @@ cli:
 
   agent:
     welcome: "BuildPact Agent — Persistent Supervisor"
+    usage: "Usage: buildpact agent <start|stop|status>"
     starting: "Starting agent supervisor..."
     started: "Agent supervisor started (PID: {pid})"
     stopping: "Stopping agent supervisor..."

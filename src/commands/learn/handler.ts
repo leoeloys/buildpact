@@ -5,12 +5,11 @@
  * @see Epic 21.1: Onboarding Learn Command
  */
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { ok } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
 import type { SupportedLanguage } from '../../contracts/i18n.js'
 import { createI18n } from '../../foundation/i18n.js'
+import { readLanguage } from '../../foundation/config-reader.js'
 
 const DOCS_BASE = 'https://buildpact.dev'
 
@@ -20,21 +19,6 @@ export function buildTutorialUrl(lang: SupportedLanguage): string {
     return `${DOCS_BASE}/pt-br/guide/getting-started`
   }
   return `${DOCS_BASE}/guide/getting-started`
-}
-
-/** Read language from config.yaml (sync, with fallback) */
-function readLanguage(projectDir: string): SupportedLanguage {
-  try {
-    const content = readFileSync(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('language:')) {
-        const value = trimmed.slice('language:'.length).trim().replace(/^["']|["']$/g, '')
-        if (value === 'pt-br' || value === 'en') return value
-      }
-    }
-  } catch { /* no config — default to en */ }
-  return 'en'
 }
 
 /** Detect if we're in a non-GUI environment */

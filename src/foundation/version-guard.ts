@@ -62,18 +62,24 @@ export async function readProjectSchema(projectDir: string): Promise<number | nu
  * Called before every command (except init, adopt, doctor).
  */
 export async function checkProjectVersion(projectDir: string): Promise<VersionCheckResult> {
-  // Check if .buildpact/config.yaml exists at all
-  let configExists = false
+  // Read config once and reuse
+  let content: string
   try {
-    await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
-    configExists = true
+    content = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
   } catch {
     return { status: 'no_project' }
   }
 
-  if (!configExists) return { status: 'no_project' }
-
-  const schema = await readProjectSchema(projectDir)
+  // Parse schema version from already-read content
+  let schema: number | null = null
+  for (const raw of content.split('\n')) {
+    const line = raw.trim()
+    if (line.startsWith('buildpact_schema:')) {
+      const value = line.slice('buildpact_schema:'.length).trim().replace(/^["']|["']$/g, '')
+      const n = parseInt(value, 10)
+      if (!isNaN(n)) { schema = n; break }
+    }
+  }
 
   // Legacy project (no schema key in config.yaml)
   if (schema === null) {
