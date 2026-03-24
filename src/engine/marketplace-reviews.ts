@@ -141,7 +141,21 @@ export async function getReviewSummary(
       })
     }
 
-    const data = (await response.json()) as ReviewSummary
+    const raw = (await response.json()) as Record<string, unknown>
+    const data: ReviewSummary = {
+      averageRating: Number(raw['averageRating'] ?? 0),
+      totalReviews: Number(raw['totalReviews'] ?? 0),
+      recentReviews: Array.isArray(raw['recentReviews'])
+        ? (raw['recentReviews'] as Record<string, unknown>[]).map(r => ({
+            author: String(r['author'] ?? ''),
+            squadName: String(r['squadName'] ?? ''),
+            rating: Number(r['rating'] ?? 0),
+            comment: String(r['comment'] ?? ''),
+            timestamp: String(r['timestamp'] ?? ''),
+            verified: r['verified'] === true,
+          }))
+        : [],
+    }
     return ok(data)
   } catch (e) {
     return err({

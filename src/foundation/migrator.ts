@@ -5,6 +5,7 @@
  */
 
 import { readFile, writeFile, readdir, copyFile as fsCopyFile, mkdir, access } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ok, err } from '../contracts/errors.js'
@@ -44,16 +45,13 @@ export interface MigrationSummary {
 /** Read CLI version from package.json (walks up from this file to find it) */
 function getCliVersion(): string {
   try {
-    const { readFileSync } = require('node:fs')
-    const { resolve, dirname } = require('node:path')
-    // Walk up from dist or src to find package.json
-    let dir = __dirname ?? dirname(new URL(import.meta.url).pathname)
+    let dir = dirname(fileURLToPath(import.meta.url))
     for (let i = 0; i < 5; i++) {
       try {
-        const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf-8'))
+        const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
         if (pkg.name === 'buildpact') return pkg.version ?? '2.0.0'
       } catch { /* keep walking up */ }
-      dir = resolve(dir, '..')
+      dir = join(dir, '..')
     }
   } catch { /* fallback */ }
   return '2.0.0'

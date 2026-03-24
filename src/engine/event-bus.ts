@@ -55,7 +55,7 @@ export class EventBus {
     const handlers = this.topicHandlers.get(topic)
     if (handlers) {
       for (const handler of handlers) {
-        handler(fullMessage)
+        try { handler(fullMessage) } catch { /* handler error must not crash the bus */ }
       }
     }
   }

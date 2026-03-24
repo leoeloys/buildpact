@@ -114,9 +114,9 @@ describe('resolveUserRole', () => {
     expect(resolveUserRole(config, 'bob')).toBe('member')
   })
 
-  it('defaults to admin for an unknown user', () => {
+  it('defaults to viewer (least privilege) for an unknown user', () => {
     const config = makeConfig()
-    expect(resolveUserRole(config, 'unknown-person')).toBe('admin')
+    expect(resolveUserRole(config, 'unknown-person')).toBe('viewer')
   })
 })
 

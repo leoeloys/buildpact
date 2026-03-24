@@ -51,25 +51,26 @@ export async function runLearn(_args: string[]): Promise<Result<void>> {
   const i18n = createI18n(lang)
   const url = buildTutorialUrl(lang)
 
+  const clack = await import('@clack/prompts')
+
   if (isNonGuiEnvironment()) {
-    console.log(i18n.t('cli.learn.url_only', { url }))
+    clack.log.info(i18n.t('cli.learn.url_only', { url }))
     return ok(undefined)
   }
 
-  // Try to open browser
-  console.log(i18n.t('cli.learn.opening', { url }))
+  // Try to open browser (use execFile to avoid shell injection)
+  clack.log.info(i18n.t('cli.learn.opening', { url }))
   try {
-    // Use dynamic import for cross-platform open
-    const { exec } = await import('node:child_process')
+    const { execFile } = await import('node:child_process')
     const platform = process.platform
     const cmd = platform === 'darwin' ? 'open'
       : platform === 'win32' ? 'start'
       : 'xdg-open'
-    exec(`${cmd} ${url}`)
+    execFile(cmd, [url])
   } catch {
     // Browser failed — print URL as fallback
   }
-  console.log(i18n.t('cli.learn.fallback', { url }))
+  clack.log.info(i18n.t('cli.learn.fallback', { url }))
 
   return ok(undefined)
 }

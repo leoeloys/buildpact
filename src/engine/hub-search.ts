@@ -5,7 +5,6 @@
  * @see Epic 20.2: Squad Quality Scores
  */
 
-import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'

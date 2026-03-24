@@ -8,6 +8,7 @@
  */
 
 import { readFile, writeFile, readdir, copyFile, mkdir, access } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ok, err } from '../contracts/errors.js'
@@ -52,7 +53,6 @@ function readCliVersion(): string {
     let dir = dirname(fileURLToPath(import.meta.url))
     for (let i = 0; i < 5; i++) {
       try {
-        const { readFileSync } = require('node:fs')
         const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf-8'))
         if (pkg.name === 'buildpact') return pkg.version
       } catch { /* keep walking */ }

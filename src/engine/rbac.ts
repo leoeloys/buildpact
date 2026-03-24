@@ -156,11 +156,11 @@ export function parseRbacYaml(raw: string): RbacConfig {
 }
 
 /**
- * Resolve the role for a user. Returns 'admin' if user is not listed
- * (backward compatible: unlisted users get full access by default).
+ * Resolve the role for a user. Returns 'viewer' (least privilege) if user
+ * is not listed — when RBAC is enabled, unknown users should be restricted.
  */
 export function resolveUserRole(config: RbacConfig, user: string): RbacRole {
-  return config.users[user] ?? 'admin'
+  return config.users[user] ?? 'viewer'
 }
 
 /**
@@ -182,7 +182,9 @@ export function resolveCurrentUser(): string {
   if (envUser) return envUser
 
   try {
-    const gitUser = execSync('git config user.name', { encoding: 'utf-8' }).trim()
+    const gitUser = execSync('git config user.name', {
+      encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim()
     if (gitUser) return gitUser
   } catch {
     // git not available or no user.name configured

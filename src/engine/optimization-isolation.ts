@@ -7,7 +7,7 @@
 
 import { mkdtemp, cp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 
@@ -49,7 +49,15 @@ export async function applyVariant(
   content: string,
 ): Promise<Result<void>> {
   try {
-    const targetPath = join(workspace, agentFile)
+    const targetPath = resolve(workspace, agentFile)
+    // Prevent path traversal outside workspace
+    if (!targetPath.startsWith(resolve(workspace))) {
+      return err({
+        code: ERROR_CODES.FILE_WRITE_FAILED,
+        i18nKey: 'error.optimize.variant_apply_failed',
+        params: { agentFile },
+      })
+    }
     await writeFile(targetPath, content, 'utf-8')
     return ok(undefined)
   } catch (cause) {

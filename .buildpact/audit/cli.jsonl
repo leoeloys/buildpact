@@ -167,3 +167,23 @@
 {"ts":"2026-03-23T19:43:54.696Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"failure","error":"CONFIG_INVALID"}
 {"ts":"2026-03-23T19:43:58.807Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
 {"ts":"2026-03-23T19:44:00.784Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"failure","error":"CONFIG_INVALID"}
+{"ts":"2026-03-23T20:28:44.841Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:28:44.943Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:28:45.003Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"failure","error":"1 check(s) failed"}
+{"ts":"2026-03-23T20:28:45.004Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"failure","error":"DOCTOR_CHECK_FAILED"}
+{"ts":"2026-03-23T20:29:49.792Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:29:49.861Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:29:49.892Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"failure","error":"1 check(s) failed"}
+{"ts":"2026-03-23T20:29:49.892Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"failure","error":"DOCTOR_CHECK_FAILED"}
+{"ts":"2026-03-23T20:34:24.537Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:34:24.603Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:34:24.635Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"failure","error":"1 check(s) failed"}
+{"ts":"2026-03-23T20:34:24.636Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"failure","error":"DOCTOR_CHECK_FAILED"}
+{"ts":"2026-03-23T20:34:55.871Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:34:55.925Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-03-23T20:34:56.070Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"failure","error":"1 check(s) failed"}
+{"ts":"2026-03-23T20:34:56.072Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"failure","error":"DOCTOR_CHECK_FAILED"}
+{"ts":"2026-03-24T07:17:02.818Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-24T07:17:02.912Z","action":"cli.command.verify","agent":"cli","files":[],"outcome":"failure","error":"SPEC_NOT_FOUND"}
+{"ts":"2026-03-24T07:18:50.865Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-03-24T07:19:50.600Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}

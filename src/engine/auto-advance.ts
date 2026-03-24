@@ -337,7 +337,9 @@ export class AutoAdvanceExecutor {
     try {
       if (!existsSync(this.pausePath)) return null
       const content = readFileSync(this.pausePath, 'utf-8')
-      return JSON.parse(content) as AgentPauseInfo
+      const parsed = JSON.parse(content) as Record<string, unknown>
+      if (!parsed || typeof parsed.reason !== 'string' || typeof parsed.wave !== 'number') return null
+      return parsed as unknown as AgentPauseInfo
     } catch {
       return null
     }
