@@ -55,13 +55,29 @@ Every step is auditable. Every AI output is checked against your project's **con
 ## Installation
 
 ```bash
-npm install -g buildpact
+git clone https://github.com/leoeloys/buildpact.git
+cd buildpact
+npm install
+npm run build
+npm install -g .
 ```
 
 Verify the installation:
 
 ```bash
 buildpact --version
+```
+
+### Updating
+
+To update to the latest version:
+
+```bash
+cd buildpact
+git pull
+npm install
+npm run build
+npm install -g .
 ```
 
 ---
@@ -738,7 +754,7 @@ webhooks:
 ├────────────────────────┬────────────────────────────────────────┤
 │    New Project         │    Existing Project                    │
 │                        │                                        │
-│    npm i -g buildpact  │    npm i -g buildpact                  │
+│    (install buildpact) │    (install buildpact)                 │
 │    buildpact init      │    cd my-project                       │
 │    (wizard)            │    buildpact adopt                     │
 │                        │    (auto-scan)                         │
@@ -815,6 +831,7 @@ cd buildpact
 npm install
 npm test
 npm run build
+npm install -g .   # Install locally to test CLI
 ```
 
 Architecture:
