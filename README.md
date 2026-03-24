@@ -54,26 +54,47 @@ Every step is auditable. Every AI output is checked against your project's **con
 
 ## Installation
 
+### Step 1 — Install the CLI (once)
+
+Clone and build BuildPact to make the `buildpact` command available on your machine:
+
 ```bash
-git clone https://github.com/leoeloys/buildpact.git
-cd buildpact
+git clone https://github.com/leoeloys/buildpact.git ~/buildpact
+cd ~/buildpact
 npm install
 npm run build
 npm install -g .
 ```
 
-Verify the installation:
+Verify:
 
 ```bash
 buildpact --version
 ```
 
-### Updating
+### Step 2 — Use it in your project
 
-To update to the latest version:
+Now go to your actual project (or create a new one) and initialize BuildPact:
 
 ```bash
-cd buildpact
+# New project (greenfield)
+mkdir my-app && cd my-app
+git init
+buildpact init
+
+# OR existing project (brownfield)
+cd my-existing-app
+buildpact adopt
+```
+
+The `buildpact` command is now global — use it from any project directory.
+
+### Updating
+
+When a new version is released:
+
+```bash
+cd ~/buildpact
 git pull
 npm install
 npm run build
