@@ -16,6 +16,35 @@ export type {
   QualityDimension, RequirementCheckItem, RequirementChecklist,
   DistillateConfig, DistillateResult,
   CompressionAction, CompressionRule,
+  // Fase 2
+  TddPhase, TddCycleState, TestRunResult,
+  PredictedIssue, SelfCritiqueReport,
+  AdversarialReviewConfig, AdversarialReviewResult, AdversarialFinding,
+  EdgeCaseFinding, EdgeCaseHuntResult,
+  TracedToolCall, ExecutionTrace, RecoveryBriefing,
+  ApprovalType, ApprovalStatus, ApprovalRequest,
+  TechnicalUnknown, ResearchFinding, ResearchPhaseState,
+  ExperimentResult, ExperimentLoopState,
+  ConstitutionVersion, ConstitutionVersionChange, SyncImpactReport,
+  DispatchGuardResult,
+  // Fase 3
+  ReviewIssue, ReviewStage, TwoStageReviewResult,
+  ConsistencyCategory, ConsistencyFinding, ConsistencyReport,
+  QualityGateMode, QualityGateResult,
+  ReadinessVerdict, ReadinessStep, ReadinessAssessment,
+  ReassessmentTrigger, PlanChange, ReassessmentResult,
+  VerificationLevel, MustHave,
+  OutputClaim, FaithfulnessResult,
+  SimplicityCheck, ParallelizationAnalysis,
+  // Fase 4
+  MemoryTemperature, ScoredMemoryEntry,
+  Gotcha,
+  CompactionConfig, CompactionResult,
+  ComplexityTier, RoutingDecision,
+  HeartbeatConfig, HeartbeatRun,
+  ActivityDetectionResult,
+  RetrievalPipeline, RetrievalRoute,
+  UsageInsight,
 } from './task.js'
 export type { SquadManifest, SquadHook, SquadHookPoint, AgentDefinition, AutomationLevel, BundleDisclaimer, DomainType } from './squad.js'
 export type { ModelProfile, FailoverChain, PhaseModelConfig, OperationModelConfig } from './profile.js'
