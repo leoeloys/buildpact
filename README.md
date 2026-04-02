@@ -54,27 +54,34 @@ Every step is auditable. Every AI output is checked against your project's **con
 
 ## Installation
 
-### Step 1 — Install the CLI (once)
-
-Clone and build BuildPact to make the `buildpact` command available on your machine:
+### One-line install
 
 ```bash
-git clone https://github.com/leoeloys/buildpact.git ~/buildpact
-cd ~/buildpact
-npm install
-npm run build
-npm install -g .
+npm install -g github:leoeloys/buildpact
 ```
 
-Verify:
+This clones, builds, and links the `buildpact` command globally. Verify:
 
 ```bash
 buildpact --version
+# buildpact v2.0.0
 ```
 
-### Step 2 — Use it in your project
+### If that fails
 
-Now go to your actual project (or create a new one) and initialize BuildPact:
+Some systems have issues with `npm install -g` from GitHub. Use the manual method:
+
+```bash
+git clone https://github.com/leoeloys/buildpact.git ~/.buildpact-cli
+cd ~/.buildpact-cli
+npm install
+npm run build
+npm link
+```
+
+This creates a global symlink to `buildpact`. Verify with `buildpact --version`.
+
+### Use it in your project
 
 ```bash
 # New project (greenfield)
@@ -87,18 +94,27 @@ cd my-existing-app
 buildpact adopt
 ```
 
-The `buildpact` command is now global — use it from any project directory.
+The `buildpact` command is global — use it from any project directory.
 
 ### Updating
 
-When a new version is released:
-
 ```bash
-cd ~/buildpact
+# If installed via npm install -g:
+npm install -g github:leoeloys/buildpact
+
+# If installed via git clone + npm link:
+cd ~/.buildpact-cli
 git pull
 npm install
 npm run build
-npm install -g .
+# npm link is persistent — no need to re-run
+```
+
+Then update your project's IDE commands and schema:
+
+```bash
+cd /your/project
+buildpact upgrade
 ```
 
 ---
@@ -559,7 +575,7 @@ Shell completion and version management.
 | CLI | Slash | Description |
 |-----|-------|-------------|
 | `buildpact completion [--install]` | — | Generate shell completion scripts for bash, zsh, and fish |
-| `buildpact --version` | — | Show installed BuildPact version |
+| `buildpact --version` | — | Show installed BuildPact version (also `-v` or `version`) |
 
 ### Quick Reference: All Slash Commands
 
@@ -850,9 +866,9 @@ English and Português (Brasil). All commands, error messages, and agent interac
 git clone https://github.com/leoeloys/buildpact.git
 cd buildpact
 npm install
-npm test
-npm run build
-npm install -g .   # Install locally to test CLI
+npm test              # 3557 tests
+npm run build         # Compile with tsdown
+npm link              # Make 'buildpact' available globally for testing
 ```
 
 Architecture:
@@ -862,10 +878,20 @@ src/
   cli/          # Entry point and installation flow
   contracts/    # Types, error codes, Result<T, CliError> pattern
   foundation/   # i18n, audit, profiles, scanner, installer, adopter
-  engine/       # Pipeline orchestrator, wave executor, budget guard, recovery
-  commands/     # One directory per command
-  squads/       # Squad loader and validator
+  engine/       # 56 modules — orchestration, verification, enforcement, quality
+  data/         # Compression rules, elicitation methods
+  commands/     # One directory per command (29 commands)
 ```
+
+The engine layer implements 67 concepts from 9 frameworks as programmatic enforcement — not prompt pressure. Key subsystems:
+
+| Layer | Modules | Purpose |
+|-------|---------|---------|
+| **Orchestration** | role-boundary, handoff-protocol, dispatch-pipeline | Multi-agent governance |
+| **Verification** | verification-gate, debug-protocol, faithfulness-checker | Evidence-based completion |
+| **Enforcement** | tdd-enforcer, spec-first-gate, self-critique, approval-gates | Hard gates that block |
+| **Quality** | quality-gates, consistency-analyzer, adversarial-review | Progressive QA |
+| **Observability** | metrics-ledger, project-ledger, session-forensics | Cost tracking and audit |
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 

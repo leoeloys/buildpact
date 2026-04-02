@@ -55,6 +55,12 @@ async function main(): Promise<void> {
     console.log('[ci] non-interactive mode enabled')
   }
 
+  // Handle --version / -v
+  if (command === '--version' || command === '-v' || command === 'version') {
+    console.log(`buildpact v${VERSION}`)
+    process.exit(0)
+  }
+
   // Handle pipeline commands: buildpact <command> [args]
   if (command && command !== 'init') {
     const { resolveCommand } = await import('../commands/registry.js')
