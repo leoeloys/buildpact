@@ -1280,7 +1280,7 @@ export async function runPlanCommand(
 
   const writtenFiles: string[] = []
   for (const wave of finalWaves) {
-    const planFiles = splitIntoPlanFiles(wave)
+    const planFiles = splitIntoPlanFiles([wave])
     for (const planFile of planFiles) {
       const content = buildPlanFileContent(planFile.waveNumber, planFile.planNumber, planFile.tasks)
       const filePath = join(plansDir, planFile.filename)

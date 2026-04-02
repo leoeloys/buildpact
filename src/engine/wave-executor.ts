@@ -156,7 +156,7 @@ function executeTaskWithValidation(task: WaveTask, maxRetries: number): TaskExec
     if (!result.success) {
       // Validate the failure — check if it's retryable
       const validation = validateTaskResult(
-        { taskId: result.taskId, success: false, artifacts: result.artifacts, error: result.error },
+        { taskId: result.taskId, success: false, artifacts: result.artifacts, error: result.error ?? 'unknown error' },
         result.title,
       )
 

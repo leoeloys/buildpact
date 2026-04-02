@@ -23,7 +23,7 @@ export interface InvestigationReport {
   findings: string[]
   recommendations: string[]
   bestPractices: string[]
-  techStack?: TechStackInfo
+  techStack?: TechStackInfo | undefined
   timestamp: string
 }
 

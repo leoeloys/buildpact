@@ -186,13 +186,13 @@ export function createMessage(params: {
     fromSquad: params.fromSquad,
     fromAgent: params.fromAgent,
     toSquad: params.toSquad,
-    toAgent: params.toAgent,
+    ...(params.toAgent !== undefined && { toAgent: params.toAgent }),
     direction: params.direction ?? 'request',
     priority: params.priority ?? 'normal',
     payload: params.payload,
     contextBoundary: params.contextBoundary ?? defaultContextBoundary(),
-    correlationId: params.correlationId,
-    ttlSeconds: params.ttlSeconds,
+    ...(params.correlationId !== undefined && { correlationId: params.correlationId }),
+    ...(params.ttlSeconds !== undefined && { ttlSeconds: params.ttlSeconds }),
   }
 }
 

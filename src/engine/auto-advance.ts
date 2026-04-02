@@ -132,8 +132,8 @@ export class AutoAdvanceExecutor {
           pausedAt: new Date().toISOString(),
           waveNumber: i,
           reason: failedTask?.error ?? 'Task execution failed',
-          ...(failedTask?.taskId !== undefined && { failedTaskId: failedTask.taskId }),
-          ...(failedTask?.title !== undefined && { failedTaskTitle: failedTask.title }),
+          failedTaskId: failedTask?.taskId ?? undefined,
+          failedTaskTitle: failedTask?.title ?? undefined,
         })
 
         return ok({
@@ -230,8 +230,8 @@ export class AutoAdvanceExecutor {
           pausedAt: new Date().toISOString(),
           waveNumber: i,
           reason: failedTask?.error ?? 'Task execution failed',
-          ...(failedTask?.taskId !== undefined && { failedTaskId: failedTask.taskId }),
-          ...(failedTask?.title !== undefined && { failedTaskTitle: failedTask.title }),
+          failedTaskId: failedTask?.taskId ?? undefined,
+          failedTaskTitle: failedTask?.title ?? undefined,
         })
 
         return ok({
@@ -338,7 +338,7 @@ export class AutoAdvanceExecutor {
       if (!existsSync(this.pausePath)) return null
       const content = readFileSync(this.pausePath, 'utf-8')
       const parsed = JSON.parse(content) as Record<string, unknown>
-      if (!parsed || typeof parsed.reason !== 'string' || typeof parsed.wave !== 'number') return null
+      if (!parsed || typeof parsed.reason !== 'string' || typeof parsed.waveNumber !== 'number') return null
       return parsed as unknown as AgentPauseInfo
     } catch {
       return null

@@ -60,6 +60,6 @@ export type {
 export type { I18nResolver, SupportedLanguage } from './i18n.js'
 export type { SubagentProvider } from './provider.js'
 export type { CrossSquadMessage, HandoffPayload, ContextBoundary, RoutingRule } from './cross-squad.js'
-export { validateMessage, evaluateRoutingRules, buildDefaultBoundary } from './cross-squad.js'
+export { validateMessage } from './cross-squad.js'
 export type { CliError, Result, ErrorCode } from './errors.js'
 export { ok, err, ERROR_CODES } from './errors.js'

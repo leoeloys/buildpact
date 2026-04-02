@@ -231,9 +231,9 @@ export async function scanProjectTree(projectDir: string): Promise<FileEntry[]> 
   const entries: FileEntry[] = []
 
   async function walk(dir: string): Promise<void> {
-    let dirEntries: Awaited<ReturnType<typeof readdir>>
+    let dirEntries: import('node:fs').Dirent[]
     try {
-      dirEntries = await readdir(dir, { withFileTypes: true })
+      dirEntries = await readdir(dir, { withFileTypes: true }) as unknown as import('node:fs').Dirent[]
     } catch {
       return
     }

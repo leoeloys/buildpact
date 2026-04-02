@@ -45,10 +45,10 @@ export function acquireExecutionLock(
       return { acquired: false, reason: 'active', existing }
     }
 
-    // Stale lock — remove and continue
+    // Stale lock — remove, acquire, and continue
     try { unlinkSync(lockPath) } catch { /* ignore */ }
     writeLockFile(lockPath, specSlug, sessionId)
-    return { acquired: false, reason: 'stale_removed' }
+    return { acquired: true, lockPath }
   }
 
   writeLockFile(lockPath, specSlug, sessionId)

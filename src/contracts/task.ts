@@ -32,9 +32,21 @@ export interface TaskDispatchPayload {
   /** Budget constraint for this task in USD */
   budgetUsd?: number
   /** Path to the project constitution file, if it exists (FR-202) */
-  constitutionPath?: string
+  constitutionPath?: string | undefined
   /** Goal ancestry — why this task matters in the bigger picture */
   goalAncestry?: GoalAncestry | undefined
+  /** Human-readable description of the task */
+  description?: string | undefined
+  /** Path to the project context file */
+  projectContextPath?: string | undefined
+  /** Path to the squad agent definition */
+  squadAgentPath?: string | undefined
+  /** Model profile name to use */
+  modelProfile?: string | undefined
+  /** Remaining budget in USD */
+  budgetRemainingUsd?: number | undefined
+  /** Commit message format */
+  commitFormat?: string | undefined
 }
 
 /** Result returned by a completed subagent task */
@@ -1052,14 +1064,18 @@ export interface ConstitutionPrinciple {
   section: string
   /** The principle name/text */
   name: string
+  /** The full content/text of the principle rule */
+  content: string
 }
 
 /** A detected constitution violation */
 export interface ConstitutionViolation {
   /** The principle that was violated */
-  principle: string
-  /** The content that triggered the violation */
-  trigger: string
+  principle: ConstitutionPrinciple
+  /** Human-readable explanation of the violation */
+  explanation: string
+  /** Severity level */
+  severity: 'warn' | 'error'
 }
 
 /** Result of enforcing constitution against output */

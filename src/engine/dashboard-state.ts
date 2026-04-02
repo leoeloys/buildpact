@@ -89,7 +89,7 @@ export function updateAgentStatus(
   const agent = state.agents.find(a => a.id === agentId)
   if (agent) {
     agent.status = status
-    agent.currentTask = currentTask
+    agent.currentTask = currentTask ?? ''
     agent.lastAction = status === 'active' ? `Working on: ${currentTask}` : status
     agent.lastActionAt = new Date().toISOString()
   }
@@ -131,7 +131,7 @@ export function initDashboardState(
       status: 'idle' as AgentStatus,
     })) ?? [],
     performanceMode: performanceMode ?? 'balanced',
-    activeSquad: squad?.name,
+    ...(squad?.name !== undefined && { activeSquad: squad.name }),
   }
 
   writeDashboardState(projectDir, state)

@@ -19,13 +19,13 @@ export interface AuditExportOptions {
   /** Output format */
   format: 'json' | 'csv'
   /** Optional start date (inclusive, ISO date string) */
-  from?: string
+  from?: string | undefined
   /** Optional end date (inclusive, ISO date string) */
-  to?: string
+  to?: string | undefined
   /** Filter by command/action type */
-  command?: string
+  command?: string | undefined
   /** Output file path (undefined = return string) */
-  output?: string
+  output?: string | undefined
   /** Project directory */
   projectDir: string
 }

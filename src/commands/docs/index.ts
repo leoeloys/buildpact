@@ -32,7 +32,7 @@ export const handler: CommandHandler = {
     let expectedFiles = DEFAULT_EXPECTED_FILES
     for (let i = 0; i < args.length; i++) {
       if (args[i] === '--expect' && args[i + 1]) {
-        expectedFiles = args[i + 1].split(',').map((f) => f.trim())
+        expectedFiles = args[i + 1]!.split(',').map((f) => f.trim())
         i++
       }
     }

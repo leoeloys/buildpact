@@ -63,7 +63,7 @@ export function loadBestPractices(
       const titleMatch = content.match(/^#\s+(.+)/m)
       practices.push({
         slug,
-        title: titleMatch ? titleMatch[1] : slug,
+        title: titleMatch?.[1] ?? slug,
         content,
       })
     } catch {

@@ -149,7 +149,16 @@ export function executeRollback(
   projectDir: string,
   commitRef: string,
 ): Result<string> {
+  // Validate commitRef is a safe git ref (hex SHA or branch-like name)
+  if (!/^[0-9a-f]{7,40}$/i.test(commitRef) && !/^[a-zA-Z0-9._\/-]+$/.test(commitRef)) {
+    return err({
+      code: ERROR_CODES.GIT_COMMAND_FAILED,
+      i18nKey: 'error.git.invalid_ref',
+      params: { ref: commitRef },
+    })
+  }
   try {
+    // Note: execSync is pre-existing; commitRef validated above to prevent injection
     execSync(`git reset --hard ${commitRef}`, {
       cwd: projectDir,
       encoding: 'utf-8',

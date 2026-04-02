@@ -33,3 +33,13 @@ export interface ModelProfile {
   /** phase name → config. Keys: "research", "plan", "execute", "verify", "specify" */
   phases: Record<string, PhaseModelConfig>
 }
+
+/** Profile tier names used for cost estimation */
+export type ProfileTier = 'quality' | 'balanced' | 'budget'
+
+/** Model configuration for cost calculation */
+export interface ModelConfig {
+  model: string
+  inputCostPer1k: number
+  outputCostPer1k: number
+}
