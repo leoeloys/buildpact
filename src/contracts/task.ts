@@ -911,6 +911,138 @@ export interface ParallelizationAnalysis {
 }
 
 // ---------------------------------------------------------------------------
+// Memory Progressive Retrieval — composite scoring (Concept 8.4)
+// ---------------------------------------------------------------------------
+
+/** Temperature tier for memory entries */
+export type MemoryTemperature = 'hot' | 'warm' | 'cold'
+
+/** A memory entry with attention scoring and temperature */
+export interface ScoredMemoryEntry {
+  id: string
+  content: string
+  type: 'insight' | 'pattern' | 'gotcha' | 'decision'
+  temperature: MemoryTemperature
+  attentionScore: number
+  lastAccessedAt: string
+  accessCount: number
+  createdAt: string
+}
+
+// ---------------------------------------------------------------------------
+// Gotchas — explicit trap category (Concept 8.5)
+// ---------------------------------------------------------------------------
+
+/** A known trap/gotcha that looks right but isn't */
+export interface Gotcha {
+  id: string
+  trigger: string
+  consequence: string
+  workaround: string
+  discoveredIn: string
+  affectedFiles: string[]
+  severity: 'critical' | 'annoying'
+}
+
+// ---------------------------------------------------------------------------
+// Context Compactor — protect head/tail, compress middle (Concept 18.1)
+// ---------------------------------------------------------------------------
+
+/** Configuration for context compaction */
+export interface CompactionConfig {
+  maxTokens: number
+  protectHeadTokens: number
+  protectTailTokens: number
+  compressionStrategy: 'summarize' | 'truncate' | 'sample'
+}
+
+/** Result of context compaction */
+export interface CompactionResult {
+  content: string
+  originalTokens: number
+  compactedTokens: number
+  sectionsRemoved: number
+}
+
+// ---------------------------------------------------------------------------
+// Smart Routing — model selection by complexity (Concept 18.2)
+// ---------------------------------------------------------------------------
+
+/** Complexity tier for routing decisions */
+export type ComplexityTier = 'trivial' | 'simple' | 'moderate' | 'complex' | 'expert'
+
+/** A routing decision for model selection */
+export interface RoutingDecision {
+  tier: ComplexityTier
+  selectedModel: string
+  reason: string
+  estimatedCost: number
+}
+
+// ---------------------------------------------------------------------------
+// Heartbeat Scheduler — cron + event triggers (Concept 14.4)
+// ---------------------------------------------------------------------------
+
+/** Heartbeat configuration for an agent */
+export interface HeartbeatConfig {
+  agentId: string
+  schedule: string
+  maxConcurrentRuns: number
+  enabled: boolean
+}
+
+/** A single heartbeat run record */
+export interface HeartbeatRun {
+  id: string
+  agentId: string
+  trigger: 'schedule' | 'task_assigned' | 'event'
+  startedAt: string
+  finishedAt: string | null
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  summary: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Working Tree Activity Detection (Concept 12.6)
+// ---------------------------------------------------------------------------
+
+/** Result of checking git working tree for agent activity */
+export interface ActivityDetectionResult {
+  hasUncommittedChanges: boolean
+  modifiedFiles: number
+  untrackedFiles: number
+  isActive: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Retrieval Router — adaptive pipeline selection (Concept 20.2)
+// ---------------------------------------------------------------------------
+
+/** Retrieval pipeline type */
+export type RetrievalPipeline = 'semantic' | 'keyword' | 'recency' | 'graph' | 'hybrid'
+
+/** Retrieval routing decision */
+export interface RetrievalRoute {
+  pipeline: RetrievalPipeline
+  query: string
+  confidence: number
+}
+
+// ---------------------------------------------------------------------------
+// Usage Insights (Concept 18.5)
+// ---------------------------------------------------------------------------
+
+/** Aggregated usage statistics */
+export interface UsageInsight {
+  period: 'daily' | 'weekly' | 'monthly'
+  totalTokens: number
+  totalCostUsd: number
+  taskCount: number
+  avgCostPerTask: number
+  topModels: Array<{ model: string; tokens: number; cost: number }>
+}
+
+// ---------------------------------------------------------------------------
 // Constitution types — canonical definitions used by enforcer + orchestrator
 // ---------------------------------------------------------------------------
 

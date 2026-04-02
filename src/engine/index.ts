@@ -519,3 +519,105 @@ export {
   detectSpeculationMarkers,
   requireFaithfulness,
 } from './faithfulness-checker.js'
+
+// ── Fase 4: Polish ────────────────────────────────────────────────────────
+
+// Memory Progressive Retrieval (concept 8.4)
+export {
+  scoreMemoryEntry,
+  classifyTemperature,
+  selectForContext,
+  pruneStale,
+} from './memory-progressive-retrieval.js'
+
+// Gotcha Registry (concept 8.5)
+export {
+  createGotcha,
+  matchGotchas,
+  formatGotchaWarning,
+  formatGotchasForContext,
+} from './gotcha-registry.js'
+
+// Micro-File Architecture (concept 10.7)
+export {
+  parseStepReference,
+  loadStep,
+  isStepCompleted,
+} from './micro-file-architecture.js'
+
+// Scale-Domain Adaptive (concept 10.8)
+export {
+  detectComplexity,
+  recommendFlow,
+  formatRecommendation as formatComplexityRecommendation,
+} from './scale-domain-adaptive.js'
+
+// Working Tree Activity (concept 12.6)
+export {
+  detectActivity,
+  shouldExtendTimeout,
+} from './working-tree-activity.js'
+
+// Heartbeat Scheduler (concept 14.4)
+export {
+  createHeartbeatConfig,
+  createHeartbeatRun,
+  startRun,
+  completeRun,
+  failRun,
+  isRunning,
+} from './heartbeat-scheduler.js'
+
+// Company Portability (concept 14.5)
+export {
+  exportProject,
+  importProject,
+} from './company-portability.js'
+
+// Context Compactor (concept 18.1)
+export {
+  compactContext,
+  protectHeadTail,
+  compressMiddle,
+} from './context-compactor.js'
+
+// Smart Routing (concept 18.2)
+export {
+  assessComplexity,
+  selectModel,
+  DEFAULT_MODEL_TIERS,
+} from './smart-routing.js'
+
+// Session Search (concept 18.3)
+export {
+  indexSession,
+  searchSessions,
+  extractSearchTerms,
+} from './session-search.js'
+
+// Usage Insights (concept 18.5)
+export {
+  computeInsights,
+  formatInsightsReport,
+} from './usage-insights.js'
+
+// Retrieval Router (concept 20.2)
+export {
+  routeQuery,
+  selectPipeline,
+} from './retrieval-router.js'
+
+// Composite Memory Scoring (concept 20.3)
+export {
+  computeCompositeScore,
+  consolidateMemories,
+  pruneByScore,
+} from './composite-memory-scoring.js'
+
+// Conclave Roles (concept 20.7)
+export {
+  FORMALIZED_ROLES,
+  selectRolesForReview,
+  formatConclaveVote,
+} from './conclave-roles.js'
+export type { ConclaveRole } from './conclave-roles.js'

@@ -199,6 +199,23 @@ export const ERROR_CODES = {
 
   // Faithfulness Checker (20.1)
   FAITHFULNESS_BELOW_THRESHOLD: 'FAITHFULNESS_BELOW_THRESHOLD',
+
+  // ── Fase 4: Polish ──────────────────────────────────────────────────────
+
+  // Context Compactor (18.1)
+  COMPACTION_SUMMARY_FAILED: 'COMPACTION_SUMMARY_FAILED',
+
+  // Smart Routing (18.2)
+  ROUTING_NO_MODEL_AVAILABLE: 'ROUTING_NO_MODEL_AVAILABLE',
+
+  // Memory Consolidation (20.3)
+  MEMORY_CONSOLIDATION_CONFLICT: 'MEMORY_CONSOLIDATION_CONFLICT',
+
+  // Heartbeat Scheduler (14.4)
+  HEARTBEAT_ALREADY_RUNNING: 'HEARTBEAT_ALREADY_RUNNING',
+
+  // Activity Detection (12.6)
+  ACTIVITY_DETECTION_FAILED: 'ACTIVITY_DETECTION_FAILED',
 } as const
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]

@@ -135,3 +135,19 @@
 - Agent output claims MUST be verifiable against spec and context
 - Faithfulness score below 0.7 BLOCKS completion
 - Speculation markers ("probably", "should work") trigger review
+
+### Memory Management Protocol
+- Memory entries scored by composite of recency (0.4), access count (0.3), and type weight (0.3)
+- HOT memories always loaded (≤2K tokens); WARM loaded if budget allows; COLD only on explicit request
+- Memories not accessed for 30+ days are pruned automatically
+- Gotchas are consulted before starting any task on affected files
+
+### Context Discipline (Extended)
+- Context compaction protects head (system prompt) and tail (recent messages)
+- Middle section compressed via truncation or sampling — never summarization of critical artifacts
+- Smart routing selects model by complexity: trivial→haiku, moderate→sonnet, complex→opus
+
+### Agent Lifecycle Protocol
+- Heartbeat scheduler wakes agents on cron schedule or event triggers
+- Working tree activity detection: uncommitted changes = agent is working, extend timeout
+- Session search enables cross-session knowledge retrieval via term-frequency indexing
