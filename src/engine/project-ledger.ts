@@ -6,7 +6,7 @@
  * @see Original BuildPact concept 16.6
  */
 
-import { readFile, mkdir, writeFile } from 'node:fs/promises'
+import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
@@ -41,7 +41,7 @@ export function formatLedgerEntry(entry: LedgerEntry): string {
   const time = entry.timestamp.slice(11, 16) // HH:MM
   const date = entry.timestamp.slice(0, 10)   // YYYY-MM-DD
   return [
-    `### ${time} — ${entry.category} [${entry.id}]`,
+    `### ${date} ${time} — ${entry.category} [${entry.id}]`,
     entry.summary,
     `→ Details: ${entry.detailsPath}`,
   ].join('\n')
@@ -59,8 +59,9 @@ function formatDateHeader(date: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Append an entry to LEDGER.md (prepend — reverse chronological).
- * Creates LEDGER.md if it doesn't exist.
+ * Append an entry to LEDGER.md (append-only, chronological order).
+ * Uses appendFile() for atomic writes — safe under concurrent access.
+ * Creates LEDGER.md with header if it doesn't exist.
  */
 export async function appendToLedger(
   projectDir: string,
@@ -71,66 +72,33 @@ export async function appendToLedger(
 
   const path = ledgerPath(projectDir)
   const formatted = formatLedgerEntry(entry)
-  const entryDate = entry.timestamp.slice(0, 10)
 
-  let existing = ''
+  // Check if file exists; if not, create with header
+  let needsHeader = false
   try {
-    existing = await readFile(path, 'utf-8')
+    await readFile(path, 'utf-8')
   } catch {
-    // File doesn't exist yet — will create
+    needsHeader = true
   }
 
-  if (existing === '') {
-    // Initialize with header
-    const content = [
+  if (needsHeader) {
+    const header = [
       '# Project Ledger',
       '',
-      '> Unified temporal index of all project events. Most recent first.',
+      '> Unified temporal index of all project events. Chronological order.',
       '> Each entry has a summary + pointer to details. Never edit manually.',
-      '',
-      formatDateHeader(entryDate),
-      formatted,
       '',
     ].join('\n')
     try {
-      await writeFile(path, content, 'utf-8')
-      return ok(undefined)
+      await writeFile(path, header, 'utf-8')
     } catch {
       return err({ code: ERROR_CODES.FILE_WRITE_FAILED, i18nKey: 'error.file.write_failed', params: { path } })
     }
   }
 
-  // Prepend entry after header (find first ## date header or end of header block)
-  const headerEnd = existing.indexOf('\n## ')
-  if (headerEnd === -1) {
-    // No date headers yet — append after header
-    const content = existing.trimEnd() + '\n' + formatDateHeader(entryDate) + '\n' + formatted + '\n'
-    try {
-      await writeFile(path, content, 'utf-8')
-      return ok(undefined)
-    } catch {
-      return err({ code: ERROR_CODES.FILE_WRITE_FAILED, i18nKey: 'error.file.write_failed', params: { path } })
-    }
-  }
-
-  // Check if today's date header already exists
-  const dateHeader = `## ${entryDate}`
-  const dateIdx = existing.indexOf(dateHeader)
-
-  let content: string
-  if (dateIdx !== -1) {
-    // Insert after existing date header
-    const afterHeader = dateIdx + dateHeader.length
-    const nextNewline = existing.indexOf('\n', afterHeader)
-    const insertPoint = nextNewline === -1 ? afterHeader : nextNewline
-    content = existing.slice(0, insertPoint) + '\n\n' + formatted + existing.slice(insertPoint)
-  } else {
-    // Insert new date header at top (after main header)
-    content = existing.slice(0, headerEnd) + '\n' + formatDateHeader(entryDate) + '\n' + formatted + '\n' + existing.slice(headerEnd)
-  }
-
+  // Atomic append — safe for concurrent writes
   try {
-    await writeFile(path, content, 'utf-8')
+    await appendFile(path, '\n' + formatted + '\n', 'utf-8')
     return ok(undefined)
   } catch {
     return err({ code: ERROR_CODES.FILE_WRITE_FAILED, i18nKey: 'error.file.write_failed', params: { path } })
@@ -155,7 +123,7 @@ export function parseLedgerEntries(content: string): LedgerEntry[] {
   while (i < lines.length) {
     const line = lines[i]!
 
-    // Date header
+    // Legacy date header (from older ledger format)
     const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})/)
     if (dateMatch) {
       currentDate = dateMatch[1]!
@@ -163,29 +131,38 @@ export function parseLedgerEntries(content: string): LedgerEntry[] {
       continue
     }
 
-    // Entry header: ### HH:MM — CATEGORY [ID]
-    const entryMatch = line.match(/^### (\d{2}:\d{2}) — (\w+) \[([^\]]+)\]/)
-    if (entryMatch && currentDate) {
-      const time = entryMatch[1]!
-      const category = entryMatch[2]! as LedgerCategory
-      const id = entryMatch[3]!
+    // Entry header: ### YYYY-MM-DD HH:MM — CATEGORY [ID] (new format)
+    // or legacy: ### HH:MM — CATEGORY [ID] (requires currentDate from ## header)
+    const newFormatMatch = line.match(/^### (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) — (\w+) \[([^\]]+)\]/)
+    const legacyMatch = !newFormatMatch ? line.match(/^### (\d{2}:\d{2}) — (\w+) \[([^\]]+)\]/) : null
 
-      // Next line is summary
+    if (newFormatMatch) {
+      const date = newFormatMatch[1]!
+      const time = newFormatMatch[2]!
+      const category = newFormatMatch[3]! as LedgerCategory
+      const id = newFormatMatch[4]!
+
       const summary = (i + 1 < lines.length) ? lines[i + 1]!.trim() : ''
-
-      // Line after is details pointer
       const detailsLine = (i + 2 < lines.length) ? lines[i + 2]! : ''
       const detailsMatch = detailsLine.match(/→ Details: (.+)/)
       const detailsPath = detailsMatch ? detailsMatch[1]!.trim() : ''
 
-      entries.push({
-        timestamp: `${currentDate}T${time}:00.000Z`,
-        category,
-        id,
-        summary,
-        detailsPath,
-      })
+      entries.push({ timestamp: `${date}T${time}:00.000Z`, category, id, summary, detailsPath })
+      i += 3
+      continue
+    }
 
+    if (legacyMatch && currentDate) {
+      const time = legacyMatch[1]!
+      const category = legacyMatch[2]! as LedgerCategory
+      const id = legacyMatch[3]!
+
+      const summary = (i + 1 < lines.length) ? lines[i + 1]!.trim() : ''
+      const detailsLine = (i + 2 < lines.length) ? lines[i + 2]! : ''
+      const detailsMatch = detailsLine.match(/→ Details: (.+)/)
+      const detailsPath = detailsMatch ? detailsMatch[1]!.trim() : ''
+
+      entries.push({ timestamp: `${currentDate}T${time}:00.000Z`, category, id, summary, detailsPath })
       i += 3
       continue
     }

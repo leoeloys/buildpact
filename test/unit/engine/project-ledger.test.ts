@@ -24,9 +24,9 @@ const makeEntry = (overrides?: Partial<LedgerEntry>): LedgerEntry => ({
 })
 
 describe('formatLedgerEntry', () => {
-  it('formats with time, category, id, summary and details pointer', () => {
+  it('formats with date, time, category, id, summary and details pointer', () => {
     const formatted = formatLedgerEntry(makeEntry())
-    expect(formatted).toContain('### 14:30 — DECISION [DEC-001]')
+    expect(formatted).toContain('### 2026-04-01 14:30 — DECISION [DEC-001]')
     expect(formatted).toContain('Chose Result<T> over exceptions')
     expect(formatted).toContain('→ Details: .buildpact/memory/decisions/result-pattern.md')
   })
@@ -39,13 +39,11 @@ describe('parseLedgerEntries', () => {
       '',
       '> Unified temporal index.',
       '',
-      '## 2026-04-01',
-      '',
-      '### 14:30 — DECISION [DEC-001]',
+      '### 2026-04-01 14:30 — DECISION [DEC-001]',
       'Chose Result<T> over exceptions',
       '→ Details: .buildpact/memory/decisions/result-pattern.md',
       '',
-      '### 13:00 — HANDOFF [HOF-001]',
+      '### 2026-04-01 13:00 — HANDOFF [HOF-001]',
       'orchestrator → developer (T-001)',
       '→ Details: .buildpact/handoffs/HOF-001.json',
     ].join('\n')
@@ -63,15 +61,11 @@ describe('parseLedgerEntries', () => {
     const content = [
       '# Project Ledger',
       '',
-      '## 2026-04-02',
-      '',
-      '### 09:00 — TASK_COMPLETE [T-002]',
+      '### 2026-04-02 09:00 — TASK_COMPLETE [T-002]',
       'Finished handoff module',
       '→ Details: .buildpact/tasks/T-002.json',
       '',
-      '## 2026-04-01',
-      '',
-      '### 14:30 — DECISION [DEC-001]',
+      '### 2026-04-01 14:30 — DECISION [DEC-001]',
       'Chose Result<T>',
       '→ Details: .buildpact/memory/decisions/result-pattern.md',
     ].join('\n')
@@ -101,7 +95,7 @@ describe('appendToLedger', () => {
     expect(content).toContain('DECISION [DEC-001]')
   })
 
-  it('appends under existing date header', async () => {
+  it('appends multiple entries atomically', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'bp-ledger-'))
     await appendToLedger(tempDir, makeEntry())
     await appendToLedger(tempDir, makeEntry({ id: 'DEC-002', summary: 'Second decision' }))
@@ -109,9 +103,6 @@ describe('appendToLedger', () => {
     const content = await readFile(join(tempDir, '.buildpact', 'LEDGER.md'), 'utf-8')
     expect(content).toContain('DEC-001')
     expect(content).toContain('DEC-002')
-    // Only one date header for same date
-    const dateHeaders = content.match(/## 2026-04-01/g)
-    expect(dateHeaders).toHaveLength(1)
   })
 })
 

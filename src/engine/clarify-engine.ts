@@ -28,14 +28,19 @@ export const AMBIGUITY_CATEGORIES: AmbiguityCategory[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// Counter
+// ID generation (collision-safe across parallel agents)
 // ---------------------------------------------------------------------------
 
-let markerCounter = 0
+/** Generate a unique marker ID */
+function generateMarkerId(): string {
+  const ts = Date.now().toString(36)
+  const rand = Math.random().toString(36).slice(2, 6)
+  return `CLR-${ts}-${rand}`
+}
 
-/** Reset counter (for testing) */
+/** Reset (no-op — kept for backward compatibility with tests) */
 export function resetMarkerCounter(): void {
-  markerCounter = 0
+  // No-op: IDs are now timestamp-based
 }
 
 // ---------------------------------------------------------------------------
@@ -75,9 +80,8 @@ export function addMarker(
     })
   }
 
-  markerCounter++
   const marker: ClarificationMarker = {
-    id: `CLR-${String(markerCounter).padStart(3, '0')}`,
+    id: generateMarkerId(),
     category,
     location,
     question,

@@ -37,7 +37,7 @@ describe('addMarker', () => {
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.value.markers).toHaveLength(1)
-      expect(result.value.markers[0]!.id).toBe('CLR-001')
+      expect(result.value.markers[0]!.id).toMatch(/^CLR-/)
       expect(result.value.markers[0]!.category).toBe('SCOPE')
       expect(result.value.markers[0]!.status).toBe('open')
     }
@@ -49,7 +49,7 @@ describe('addMarker', () => {
     const result = addMarker(s, 'DATA_MODEL', '§2', 'Q2')
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value.markers[1]!.id).toBe('CLR-002')
+      expect(result.value.markers[1]!.id).toMatch(/^CLR-/)
     }
   })
 
@@ -67,7 +67,8 @@ describe('resolveMarker', () => {
   it('resolves an open marker', () => {
     let s = createClarificationSession('SPEC-001')
     s = (addMarker(s, 'SCOPE', '§1', 'What scope?') as any).value
-    const result = resolveMarker(s, 'CLR-001', 'Only user-facing features')
+    const markerId = s.markers[0]!.id
+    const result = resolveMarker(s, markerId, 'Only user-facing features')
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.value.markers[0]!.status).toBe('resolved')
@@ -93,7 +94,7 @@ describe('getUnresolvedCount / getUnresolvedMarkers', () => {
     expect(getUnresolvedCount(s)).toBe(3)
     expect(getUnresolvedMarkers(s)).toHaveLength(3)
 
-    s = (resolveMarker(s, 'CLR-001', 'resolved') as any).value
+    s = (resolveMarker(s, s.markers[0]!.id, 'resolved') as any).value
     expect(getUnresolvedCount(s)).toBe(2)
   })
 })
@@ -131,7 +132,7 @@ describe('canProceedToPlan', () => {
     s = (addMarker(s, 'DATA_MODEL', '§2', 'Q2') as any).value
     s = (addMarker(s, 'SECURITY', '§3', 'Q3') as any).value
     expect(canProceedToPlan(s).ok).toBe(false)
-    s = (resolveMarker(s, 'CLR-001', 'done') as any).value
+    s = (resolveMarker(s, s.markers[0]!.id, 'done') as any).value
     expect(canProceedToPlan(s).ok).toBe(true)
   })
 })
@@ -153,7 +154,7 @@ describe('formatMarkersForSpec', () => {
     let s = createClarificationSession('SPEC-001')
     s = (addMarker(s, 'SCOPE', '§1', 'What scope?') as any).value
     const formatted = formatMarkersForSpec(s.markers)
-    expect(formatted).toContain('[NEEDS CLARIFICATION: CLR-001]')
+    expect(formatted).toMatch(/\[NEEDS CLARIFICATION: CLR-/)
     expect(formatted).toContain('(SCOPE)')
     expect(formatted).toContain('What scope?')
   })
@@ -161,7 +162,7 @@ describe('formatMarkersForSpec', () => {
   it('excludes resolved markers', () => {
     let s = createClarificationSession('SPEC-001')
     s = (addMarker(s, 'SCOPE', '§1', 'Q1') as any).value
-    s = (resolveMarker(s, 'CLR-001', 'done') as any).value
+    s = (resolveMarker(s, s.markers[0]!.id, 'done') as any).value
     expect(formatMarkersForSpec(s.markers)).toBe('')
   })
 })
@@ -172,7 +173,7 @@ describe('formatClarificationReport', () => {
   it('includes session summary', () => {
     let s = createClarificationSession('SPEC-001')
     s = (addMarker(s, 'SCOPE', '§1', 'Q1') as any).value
-    s = (resolveMarker(s, 'CLR-001', 'answer') as any).value
+    s = (resolveMarker(s, s.markers[0]!.id, 'answer') as any).value
     s = completeRound(s)
     const report = formatClarificationReport(s)
     expect(report).toContain('SPEC-001')

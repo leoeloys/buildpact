@@ -62,9 +62,34 @@ export function createPolicy(opts: {
 // ---------------------------------------------------------------------------
 
 /**
- * Check the current status of a budget policy given observed spend.
+ * Check if the current monthly window has expired and return the effective spend.
+ * For lifetime windows, always returns observedSpend unchanged.
+ * For monthly windows, returns 0 if the window has rolled over.
  */
-export function checkPolicyStatus(policy: BudgetPolicy, observedSpend: number): BudgetPolicyStatus {
+export function effectiveSpendInWindow(
+  policy: BudgetPolicy,
+  observedSpend: number,
+  windowStartedAt: string | undefined,
+): number {
+  if (policy.windowKind !== 'monthly' || !windowStartedAt) return observedSpend
+  const start = new Date(windowStartedAt)
+  const now = new Date()
+  // Different UTC month means the window has rolled over
+  if (start.getUTCFullYear() !== now.getUTCFullYear() || start.getUTCMonth() !== now.getUTCMonth()) {
+    return 0
+  }
+  return observedSpend
+}
+
+/**
+ * Check the current status of a budget policy given observed spend.
+ * For monthly policies, pass windowStartedAt to enable automatic window reset.
+ */
+export function checkPolicyStatus(
+  policy: BudgetPolicy,
+  observedSpend: number,
+  windowStartedAt?: string | undefined,
+): BudgetPolicyStatus {
   if (!policy.enabled) {
     return {
       policy,
@@ -74,20 +99,21 @@ export function checkPolicyStatus(policy: BudgetPolicy, observedSpend: number): 
     }
   }
 
+  const spend = effectiveSpendInWindow(policy, observedSpend, windowStartedAt)
   const warnThreshold = policy.amountUsd * (policy.warnPercent / 100)
   let status: BudgetStatusLevel = 'ok'
 
-  if (observedSpend >= policy.amountUsd) {
+  if (spend >= policy.amountUsd) {
     status = 'hard_stop'
-  } else if (observedSpend >= warnThreshold) {
+  } else if (spend >= warnThreshold) {
     status = 'warning'
   }
 
   return {
     policy,
-    observed: observedSpend,
+    observed: spend,
     status,
-    remainingUsd: Math.max(0, policy.amountUsd - observedSpend),
+    remainingUsd: Math.max(0, policy.amountUsd - spend),
   }
 }
 
@@ -141,14 +167,25 @@ export function resolveIncident(
 // Persistence
 // ---------------------------------------------------------------------------
 
+/** Type guard: validate a parsed object is a BudgetPolicy */
+function isBudgetPolicy(obj: unknown): obj is BudgetPolicy {
+  if (typeof obj !== 'object' || obj === null) return false
+  const o = obj as Record<string, unknown>
+  return typeof o.id === 'string' && typeof o.scopeType === 'string' &&
+    typeof o.amountUsd === 'number' && typeof o.enabled === 'boolean'
+}
+
 /**
  * Load budget policies from .buildpact/budget/policies.json.
+ * Validates each parsed policy with a type guard.
  */
 export async function loadPolicies(projectDir: string): Promise<Result<BudgetPolicy[]>> {
   const path = join(projectDir, '.buildpact', POLICIES_FILE)
   try {
     const content = await readFile(path, 'utf-8')
-    return ok(JSON.parse(content) as BudgetPolicy[])
+    const parsed = JSON.parse(content)
+    if (!Array.isArray(parsed)) return ok([])
+    return ok(parsed.filter(isBudgetPolicy))
   } catch {
     return ok([]) // No policies yet
   }

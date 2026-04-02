@@ -128,8 +128,26 @@ export function applyCompressionRules(content: string, rules: CompressionRule[])
 // ---------------------------------------------------------------------------
 
 /**
- * Round-trip validation: verify that all headings and entities from the original
+ * Check if a heading survives in the distilled content.
+ * Uses fuzzy matching: if >70% of words in the heading appear in the distilled text,
+ * it's considered present (handles minor rephrasing during compression).
+ */
+export function headingSurvives(heading: string, distilledLower: string): boolean {
+  // Exact match (case-insensitive)
+  if (distilledLower.includes(heading.toLowerCase())) return true
+
+  // Fuzzy: check if majority of significant words survive
+  const words = heading.toLowerCase().split(/\s+/).filter(w => w.length >= 3)
+  if (words.length === 0) return true // trivial heading
+  const found = words.filter(w => distilledLower.includes(w))
+  return found.length / words.length >= 0.7
+}
+
+/**
+ * Round-trip validation: verify that headings and entities from the original
  * survive in the distilled version.
+ * Headings use fuzzy matching (70% word overlap).
+ * Entities use exact match (identifiers, version numbers must be exact).
  */
 export function validateRoundTrip(
   originalHeadings: string[],
@@ -138,7 +156,8 @@ export function validateRoundTrip(
 ): Result<void> {
   const distilledLower = distilled.toLowerCase()
 
-  const missingHeadings = originalHeadings.filter(h => !distilledLower.includes(h.toLowerCase()))
+  const missingHeadings = originalHeadings.filter(h => !headingSurvives(h, distilledLower))
+  // Entities: exact match — identifiers like FR-201 and versions like v2.3.1 must be exact
   const missingEntities = originalEntities.filter(e => !distilled.includes(e))
 
   if (missingHeadings.length > 0 || missingEntities.length > 0) {

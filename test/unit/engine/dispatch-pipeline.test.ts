@@ -39,7 +39,7 @@ describe('dispatchWithSafetyChecks', () => {
     const result = await dispatchWithSafetyChecks(makeRequest(tempDir))
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value.packet.id).toBe('HOF-001')
+      expect(result.value.packet.id).toMatch(/^HOF-/)
       expect(result.value.packet.fromAgent).toBe('Taiichi')
       expect(result.value.packet.toAgent).toBe('developer-1')
       expect(result.value.briefing).toContain('Handoff Briefing')
@@ -52,7 +52,7 @@ describe('dispatchWithSafetyChecks', () => {
     await dispatchWithSafetyChecks(makeRequest(tempDir))
 
     const ledger = await readFile(join(tempDir, '.buildpact', 'LEDGER.md'), 'utf-8')
-    expect(ledger).toContain('HANDOFF [HOF-001]')
+    expect(ledger).toMatch(/HANDOFF \[HOF-/)
     expect(ledger).toContain('Taiichi → developer-1')
   })
 

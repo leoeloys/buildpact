@@ -11,14 +11,19 @@ import type { Result } from '../contracts/errors.js'
 import type { HandoffPacket, HandoffValidation, GoalAncestry } from '../contracts/task.js'
 
 // ---------------------------------------------------------------------------
-// Handoff counter (session-scoped)
+// ID generation (collision-safe across parallel agents)
 // ---------------------------------------------------------------------------
 
-let handoffCounter = 0
+/** Generate a unique handoff ID using timestamp + random suffix */
+function generateHandoffId(): string {
+  const ts = Date.now().toString(36)
+  const rand = Math.random().toString(36).slice(2, 6)
+  return `HOF-${ts}-${rand}`
+}
 
-/** Reset counter (for testing) */
+/** Reset (no-op — kept for backward compatibility with tests) */
 export function resetHandoffCounter(): void {
-  handoffCounter = 0
+  // No-op: IDs are now timestamp-based, not counter-based
 }
 
 // ---------------------------------------------------------------------------
@@ -44,8 +49,7 @@ export function createHandoffPacket(
   taskId: string,
   opts: CreateHandoffOptions,
 ): HandoffPacket {
-  handoffCounter++
-  const id = `HOF-${String(handoffCounter).padStart(3, '0')}`
+  const id = generateHandoffId()
 
   return {
     id,

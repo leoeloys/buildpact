@@ -198,6 +198,17 @@ describe('R6 — No Self-Dispatch', () => {
     expect(v!.message).toContain('agent-1')
   })
 
+  it('blocks self-dispatch with case differences (DES-008)', () => {
+    const v = checkR6NoSelfDispatch('Orchestrator', 'orchestrator')
+    expect(v).toBeDefined()
+    expect(v!.ruleId).toBe('R6_NO_SELF_DISPATCH')
+  })
+
+  it('blocks self-dispatch with whitespace differences', () => {
+    const v = checkR6NoSelfDispatch('agent-1 ', ' agent-1')
+    expect(v).toBeDefined()
+  })
+
   it('passes for empty agents (edge case)', () => {
     expect(checkR6NoSelfDispatch('', '')).toBeUndefined()
   })

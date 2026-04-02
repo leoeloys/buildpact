@@ -25,6 +25,12 @@ const ARTIFACT_PATTERNS: Array<{ pattern: RegExp; type: ArtifactType }> = [
   { pattern: /constitution\.md$/i, type: 'constitution' },
   { pattern: /epics\.md$/i, type: 'epics' },
   { pattern: /stories\.md$/i, type: 'stories' },
+  { pattern: /research\.md$/i, type: 'research' },
+  { pattern: /decision.*\.md$/i, type: 'decision' },
+  { pattern: /approval.*\.json$/i, type: 'approval' },
+  { pattern: /quality-review.*\.md$/i, type: 'quality-review' },
+  { pattern: /policies\.json$/i, type: 'budget-policy' },
+  { pattern: /build-state\.json$/i, type: 'checkpoint' },
 ]
 
 /**
@@ -47,14 +53,19 @@ export function isOfficialArtifact(filePath: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Change entry counter
+// ID generation (collision-safe across parallel agents)
 // ---------------------------------------------------------------------------
 
-let changeCounter = 0
+/** Generate a unique change entry ID using timestamp + random suffix */
+function generateChangeId(): string {
+  const ts = Date.now().toString(36)
+  const rand = Math.random().toString(36).slice(2, 6)
+  return `ACH-${ts}-${rand}`
+}
 
-/** Reset counter (for testing) */
+/** Reset (no-op — kept for backward compatibility with tests) */
 export function resetChangeCounter(): void {
-  changeCounter = 0
+  // No-op: IDs are now timestamp-based
 }
 
 // ---------------------------------------------------------------------------
@@ -74,8 +85,7 @@ export function createChangeEntry(
   diff?: string,
   impact?: string[],
 ): ArtifactChangeEntry {
-  changeCounter++
-  const id = `ACH-${String(changeCounter).padStart(3, '0')}`
+  const id = generateChangeId()
   const artifactType = detectArtifactType(artifactPath) ?? 'spec'
 
   return {

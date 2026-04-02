@@ -144,7 +144,9 @@ export interface HandoffValidation {
 // ---------------------------------------------------------------------------
 
 /** Types of official project artifacts that are change-tracked */
-export type ArtifactType = 'prd' | 'spec' | 'plan' | 'architecture' | 'constitution' | 'epics' | 'stories'
+export type ArtifactType =
+  | 'prd' | 'spec' | 'plan' | 'architecture' | 'constitution' | 'epics' | 'stories'
+  | 'research' | 'decision' | 'approval' | 'quality-review' | 'budget-policy' | 'checkpoint'
 
 /** A recorded change to an official project artifact */
 export interface ArtifactChangeEntry {

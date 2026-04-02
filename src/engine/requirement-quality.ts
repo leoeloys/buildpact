@@ -30,10 +30,16 @@ export const QUALITY_DIMENSIONS: QualityDimension[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// Counter
+// ID generation (collision-safe across parallel agents)
 // ---------------------------------------------------------------------------
 
 let checkCounter = 0
+
+/** Generate a unique check item ID (counter is fine here — single-session checklist creation) */
+function generateCheckId(): string {
+  checkCounter++
+  return `CHK-${String(checkCounter).padStart(3, '0')}`
+}
 
 /** Reset counter (for testing) */
 export function resetCheckCounter(): void {

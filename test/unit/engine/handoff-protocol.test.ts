@@ -33,7 +33,7 @@ describe('createHandoffPacket', () => {
 
   it('creates a packet with auto-generated ID', () => {
     const packet = createHandoffPacket('orchestrator', 'developer', 'T-001', validOpts)
-    expect(packet.id).toBe('HOF-001')
+    expect(packet.id).toMatch(/^HOF-/)
     expect(packet.fromAgent).toBe('orchestrator')
     expect(packet.toAgent).toBe('developer')
     expect(packet.taskId).toBe('T-001')
@@ -45,8 +45,9 @@ describe('createHandoffPacket', () => {
   it('increments ID on each call', () => {
     const p1 = createHandoffPacket('a', 'b', 'T-1', validOpts)
     const p2 = createHandoffPacket('a', 'b', 'T-2', validOpts)
-    expect(p1.id).toBe('HOF-001')
-    expect(p2.id).toBe('HOF-002')
+    expect(p1.id).toMatch(/^HOF-/)
+    expect(p2.id).toMatch(/^HOF-/)
+    expect(p1.id).not.toBe(p2.id) // unique IDs
   })
 
   it('defaults contextFiles and priorDecisions to empty arrays', () => {
@@ -148,7 +149,7 @@ describe('formatHandoffBriefing', () => {
     const packet = createHandoffPacket('orchestrator', 'developer', 'T-001', validOpts)
     const briefing = formatHandoffBriefing(packet)
 
-    expect(briefing).toContain('Handoff Briefing [HOF-001]')
+    expect(briefing).toMatch(/Handoff Briefing \[HOF-/)
     expect(briefing).toContain('orchestrator')
     expect(briefing).toContain('developer')
     expect(briefing).toContain('Goal Chain')

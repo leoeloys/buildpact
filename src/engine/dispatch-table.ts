@@ -16,10 +16,12 @@ import type { DispatchAction, DispatchContext } from '../contracts/task.js'
 // Types
 // ---------------------------------------------------------------------------
 
-/** A single dispatch rule: name + match function */
+/** A single dispatch rule: name + priority + match function */
 export interface DispatchRule {
   /** Human-readable rule name (e.g. "all-tasks-done → verify") */
   name: string
+  /** Evaluation priority — higher numbers run first. Default: 0. Use -1 for fallback. */
+  priority: number
   /** Pure function: given context, return action or null (no match) */
   match: (ctx: DispatchContext) => DispatchAction | null
 }
@@ -34,36 +36,35 @@ export interface DispatchRule {
 export function createDispatchRule(
   name: string,
   matchFn: (ctx: DispatchContext) => DispatchAction | null,
+  priority: number = 0,
 ): DispatchRule {
-  return { name, match: matchFn }
+  return { name, priority, match: matchFn }
 }
 
 // ---------------------------------------------------------------------------
 // Built-in rules
 // ---------------------------------------------------------------------------
 
-export const RULE_ALL_TASKS_DONE = createDispatchRule(
-  'all-tasks-done → verify',
+export const RULE_PAUSED = createDispatchRule(
+  'paused → stop',
   (ctx) => {
-    if (ctx.taskIndex >= ctx.totalTasks && ctx.waveNumber >= ctx.totalWaves - 1) {
-      return { action: 'stop', reason: 'All tasks complete — proceed to verification', level: 'info' }
+    if (ctx.currentPhase === 'paused') {
+      return { action: 'stop', reason: 'Pipeline is paused', level: 'info' }
     }
     return null
   },
+  100, // highest priority
 )
 
-export const RULE_WAVE_COMPLETE = createDispatchRule(
-  'wave-complete → next-wave',
+export const RULE_BUDGET_EXCEEDED = createDispatchRule(
+  'budget-exceeded → stop',
   (ctx) => {
-    if (ctx.taskIndex >= ctx.totalTasks && ctx.waveNumber < ctx.totalWaves - 1) {
-      return {
-        action: 'dispatch',
-        unitType: 'wave',
-        unitId: `wave-${ctx.waveNumber + 1}`,
-      }
+    if (ctx.budgetRemaining <= 0) {
+      return { action: 'stop', reason: 'Budget exhausted', level: 'error' }
     }
     return null
   },
+  90,
 )
 
 export const RULE_TASK_FAILED_3X = createDispatchRule(
@@ -78,26 +79,33 @@ export const RULE_TASK_FAILED_3X = createDispatchRule(
     }
     return null
   },
+  80,
 )
 
-export const RULE_BUDGET_EXCEEDED = createDispatchRule(
-  'budget-exceeded → stop',
+export const RULE_ALL_TASKS_DONE = createDispatchRule(
+  'all-tasks-done → verify',
   (ctx) => {
-    if (ctx.budgetRemaining <= 0) {
-      return { action: 'stop', reason: 'Budget exhausted', level: 'error' }
+    if (ctx.taskIndex >= ctx.totalTasks && ctx.waveNumber >= ctx.totalWaves - 1) {
+      return { action: 'stop', reason: 'All tasks complete — proceed to verification', level: 'info' }
     }
     return null
   },
+  50,
 )
 
-export const RULE_PAUSED = createDispatchRule(
-  'paused → stop',
+export const RULE_WAVE_COMPLETE = createDispatchRule(
+  'wave-complete → next-wave',
   (ctx) => {
-    if (ctx.currentPhase === 'paused') {
-      return { action: 'stop', reason: 'Pipeline is paused', level: 'info' }
+    if (ctx.taskIndex >= ctx.totalTasks && ctx.waveNumber < ctx.totalWaves - 1) {
+      return {
+        action: 'dispatch',
+        unitType: 'wave',
+        unitId: `wave-${ctx.waveNumber + 1}`,
+      }
     }
     return null
   },
+  40,
 )
 
 export const RULE_DISPATCH_NEXT = createDispatchRule(
@@ -109,9 +117,10 @@ export const RULE_DISPATCH_NEXT = createDispatchRule(
       unitId: `wave-${ctx.waveNumber}/task-${ctx.taskIndex}`,
     }
   },
+  -1, // fallback — always matches, lowest priority
 )
 
-/** Default dispatch rules in evaluation order */
+/** Default dispatch rules sorted by priority (highest first) */
 export const DEFAULT_DISPATCH_RULES: DispatchRule[] = [
   RULE_PAUSED,
   RULE_BUDGET_EXCEEDED,
@@ -126,14 +135,18 @@ export const DEFAULT_DISPATCH_RULES: DispatchRule[] = [
 // ---------------------------------------------------------------------------
 
 /**
- * Evaluate dispatch rules against a context. First match wins.
- * Returns error if no rule matches (should never happen with DEFAULT_DISPATCH_NEXT as fallback).
+ * Evaluate dispatch rules against a context.
+ * Rules are sorted by priority (highest first). First match wins.
+ * Returns error if no rule matches.
  */
 export function evaluateRules(
   rules: DispatchRule[],
   ctx: DispatchContext,
 ): Result<{ rule: string; action: DispatchAction }> {
-  for (const rule of rules) {
+  // Sort by priority descending (highest first)
+  const sorted = [...rules].sort((a, b) => b.priority - a.priority)
+
+  for (const rule of sorted) {
     const action = rule.match(ctx)
     if (action !== null) {
       return ok({ rule: rule.name, action })

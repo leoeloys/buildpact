@@ -34,7 +34,7 @@ describe('createChangeEntry', () => {
 
   it('creates an entry with auto-incremented ID', () => {
     const entry = createChangeEntry('spec.md', 'modified', 'Added section 3', 'New requirement', 'T-001')
-    expect(entry.id).toBe('ACH-001')
+    expect(entry.id).toMatch(/^ACH-/)
     expect(entry.artifactType).toBe('spec')
     expect(entry.changeType).toBe('modified')
     expect(entry.summary).toBe('Added section 3')
@@ -46,8 +46,9 @@ describe('createChangeEntry', () => {
   it('increments counter', () => {
     const e1 = createChangeEntry('spec.md', 'added', 's1', 'r1', 'T-1')
     const e2 = createChangeEntry('plan.md', 'modified', 's2', 'r2', 'T-2')
-    expect(e1.id).toBe('ACH-001')
-    expect(e2.id).toBe('ACH-002')
+    expect(e1.id).toMatch(/^ACH-/)
+    expect(e2.id).toMatch(/^ACH-/)
+    expect(e1.id).not.toBe(e2.id)
   })
 
   it('defaults to spec when type unknown', () => {
@@ -98,7 +99,7 @@ describe('appendToChangelog', () => {
     expect(result.ok).toBe(true)
 
     const content = await readFile(join(tempDir, '.buildpact', 'changelogs', 'spec.md'), 'utf-8')
-    expect(content).toContain('ADDED [ACH-001]')
+    expect(content).toMatch(/ADDED \[ACH-/)
     expect(content).toContain('Initial spec')
     expect(content).toContain('Project kickoff')
     expect(content).toContain('T-001')
@@ -118,7 +119,7 @@ describe('formatChangeEntry', () => {
   it('formats entry as single line', () => {
     const entry = createChangeEntry('spec.md', 'modified', 'Updated scope', 'Scope change', 'T-005')
     const formatted = formatChangeEntry(entry)
-    expect(formatted).toContain('[ACH-001]')
+    expect(formatted).toMatch(/\[ACH-/)
     expect(formatted).toContain('spec:modified')
     expect(formatted).toContain('Updated scope')
   })

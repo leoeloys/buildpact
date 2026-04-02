@@ -166,12 +166,32 @@ export async function saveBuildState(projectDir: string, state: BuildState): Pro
 /**
  * Load build state from .buildpact/build-state.json.
  */
+/** Type guard: validate parsed object has required BuildState fields */
+function isBuildState(obj: unknown): obj is BuildState {
+  if (typeof obj !== 'object' || obj === null) return false
+  const o = obj as Record<string, unknown>
+  return typeof o.sessionId === 'string' && typeof o.status === 'string' &&
+    typeof o.startedAt === 'string' && Array.isArray(o.completedTasks) &&
+    Array.isArray(o.checkpoints) && typeof o.metrics === 'object'
+}
+
+/**
+ * Load build state from .buildpact/build-state.json.
+ * Validates parsed JSON with a type guard.
+ */
 export async function loadBuildState(projectDir: string): Promise<Result<BuildState>> {
   const path = join(projectDir, '.buildpact', BUILD_STATE_FILE)
   try {
     const content = await readFile(path, 'utf-8')
-    const state = JSON.parse(content) as BuildState
-    return ok(state)
+    const parsed = JSON.parse(content)
+    if (!isBuildState(parsed)) {
+      return err({
+        code: ERROR_CODES.BUILD_CHECKPOINT_CORRUPT,
+        i18nKey: 'error.build.checkpoint_corrupt',
+        params: { path },
+      })
+    }
+    return ok(parsed)
   } catch {
     return err({
       code: ERROR_CODES.BUILD_CHECKPOINT_CORRUPT,

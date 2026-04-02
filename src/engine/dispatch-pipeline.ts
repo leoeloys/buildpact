@@ -18,6 +18,7 @@ import { checkRoleBoundary, getBoundaryForRole } from './role-boundary.js'
 import type { AgentAction } from './role-boundary.js'
 import { createHandoffPacket, requireValidHandoff, formatHandoffBriefing } from './handoff-protocol.js'
 import type { CreateHandoffOptions } from './handoff-protocol.js'
+import { resolve, relative } from 'node:path'
 import { registerEvent } from './project-ledger.js'
 import { detectArtifactType, createChangeEntry, appendToChangelog } from './artifact-changelog.js'
 import {
@@ -25,6 +26,7 @@ import {
   checkR4ArtifactAccountability,
   formatRuleViolations,
 } from './orchestration-rules.js'
+import { loadPolicies, checkPolicyStatus, findApplicablePolicy } from './budget-policies.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,9 +47,11 @@ export interface DispatchRequest {
   /** Project directory for state/ledger operations */
   projectDir: string
   /** Current pipeline phase (needed for R3 goal ancestry check) */
-  phase?: string
+  phase?: string | undefined
   /** Goal ancestry for R3 enforcement */
-  goalAncestry?: GoalAncestry
+  goalAncestry?: GoalAncestry | undefined
+  /** Current total spend in USD (for budget policy check) */
+  currentSpendUsd?: number | undefined
 }
 
 /** Result of a successful dispatch */
@@ -110,7 +114,27 @@ export async function dispatchWithSafetyChecks(
     })
   }
 
-  // 4. Validate handoff packet (structural — complements R2)
+  // 4. Budget policy check — block if hard_stop
+  const policiesResult = await loadPolicies(request.projectDir)
+  if (policiesResult.ok && policiesResult.value.length > 0) {
+    const projectPolicy = findApplicablePolicy(policiesResult.value, 'project', request.projectDir)
+    if (projectPolicy) {
+      const budgetStatus = checkPolicyStatus(projectPolicy, request.currentSpendUsd ?? 0)
+      if (budgetStatus.status === 'hard_stop') {
+        return err({
+          code: ERROR_CODES.BUDGET_POLICY_HARD_STOP,
+          i18nKey: 'error.budget.hard_stop',
+          params: {
+            policyId: projectPolicy.id,
+            observed: String(budgetStatus.observed),
+            limit: String(projectPolicy.amountUsd),
+          },
+        })
+      }
+    }
+  }
+
+  // 5. Validate handoff packet (structural — complements R2)
   const validationResult = requireValidHandoff(packet)
   if (!validationResult.ok) {
     return validationResult as Result<never>
@@ -144,7 +168,14 @@ export async function recordArtifactChange(
   reason: string,
   causedBy: string,
 ): Promise<Result<void>> {
-  const artifactType = detectArtifactType(filePath)
+  // SEC-002: Canonicalize path and verify it's under project directory
+  const canonical = resolve(projectDir, filePath)
+  const rel = relative(projectDir, canonical)
+  if (rel.startsWith('..') || resolve(canonical) !== canonical) {
+    return ok(undefined) // Path escapes project dir — reject silently
+  }
+
+  const artifactType = detectArtifactType(canonical)
   if (!artifactType) return ok(undefined) // Not an official artifact — skip
 
   // R4: Artifact accountability — reason + cause required

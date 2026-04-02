@@ -103,12 +103,13 @@ describe('validateRoundTrip', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('fails when heading is missing', () => {
+  it('fails when heading is completely missing', () => {
     const result = validateRoundTrip(
-      ['Section A', 'Section B'],
+      ['Error Handling Strategy', 'Performance Requirements'],
       [],
-      '## Section A\nSome content',
+      '## Error Handling Strategy\nSome content about errors',
     )
+    // "Performance Requirements" has 0 of its words in distilled → fails
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('DISTILLATE_ROUND_TRIP_FAILED')
   })

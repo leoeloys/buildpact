@@ -207,14 +207,25 @@ export function checkR5ContextPollution(
 // ---------------------------------------------------------------------------
 
 /**
+ * Normalize agent name for comparison: lowercase + trim.
+ * Prevents self-dispatch bypass via case differences.
+ */
+function normalizeAgentName(name: string): string {
+  return name.trim().toLowerCase()
+}
+
+/**
  * R6: An agent cannot dispatch a task to itself.
  * BLOCKS: infinite recursion loops.
+ * Names are normalized (lowercase, trimmed) before comparison.
  */
 export function checkR6NoSelfDispatch(
   fromAgent: string,
   toAgent: string,
 ): RuleViolation | undefined {
-  if (fromAgent === toAgent && fromAgent.trim() !== '') {
+  const from = normalizeAgentName(fromAgent)
+  const to = normalizeAgentName(toAgent)
+  if (from === to && from !== '') {
     return {
       ruleId: 'R6_NO_SELF_DISPATCH',
       message: `Agent "${fromAgent}" attempted to dispatch to itself`,
@@ -236,6 +247,8 @@ export interface DispatchRuleContext {
   goalAncestry?: GoalAncestry | undefined
   packet: HandoffPacket
   briefingContent?: string | undefined
+  /** If this dispatch modifies an artifact, provide reason+cause for R4 check */
+  artifactChange?: { reason: string; causedBy: string } | undefined
 }
 
 /**
@@ -256,6 +269,12 @@ export function enforceOrchestrationRules(ctx: DispatchRuleContext): RuleCheckRe
   // R3: Goal ancestry (execute phase only)
   const r3 = checkR3GoalAncestry(ctx.phase, ctx.goalAncestry)
   if (r3) violations.push(r3)
+
+  // R4: Artifact accountability (if dispatch involves artifact changes)
+  if (ctx.artifactChange) {
+    const r4 = checkR4ArtifactAccountability(ctx.artifactChange.reason, ctx.artifactChange.causedBy)
+    if (r4) violations.push(r4)
+  }
 
   // R5: Briefing size
   if (ctx.briefingContent) {

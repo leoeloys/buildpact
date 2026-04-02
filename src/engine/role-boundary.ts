@@ -63,22 +63,52 @@ export const BUILT_IN_BOUNDARIES: Record<string, RoleBoundary> = {
 // Pattern matching
 // ---------------------------------------------------------------------------
 
+/** Cached compiled regexes to avoid recompilation on every check */
+const regexCache = new Map<string, RegExp>()
+
+/** Maximum pattern length to prevent excessive compilation cost */
+const MAX_PATTERN_LENGTH = 500
+
+/**
+ * Dangerous regex constructs that can cause catastrophic backtracking (ReDoS).
+ * Rejects patterns with nested quantifiers like (a+)+, (a*)*b, etc.
+ */
+const REDOS_DANGER_PATTERN = /(\([^)]*[+*][^)]*\))[+*]|\(\?[^)]*[+*][^)]*\)[+*]/
+
+/**
+ * Validate and compile a regex pattern safely.
+ * Rejects patterns that are too long or contain known ReDoS constructs.
+ */
+export function safeCompileRegex(pattern: string): RegExp | null {
+  if (pattern.length > MAX_PATTERN_LENGTH) return null
+
+  const cached = regexCache.get(pattern)
+  if (cached) return cached
+
+  // Reject known ReDoS patterns (nested quantifiers)
+  if (REDOS_DANGER_PATTERN.test(pattern)) return null
+
+  try {
+    const regex = new RegExp(pattern)
+    regexCache.set(pattern, regex)
+    return regex
+  } catch {
+    return null
+  }
+}
+
 /**
  * Check if an action matches a pattern.
- * For tool_call: matches against tool name.
- * For file_operation: matches against file path.
- * For output_pattern: matches against output content.
+ * Uses safe regex compilation with ReDoS protection and caching.
  */
 export function matchesPattern(
   patternType: ActionPattern['type'],
   value: string,
   pattern: string,
 ): boolean {
-  try {
-    return new RegExp(pattern).test(value)
-  } catch {
-    return false
-  }
+  const regex = safeCompileRegex(pattern)
+  if (!regex) return false
+  return regex.test(value)
 }
 
 // ---------------------------------------------------------------------------
