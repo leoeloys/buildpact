@@ -29,7 +29,7 @@ vi.mock('@clack/prompts', () => ({
   confirm: vi.fn(),
   multiselect: vi.fn(),
   group: vi.fn(),
-  spinner: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
+  spinner: vi.fn(() => ({ start: vi.fn(), stop: vi.fn(), message: vi.fn() })),
   log: {
     success: vi.fn(),
     warn: vi.fn(),

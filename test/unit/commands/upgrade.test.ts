@@ -8,7 +8,7 @@ import { join } from 'node:path'
 // ---------------------------------------------------------------------------
 
 const mockConfirm = vi.fn()
-const mockSpinner = { start: vi.fn(), stop: vi.fn() }
+const mockSpinner = { start: vi.fn(), stop: vi.fn(), message: vi.fn() }
 
 vi.mock('@clack/prompts', () => ({
   intro: vi.fn(),
@@ -54,7 +54,7 @@ describe('runUpgrade', () => {
   it('reports already current when schema matches', async () => {
     await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
     await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), [
-      'buildpact_schema: 1',
+      'buildpact_schema: 2',
       'project_name: "test"',
       'language: "en"',
     ].join('\n'))
@@ -126,7 +126,7 @@ describe('runUpgrade', () => {
   it('detects pt-br language from existing config', async () => {
     await mkdir(join(tmpDir, '.buildpact'), { recursive: true })
     await writeFile(join(tmpDir, '.buildpact', 'config.yaml'), [
-      'buildpact_schema: 1',
+      'buildpact_schema: 2',
       'project_name: "test"',
       'language: "pt-br"',
     ].join('\n'))
@@ -136,7 +136,7 @@ describe('runUpgrade', () => {
 
     expect(result.ok).toBe(true)
     // It should have read pt-br and created i18n with it
-    // Since schema is already 1, it reports already current
+    // Since schema matches current (2), it reports already current
     const clack = await import('@clack/prompts')
     expect(clack.log.success).toHaveBeenCalled()
   })
