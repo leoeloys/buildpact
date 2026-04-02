@@ -737,6 +737,180 @@ export interface DispatchGuardResult {
 }
 
 // ---------------------------------------------------------------------------
+// Two-Stage Review — spec compliance then code quality (Concept 3.4)
+// ---------------------------------------------------------------------------
+
+/** A single review issue */
+export interface ReviewIssue {
+  severity: 'critical' | 'important' | 'suggestion'
+  category: string
+  description: string
+  file: string
+  line?: number | undefined
+  recommendation: string
+}
+
+/** One stage of a two-stage review */
+export interface ReviewStage {
+  stage: 'spec-compliance' | 'code-quality'
+  issues: ReviewIssue[]
+  passed: boolean
+}
+
+/** Combined result of both review stages */
+export interface TwoStageReviewResult {
+  specReview: ReviewStage
+  qualityReview: ReviewStage | null
+  overallPassed: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Consistency Analyzer — cross-artifact validation (Concept 6.2)
+// ---------------------------------------------------------------------------
+
+/** Categories of cross-artifact inconsistencies */
+export type ConsistencyCategory =
+  | 'DUPLICATION' | 'TERMINOLOGY_DRIFT' | 'COVERAGE_GAP'
+  | 'REQUIREMENT_CONFLICT' | 'CONSTITUTION_VIOLATION'
+  | 'UNDERSPECIFICATION' | 'ORPHAN_TASK'
+
+/** A single consistency finding */
+export interface ConsistencyFinding {
+  id: string
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  category: ConsistencyCategory
+  description: string
+  sourceArtifact: string
+  conflictArtifact: string
+  recommendation: string
+}
+
+/** Full consistency report */
+export interface ConsistencyReport {
+  findings: ConsistencyFinding[]
+  summary: Record<string, number>
+}
+
+// ---------------------------------------------------------------------------
+// Quality Gates — 3-layer progressive quality assurance (Concept 8.2)
+// ---------------------------------------------------------------------------
+
+/** Quality gate execution mode */
+export type QualityGateMode = 'auto' | 'hybrid' | 'manual'
+
+/** Result of a single quality gate layer */
+export interface QualityGateResult {
+  layer: 1 | 2 | 3
+  mode: QualityGateMode
+  passed: boolean
+  issues: ReviewIssue[]
+  duration: number
+}
+
+// ---------------------------------------------------------------------------
+// Readiness Formal — 6-step implementation readiness (Concept 10.4)
+// ---------------------------------------------------------------------------
+
+/** Readiness assessment verdict */
+export type ReadinessVerdict = 'READY' | 'NEEDS_WORK' | 'NOT_READY'
+
+/** A single readiness step result */
+export interface ReadinessStep {
+  step: 'discovery' | 'spec-analysis' | 'plan-coverage' | 'architecture-alignment' | 'quality-review' | 'final-assessment'
+  passed: boolean
+  notes: string
+}
+
+/** Full readiness assessment */
+export interface ReadinessAssessment {
+  steps: ReadinessStep[]
+  verdict: ReadinessVerdict
+  blockers: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Reassessment — adaptive plan adjustment (Concept 12.4)
+// ---------------------------------------------------------------------------
+
+/** What triggered the reassessment */
+export type ReassessmentTrigger = 'wave-complete' | 'task-failed-2x' | 'new-contradicting-info' | 'budget-alert'
+
+/** A change to the plan from reassessment */
+export interface PlanChange {
+  type: 'reorder' | 'add' | 'remove' | 'modify'
+  taskId: string
+  reason: string
+}
+
+/** Result of a plan reassessment */
+export interface ReassessmentResult {
+  trigger: ReassessmentTrigger
+  planChanged: boolean
+  changes: PlanChange[]
+  timestamp: string
+}
+
+// ---------------------------------------------------------------------------
+// Verification Ladder — progressive verification scale (Concept 12.7)
+// ---------------------------------------------------------------------------
+
+/** Verification levels from lightweight to exhaustive */
+export type VerificationLevel = 'static' | 'command' | 'behavioral' | 'human'
+
+/** A must-have decomposed into verifiable components */
+export interface MustHave {
+  type: 'truth' | 'artifact' | 'key-link'
+  description: string
+  verificationLevel: VerificationLevel
+  verified: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Faithfulness Checker — output verification against source (Concept 20.1)
+// ---------------------------------------------------------------------------
+
+/** A claim extracted from agent output for verification */
+export interface OutputClaim {
+  claim: string
+  source: string | null
+  verified: boolean
+  faithful: boolean
+}
+
+/** Result of faithfulness checking */
+export interface FaithfulnessResult {
+  claims: OutputClaim[]
+  score: number
+  speculationMarkers: string[]
+  passed: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Simplicity Criterion (Concept 4.3)
+// ---------------------------------------------------------------------------
+
+/** Simplicity assessment for an experiment */
+export interface SimplicityCheck {
+  linesAdded: number
+  linesRemoved: number
+  netComplexity: number
+  metricImprovement: number
+  simplicityRatio: number
+}
+
+// ---------------------------------------------------------------------------
+// Parallelization Heuristics (Concept 3.5)
+// ---------------------------------------------------------------------------
+
+/** Result of parallelization analysis for a set of tasks */
+export interface ParallelizationAnalysis {
+  canParallelize: boolean
+  reasons: string[]
+  sharedFiles: string[]
+  sequentialDeps: string[]
+}
+
+// ---------------------------------------------------------------------------
 // Constitution types — canonical definitions used by enforcer + orchestrator
 // ---------------------------------------------------------------------------
 

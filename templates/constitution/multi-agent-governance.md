@@ -105,3 +105,33 @@
 - Constitution changes are classified as MAJOR (breaking), MINOR (additive), or PATCH (cosmetic)
 - MAJOR changes require approval and generate a sync impact report
 - Affected specs and plans receive warnings on next execution
+
+### Two-Stage Review Protocol
+- Task output MUST pass spec-compliance review BEFORE code-quality review
+- Critical issues in spec-compliance block code-quality review entirely
+- Both stages must pass for overall approval
+
+### Cross-Artifact Consistency Protocol
+- Constitution violations in consistency analysis are automatically CRITICAL severity
+- Requirements with 0 corresponding tasks are coverage gaps (HIGH severity)
+- Tasks with 0 corresponding requirements are orphan tasks (MEDIUM severity)
+
+### Quality Gate Layers
+- Layer 1 (local, ~30s): lint + test + typecheck — MUST pass before Layer 2
+- Layer 2 (AI, ~5min): spec compliance + code quality — MUST pass before Layer 3
+- Layer 3 (human): strategic review with sign-off
+
+### Implementation Readiness Protocol
+- 6-step readiness assessment: Discovery → Spec Analysis → Plan Coverage → Architecture Alignment → Quality Review → Final Assessment
+- Verdict: READY (all passed), NEEDS_WORK (some failed), NOT_READY (critical failures)
+- NOT_READY verdict BLOCKS execution
+
+### Adaptive Reassessment Protocol
+- Reassessment triggers: wave complete, 2+ consecutive task failures, new contradicting information
+- Reassessment can reorder, add, or remove tasks in the plan
+- All plan changes must include a documented reason
+
+### Faithfulness Protocol
+- Agent output claims MUST be verifiable against spec and context
+- Faithfulness score below 0.7 BLOCKS completion
+- Speculation markers ("probably", "should work") trigger review

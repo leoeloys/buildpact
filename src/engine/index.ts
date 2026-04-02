@@ -436,3 +436,86 @@ export {
   createVersionChange,
   formatImpactReport,
 } from './constitution-semantic-versioning.js'
+
+// ── Fase 3: Integration ───────────────────────────────────────────────────
+
+// Two-Stage Review (concept 3.4)
+export {
+  createSpecComplianceReview,
+  createCodeQualityReview,
+  runTwoStageReview,
+  hasCriticalIssues,
+  formatReviewReport,
+} from './two-stage-review.js'
+
+// Parallelization Heuristics (concept 3.5)
+export {
+  analyzeParallelization,
+  findSharedOutputFiles,
+  findSequentialDeps,
+  canRunInParallel,
+} from './parallelization-heuristics.js'
+
+// Simplicity Criterion (concept 4.3)
+export {
+  calculateSimplicity,
+  shouldAutoDiscard,
+  formatSimplicityReport,
+} from './simplicity-criterion.js'
+
+// Fixed-Budget Experiment (concept 4.5)
+export {
+  createExperimentBudget,
+  checkBudget as checkExperimentBudget,
+} from './fixed-budget-experiment.js'
+export type { ExperimentBudget } from './fixed-budget-experiment.js'
+
+// Consistency Analyzer (concept 6.2)
+export {
+  createConsistencyFinding,
+  analyzeConsistency,
+  hasCriticalFindings,
+  constitutionViolationsAreCritical,
+  formatConsistencyReport,
+} from './consistency-analyzer.js'
+
+// Story Slicing (concept 6.6-6.8)
+export {
+  validateStoryIndependence,
+  detectParallelMarkers,
+  hasCyclicDependencies,
+} from './story-slicing.js'
+export type { StorySlice } from './story-slicing.js'
+
+// Quality Gates (concept 8.2 + 20.4)
+export {
+  runLayer1,
+  runLayer2,
+  runLayer3,
+  requireLayerOrder,
+} from './quality-gates.js'
+
+// Readiness Formal (concept 10.4)
+export {
+  createReadinessAssessment,
+  completeStep,
+  computeVerdict,
+  requireReady,
+  formatReadinessReport,
+} from './readiness-formal.js'
+
+// Reassessment (concept 12.4)
+export {
+  createReassessment,
+  shouldReassess,
+  applyChanges,
+  formatReassessmentReport,
+} from './reassessment.js'
+
+// Faithfulness Checker (concept 20.1)
+export {
+  extractClaims,
+  checkFaithfulness,
+  detectSpeculationMarkers,
+  requireFaithfulness,
+} from './faithfulness-checker.js'
