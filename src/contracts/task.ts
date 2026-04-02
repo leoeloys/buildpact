@@ -208,6 +208,292 @@ export interface LedgerEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Verification Gate — evidence-based completion claims (Concept 3.1)
+// ---------------------------------------------------------------------------
+
+/** Types of completion claims that require verification evidence */
+export type VerificationClaim = 'TESTS_PASS' | 'BUILD_SUCCEEDS' | 'BUG_FIXED' | 'LINT_CLEAN' | 'SPEC_SATISFIED'
+
+/** Proof that a claim was verified by actually running a command */
+export interface VerificationEvidence {
+  /** Command that was executed (e.g. "npm test") */
+  command: string
+  /** Exit code of the command */
+  exitCode: number
+  /** Output from the command (truncated to 2000 chars max) */
+  output: string
+  /** ISO timestamp of when the command was run */
+  timestamp: string
+  /** What claim this evidence supports */
+  claimType: VerificationClaim
+  /** True if evidence is older than the staleness threshold */
+  stale: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Debug Protocol — systematic 4-phase debugging (Concept 3.2)
+// ---------------------------------------------------------------------------
+
+/** Mandatory phases for systematic debugging */
+export type DebugPhase = 'INVESTIGATION' | 'PATTERN_ANALYSIS' | 'HYPOTHESIS_TEST' | 'IMPLEMENTATION'
+
+/** A single hypothesis in a debug session */
+export interface Hypothesis {
+  /** What might be causing the bug */
+  description: string
+  /** Evidence supporting this hypothesis */
+  evidenceFor: string[]
+  /** Evidence against this hypothesis */
+  evidenceAgainst: string[]
+  /** Whether this hypothesis has been tested */
+  tested: boolean
+  /** Result of testing */
+  result: 'confirmed' | 'rejected' | 'pending'
+}
+
+/** State of a systematic debug session */
+export interface DebugSession {
+  /** Unique session identifier */
+  sessionId: string
+  /** Current phase — MUST progress sequentially */
+  phase: DebugPhase
+  /** Hypotheses generated during investigation */
+  hypotheses: Hypothesis[]
+  /** Collected evidence (error messages, logs, reproduction steps) */
+  evidence: string[]
+  /** Number of fix attempts (>= 3 triggers architecture review) */
+  fixAttempts: number
+  /** True only when root cause is identified — required to enter IMPLEMENTATION */
+  rootCauseIdentified: boolean
+  /** ISO timestamp of session creation */
+  createdAt: string
+}
+
+// ---------------------------------------------------------------------------
+// Build State — granular checkpoint recovery (Concept 8.3)
+// ---------------------------------------------------------------------------
+
+/** Build lifecycle status */
+export type BuildStatus = 'PENDING' | 'IN_PROGRESS' | 'PAUSED' | 'ABANDONED' | 'COMPLETED' | 'FAILED'
+
+/** A single checkpoint after a completed task */
+export interface BuildCheckpoint {
+  /** Task that was completed */
+  taskId: string
+  /** ISO timestamp of completion */
+  completedAt: string
+  /** Artifacts produced by the task */
+  artifacts: string[]
+  /** Cost of this task in USD */
+  costUsd: number
+}
+
+/** Full build state with checkpoints for resume capability */
+export interface BuildState {
+  /** Session identifier */
+  sessionId: string
+  /** Current build status */
+  status: BuildStatus
+  /** ISO timestamp of build start */
+  startedAt: string
+  /** ISO timestamp of last checkpoint */
+  lastCheckpoint: string
+  /** Current wave number */
+  currentWave: number
+  /** Current task identifier */
+  currentTask: string
+  /** List of completed task IDs */
+  completedTasks: string[]
+  /** Checkpoint history */
+  checkpoints: BuildCheckpoint[]
+  /** Aggregate metrics */
+  metrics: {
+    totalTasks: number
+    completedTasks: number
+    totalCostUsd: number
+    elapsedSeconds: number
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch Table — rules-based pipeline routing (Concept 12.1)
+// ---------------------------------------------------------------------------
+
+/** What the dispatch table decides to do */
+export type DispatchActionType = 'dispatch' | 'stop' | 'skip'
+
+/** Result of evaluating dispatch rules */
+export interface DispatchAction {
+  /** What to do */
+  action: DispatchActionType
+  /** Unit type to dispatch (if action='dispatch') */
+  unitType?: string | undefined
+  /** Unit identifier (if action='dispatch') */
+  unitId?: string | undefined
+  /** Reason (if action='stop') */
+  reason?: string | undefined
+  /** Severity level (if action='stop') */
+  level?: 'info' | 'warning' | 'error' | undefined
+}
+
+/** Pipeline state snapshot used by dispatch rules for decision-making */
+export interface DispatchContext {
+  /** Project root directory */
+  projectDir: string
+  /** Current pipeline phase */
+  currentPhase: string
+  /** Current wave number */
+  waveNumber: number
+  /** Current task index within wave */
+  taskIndex: number
+  /** Total tasks in current wave */
+  totalTasks: number
+  /** Total waves in plan */
+  totalWaves: number
+  /** Whether the last task succeeded */
+  lastTaskSucceeded: boolean
+  /** Count of consecutive task failures */
+  consecutiveFailures: number
+  /** Remaining budget in USD */
+  budgetRemaining: number
+}
+
+// ---------------------------------------------------------------------------
+// Metrics Ledger — per-unit cost/token tracking (Concept 12.3)
+// ---------------------------------------------------------------------------
+
+/** Pipeline phase for metrics categorization */
+export type MetricsPhase = 'research' | 'planning' | 'execution' | 'verification'
+
+/** Cost and token metrics for a single unit of work */
+export interface UnitMetrics {
+  /** Type of unit ("research", "plan-task", "execute-task", "verify") */
+  unitType: string
+  /** Unique unit identifier (e.g. "wave-2/task-3") */
+  unitId: string
+  /** Model used (e.g. "claude-opus-4-6") */
+  model: string
+  /** ISO timestamp of start */
+  startedAt: string
+  /** ISO timestamp of finish */
+  finishedAt: string
+  /** Token breakdown */
+  tokens: {
+    input: number
+    output: number
+    cacheRead: number
+    cacheWrite: number
+    total: number
+  }
+  /** Cost in USD */
+  costUsd: number
+  /** Number of tool calls made */
+  toolCalls: number
+  /** Pipeline phase this unit belongs to */
+  phase: MetricsPhase
+}
+
+/** Persistent ledger of all unit metrics for a project */
+export interface MetricsLedger {
+  /** Schema version */
+  version: 1
+  /** ISO timestamp of project start */
+  projectStartedAt: string
+  /** All recorded unit metrics */
+  units: UnitMetrics[]
+}
+
+// ---------------------------------------------------------------------------
+// Requirement Quality — "unit tests for English" (Concept 6.3)
+// ---------------------------------------------------------------------------
+
+/** Dimensions for evaluating requirement quality */
+export type QualityDimension =
+  | 'COMPLETENESS' | 'CLARITY' | 'CONSISTENCY'
+  | 'MEASURABILITY' | 'COVERAGE' | 'TESTABILITY'
+
+/** A single item in a requirement quality checklist */
+export interface RequirementCheckItem {
+  /** Item identifier (CHK-001) */
+  id: string
+  /** The question being evaluated */
+  question: string
+  /** Quality dimension this item measures */
+  dimension: QualityDimension
+  /** Reference to the spec section (null = no traceability) */
+  specReference: string | null
+  /** Evaluation result */
+  status: 'pass' | 'fail' | 'na'
+  /** Evaluator notes */
+  notes: string | null
+}
+
+/** Complete requirement quality checklist for a spec */
+export interface RequirementChecklist {
+  /** Spec being evaluated */
+  specId: string
+  /** All checklist items */
+  items: RequirementCheckItem[]
+  /** % of items with specReference (0-1) */
+  traceabilityRate: number
+  /** % of items with status='pass' (0-1) */
+  passRate: number
+}
+
+// ---------------------------------------------------------------------------
+// Distillate — lossless document compression (Concept 10.1)
+// ---------------------------------------------------------------------------
+
+/** Configuration for a distillation run */
+export interface DistillateConfig {
+  /** Source file paths to distill */
+  sourcePaths: string[]
+  /** What the distillate will be used for (e.g. "plan creation") */
+  downstreamConsumer?: string | undefined
+  /** Target token budget */
+  tokenBudget?: number | undefined
+  /** Custom output path */
+  outputPath?: string | undefined
+  /** Run round-trip validation */
+  validate?: boolean | undefined
+}
+
+/** Result of a distillation run */
+export interface DistillateResult {
+  /** The distilled content */
+  content: string
+  /** Headings preserved from source */
+  sourceHeadings: string[]
+  /** Named entities preserved from source */
+  namedEntities: string[]
+  /** Estimated token count of the distillate */
+  tokenEstimate: number
+  /** Compression ratio (distilled/original, e.g. 0.35 = 65% reduction) */
+  compressionRatio: number
+}
+
+// ---------------------------------------------------------------------------
+// Compression Rules — reusable strip/preserve/transform (Concept 10.6)
+// ---------------------------------------------------------------------------
+
+/** What a compression rule does to matching content */
+export type CompressionAction = 'strip' | 'preserve' | 'transform'
+
+/** A single reusable compression rule */
+export interface CompressionRule {
+  /** Rule identifier */
+  id: string
+  /** What to do with matching content */
+  action: CompressionAction
+  /** Regex pattern to match */
+  pattern: string
+  /** Human-readable description */
+  description: string
+  /** Replacement text (for 'transform' action) */
+  replacement?: string | undefined
+}
+
+// ---------------------------------------------------------------------------
 // Constitution types — canonical definitions used by enforcer + orchestrator
 // ---------------------------------------------------------------------------
 

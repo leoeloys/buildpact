@@ -29,3 +29,42 @@
 - Pipeline state files must not exceed 50 lines
 - Do not accumulate context between orchestrator cycles — read from disk, decide, write back
 - Handoff briefings must be condensed, not raw context dumps
+
+### Verification Protocol
+- Agents MUST provide VerificationEvidence before claiming task completion
+- Evidence older than 5 minutes is stale and must be refreshed
+- Output containing "probably", "should work", "seems correct" triggers red flag review
+- TaskResult with success:true but no evidence is BLOCKED
+
+### Debug Protocol
+- Debug agents MUST complete INVESTIGATION phase before proposing fixes
+- Each hypothesis must be tested individually — one variable at a time
+- After 3 failed fix attempts, agents must question architecture, not hypotheses
+- Never skip from INVESTIGATION directly to IMPLEMENTATION
+
+### Specification Quality
+- Specifications with unresolved [NEEDS CLARIFICATION] markers MUST NOT proceed to planning
+- Maximum 3 unresolved markers allowed after clarify phase
+- Requirements MUST pass quality checklist (80%+ pass rate, 80%+ traceability) before planning
+
+### Build Recovery
+- Build checkpoints saved after each completed task
+- Builds without activity for >1 hour are marked ABANDONED
+- Recovery sessions MUST resume from last checkpoint, not restart
+
+### Budget Policy Protocol
+- Budget policies enforce hard stops — agents MUST pause when budget is exceeded
+- Budget incidents require explicit resolution before work can resume
+- Monthly budget windows reset on the 1st of each month UTC
+
+### Distillation Protocol
+- Distillation MUST be lossless — all headings, entities, and decisions must survive
+- Round-trip validation required for critical artifacts (spec, plan, architecture)
+- Compression strips filler and hedging but NEVER strips numbers, decisions, or constraints
+
+### Anti-Sycophancy Protocol
+- Agents receiving feedback MUST restate it in own technical terms before acting
+- Agents MUST verify claims against codebase reality before implementing suggestions
+- Agents MUST NOT express agreement without technical justification
+- Agents MUST NOT use performative language ("Great point!", "Absolutely right!", "You're correct!")
+- Implement changes one at a time with individual verification, not all at once

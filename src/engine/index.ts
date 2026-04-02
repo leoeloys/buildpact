@@ -198,3 +198,127 @@ export {
   recordArtifactChange,
 } from './dispatch-pipeline.js'
 export type { DispatchRequest, DispatchResult } from './dispatch-pipeline.js'
+
+// ── Fase 1: Foundations ────────────────────────────────────────────────────
+
+// Verification Gate (concept 3.1)
+export {
+  createVerificationEvidence,
+  isEvidenceStale,
+  validateEvidence,
+  detectRedFlags,
+  requireVerificationForClaim,
+  DEFAULT_MAX_AGE_MS,
+  MAX_OUTPUT_LENGTH,
+  RED_FLAG_PATTERNS,
+} from './verification-gate.js'
+
+// Debug Protocol (concept 3.2)
+export {
+  createDebugSession,
+  addEvidence as addDebugEvidence,
+  addHypothesis,
+  testHypothesis,
+  recordFixAttempt,
+  advancePhase,
+  checkFixLimit,
+  formatDebugBriefing,
+  DEFAULT_MAX_FIX_ATTEMPTS,
+} from './debug-protocol.js'
+
+// Clarify Engine (concept 6.1)
+export {
+  createClarificationSession,
+  addMarker,
+  resolveMarker,
+  completeRound,
+  getUnresolvedCount,
+  getUnresolvedMarkers,
+  canProceedToPlan,
+  formatMarkersForSpec,
+  formatClarificationReport,
+  resetMarkerCounter,
+  AMBIGUITY_CATEGORIES,
+  DEFAULT_MAX_UNRESOLVED,
+} from './clarify-engine.js'
+
+// Requirement Quality (concept 6.3)
+export {
+  createChecklist,
+  createCheckItem,
+  evaluateItem,
+  calculateTraceability,
+  calculatePassRate,
+  checkQualityThreshold,
+  resetCheckCounter,
+  QUALITY_DIMENSIONS,
+  DEFAULT_MIN_PASS_RATE,
+  DEFAULT_MIN_TRACEABILITY,
+} from './requirement-quality.js'
+
+// Build Checkpoint (concept 8.3)
+export {
+  createBuildState,
+  addCheckpoint,
+  setCurrentTask,
+  updateStatus as updateBuildStatus,
+  resumeFromCheckpoint,
+  detectAbandoned,
+  saveBuildState,
+  loadBuildState,
+  DEFAULT_ABANDON_THRESHOLD_MS,
+} from './build-checkpoint.js'
+
+// Distillator (concept 10.1)
+export {
+  estimateTokens,
+  extractHeadings,
+  extractNamedEntities,
+  applyRule as applyCompressionRule,
+  applyCompressionRules,
+  validateRoundTrip,
+  distill,
+} from './distillator.js'
+
+// Dispatch Table (concept 12.1)
+export {
+  createDispatchRule,
+  evaluateRules,
+  formatRulesTable,
+  DEFAULT_DISPATCH_RULES,
+  RULE_ALL_TASKS_DONE,
+  RULE_WAVE_COMPLETE,
+  RULE_TASK_FAILED_3X,
+  RULE_BUDGET_EXCEEDED,
+  RULE_PAUSED,
+  RULE_DISPATCH_NEXT,
+} from './dispatch-table.js'
+export type { DispatchRule } from './dispatch-table.js'
+
+// Metrics Ledger (concept 12.3)
+export {
+  createMetricsLedger,
+  createUnitMetrics,
+  recordUnit,
+  totalCostByPhase,
+  totalCost as totalMetricsCost,
+  averageCostPerTask,
+  projectedTotalCost,
+  costBurnRate,
+  totalTokens,
+  loadMetricsLedger,
+  saveMetricsLedger,
+} from './metrics-ledger.js'
+
+// Budget Policies (concept 14.2)
+export {
+  createPolicy,
+  checkPolicyStatus,
+  findApplicablePolicy,
+  createIncident,
+  resolveIncident as resolveBudgetIncident,
+  loadPolicies,
+  savePolicies,
+  recordIncident,
+  DEFAULT_WARN_PERCENT,
+} from './budget-policies.js'

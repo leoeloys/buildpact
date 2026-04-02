@@ -36,3 +36,60 @@ export interface BudgetGuardResult {
   /** Human-readable message for display */
   message?: string
 }
+
+// ---------------------------------------------------------------------------
+// Budget Policies — scoped budgets with windows and incidents (Concept 14.2)
+// ---------------------------------------------------------------------------
+
+/** Scope level for a budget policy */
+export type BudgetScopeType = 'project' | 'squad' | 'agent'
+
+/** Time window for budget tracking */
+export type BudgetWindowKind = 'monthly' | 'lifetime'
+
+/** Current status of a budget policy */
+export type BudgetStatusLevel = 'ok' | 'warning' | 'hard_stop'
+
+/** A budget policy defining spend limits for a specific scope */
+export interface BudgetPolicy {
+  /** Unique policy identifier */
+  id: string
+  /** What level this policy applies to */
+  scopeType: BudgetScopeType
+  /** Identifier of the scope (project name, squad id, or agent id) */
+  scopeId: string
+  /** Time window for tracking spend */
+  windowKind: BudgetWindowKind
+  /** Maximum allowed spend in USD */
+  amountUsd: number
+  /** Warning threshold as percentage (default: 80) */
+  warnPercent: number
+  /** Whether this policy is active */
+  enabled: boolean
+}
+
+/** Current status of a budget policy based on observed spend */
+export interface BudgetPolicyStatus {
+  /** The policy being checked */
+  policy: BudgetPolicy
+  /** Observed spend in the current window */
+  observed: number
+  /** Current status level */
+  status: BudgetStatusLevel
+  /** Remaining budget in USD */
+  remainingUsd: number
+}
+
+/** A recorded budget policy violation incident */
+export interface BudgetIncident {
+  /** Policy that was violated */
+  policyId: string
+  /** ISO timestamp of when the incident was triggered */
+  triggeredAt: string
+  /** Observed spend amount at trigger time */
+  observedAmount: number
+  /** Threshold that was exceeded */
+  threshold: number
+  /** How the incident was resolved (null = unresolved) */
+  resolution: 'acknowledged' | 'increased' | 'paused' | null
+}
