@@ -24,6 +24,8 @@ const STEP_REF_PATTERN = /\{\{step:(\d+)\}\}/g
  */
 export function parseStepReference(templateContent: string): string[] {
   const refs: string[] = []
+  // Reset lastIndex to avoid stale state from previous calls (global regex)
+  STEP_REF_PATTERN.lastIndex = 0
   let match: RegExpExecArray | null = STEP_REF_PATTERN.exec(templateContent)
   while (match !== null) {
     refs.push(`step:${match[1]}`)

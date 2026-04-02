@@ -16,15 +16,18 @@ import type {
 } from '../contracts/task.js'
 
 // ---------------------------------------------------------------------------
-// Counter
+// ID generation (collision-safe)
 // ---------------------------------------------------------------------------
 
-let findingCounter = 0
-
-/** Reset the auto-ID counter (useful for testing) */
-export function resetFindingCounter(): void {
-  findingCounter = 0
+/** Generate unique finding ID */
+function generateFindingId(): string {
+  const ts = Date.now().toString(36)
+  const rand = Math.random().toString(36).slice(2, 6)
+  return `CST-${ts}-${rand}`
 }
+
+/** Reset (no-op — kept for backward compat) */
+export function resetFindingCounter(): void {}
 
 // ---------------------------------------------------------------------------
 // Factory
@@ -41,9 +44,8 @@ export function createConsistencyFinding(
   conflict: string,
   recommendation: string,
 ): ConsistencyFinding {
-  findingCounter += 1
   return {
-    id: `CST-${String(findingCounter).padStart(3, '0')}`,
+    id: generateFindingId(),
     severity,
     category,
     description,

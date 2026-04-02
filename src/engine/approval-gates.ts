@@ -133,6 +133,14 @@ export async function saveApproval(
   }
 }
 
+/** Type guard: validate parsed object is an ApprovalRequest */
+function isApprovalRequest(obj: unknown): obj is ApprovalRequest {
+  if (typeof obj !== 'object' || obj === null) return false
+  const o = obj as Record<string, unknown>
+  return typeof o.id === 'string' && typeof o.type === 'string' &&
+    typeof o.status === 'string' && typeof o.requestedAt === 'string'
+}
+
 export async function loadApproval(
   projectDir: string,
   approvalId: string,
@@ -140,7 +148,11 @@ export async function loadApproval(
   const path = join(projectDir, '.buildpact', 'approvals', `${approvalId}.json`)
   try {
     const content = await readFile(path, 'utf-8')
-    return ok(JSON.parse(content) as ApprovalRequest)
+    const parsed = JSON.parse(content)
+    if (!isApprovalRequest(parsed)) {
+      return err({ code: ERROR_CODES.FILE_READ_FAILED, i18nKey: 'error.file.read_failed', params: { path } })
+    }
+    return ok(parsed)
   } catch {
     return err({
       code: ERROR_CODES.FILE_READ_FAILED,

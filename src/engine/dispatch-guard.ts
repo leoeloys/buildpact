@@ -25,17 +25,8 @@ export function checkWavePrerequisites(
   const missingPrerequisites: string[] = []
 
   // All tasks in waves before targetWave must be completed
-  if (targetWave > 0) {
-    // We can only verify by checking completedTasks count against expected
-    // In practice, the wave executor tracks this — guard is a safety net
-    const expectedPriorTasks = buildState.checkpoints.filter(cp => {
-      // Parse wave from taskId pattern "wave-N/task-M" or just check if it's in completedTasks
-      return buildState.completedTasks.includes(cp.taskId)
-    })
-
-    if (buildState.currentWave < targetWave - 1) {
-      missingPrerequisites.push(`Wave ${targetWave - 1} not yet started (current: ${buildState.currentWave})`)
-    }
+  if (targetWave > 0 && buildState.currentWave < targetWave - 1) {
+    missingPrerequisites.push(`Wave ${targetWave - 1} not yet started (current: ${buildState.currentWave})`)
   }
 
   // Task should not already be completed

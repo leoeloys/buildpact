@@ -125,8 +125,8 @@ export function costBurnRate(ledger: MetricsLedger): number {
   if (ledger.units.length === 0) return 0
 
   const firstStart = new Date(ledger.projectStartedAt).getTime()
-  const lastFinish = Math.max(
-    ...ledger.units.map(u => new Date(u.finishedAt).getTime()),
+  const lastFinish = ledger.units.reduce(
+    (max, u) => Math.max(max, new Date(u.finishedAt).getTime()), 0,
   )
   const elapsedHours = (lastFinish - firstStart) / (1000 * 60 * 60)
   if (elapsedHours <= 0) return 0
@@ -148,11 +148,20 @@ export function totalTokens(ledger: MetricsLedger): number {
 /**
  * Load metrics ledger from .buildpact/metrics.json.
  */
+/** Type guard: validate parsed object is a MetricsLedger */
+function isMetricsLedger(obj: unknown): obj is MetricsLedger {
+  if (typeof obj !== 'object' || obj === null) return false
+  const o = obj as Record<string, unknown>
+  return o.version === 1 && typeof o.projectStartedAt === 'string' && Array.isArray(o.units)
+}
+
 export async function loadMetricsLedger(projectDir: string): Promise<Result<MetricsLedger>> {
   const path = join(projectDir, '.buildpact', METRICS_FILE)
   try {
     const content = await readFile(path, 'utf-8')
-    return ok(JSON.parse(content) as MetricsLedger)
+    const parsed = JSON.parse(content)
+    if (!isMetricsLedger(parsed)) return ok(createMetricsLedger())
+    return ok(parsed)
   } catch {
     return ok(createMetricsLedger()) // No ledger yet — return empty
   }

@@ -171,7 +171,7 @@ export async function recordArtifactChange(
   // SEC-002: Canonicalize path and verify it's under project directory
   const canonical = resolve(projectDir, filePath)
   const rel = relative(projectDir, canonical)
-  if (rel.startsWith('..') || resolve(canonical) !== canonical) {
+  if (rel.startsWith('..')) {
     return ok(undefined) // Path escapes project dir — reject silently
   }
 

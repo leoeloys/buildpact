@@ -187,14 +187,15 @@ export async function distill(
   config: DistillateConfig,
   rules: CompressionRule[],
 ): Promise<Result<DistillateResult>> {
-  // Read and concatenate sources
+  // Read and concatenate sources, tracking skipped files
   let combined = ''
+  const skippedFiles: string[] = []
   for (const path of config.sourcePaths) {
     try {
       const content = await readFile(path, 'utf-8')
       combined += content + '\n\n'
     } catch {
-      // Skip unreadable files
+      skippedFiles.push(path)
     }
   }
 

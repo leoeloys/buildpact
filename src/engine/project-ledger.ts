@@ -6,8 +6,7 @@
  * @see Original BuildPact concept 16.6
  */
 
-import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { readFile, mkdir, writeFile, appendFile, access } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
@@ -96,7 +95,8 @@ export async function appendToLedger(
     }
   }
 
-  // Atomic append — safe for concurrent writes
+  // Append-only write — minimizes data loss risk under concurrent access
+  // Note: Node.js appendFile is NOT truly atomic; use file locks for strict guarantees
   try {
     await appendFile(path, '\n' + formatted + '\n', 'utf-8')
     return ok(undefined)
@@ -259,7 +259,9 @@ export async function initializeLedger(projectDir: string): Promise<Result<void>
 
   // LEDGER.md — only create if missing
   const lPath = ledgerPath(projectDir)
-  if (!existsSync(lPath)) {
+  let ledgerExists = false
+  try { await access(lPath); ledgerExists = true } catch { /* not found */ }
+  if (!ledgerExists) {
     const header = [
       '# Project Ledger',
       '',

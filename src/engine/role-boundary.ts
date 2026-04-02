@@ -66,6 +66,9 @@ export const BUILT_IN_BOUNDARIES: Record<string, RoleBoundary> = {
 /** Cached compiled regexes to avoid recompilation on every check */
 const regexCache = new Map<string, RegExp>()
 
+/** Maximum cache entries to prevent unbounded memory growth */
+const MAX_REGEX_CACHE_SIZE = 200
+
 /** Maximum pattern length to prevent excessive compilation cost */
 const MAX_PATTERN_LENGTH = 500
 
@@ -90,6 +93,11 @@ export function safeCompileRegex(pattern: string): RegExp | null {
 
   try {
     const regex = new RegExp(pattern)
+    if (regexCache.size >= MAX_REGEX_CACHE_SIZE) {
+      // Evict oldest entry
+      const firstKey = regexCache.keys().next().value
+      if (firstKey !== undefined) regexCache.delete(firstKey)
+    }
     regexCache.set(pattern, regex)
     return regex
   } catch {
@@ -134,8 +142,6 @@ export function checkRoleBoundary(
   boundary: RoleBoundary,
   action: AgentAction,
 ): Result<void> {
-  const now = new Date().toISOString()
-
   // Check blocked actions first (blacklist takes priority)
   for (const blocked of boundary.blockedActions) {
     const value = actionValueForType(blocked.type, action)

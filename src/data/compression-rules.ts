@@ -33,13 +33,6 @@ export const STRIP_RULES: CompressionRule[] = [
     description: 'Remove hedging attributions',
   },
   {
-    id: 'S04',
-    action: 'strip',
-    pattern: '\\b(In order to)\\b',
-    description: 'Remove verbose "in order to" → implicit "to"',
-    replacement: 'To',
-  },
-  {
     id: 'S05',
     action: 'strip',
     pattern: '\\b(The fact that)\\s*',
@@ -143,6 +136,13 @@ export const PRESERVE_RULES: CompressionRule[] = [
 // ---------------------------------------------------------------------------
 
 export const TRANSFORM_RULES: CompressionRule[] = [
+  {
+    id: 'T00',
+    action: 'transform',
+    pattern: '\\b(In order to)\\b',
+    description: 'Transform verbose "in order to" → "To"',
+    replacement: 'To',
+  },
   {
     id: 'T01',
     action: 'transform',

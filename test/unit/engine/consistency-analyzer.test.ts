@@ -14,11 +14,12 @@ beforeEach(() => {
 })
 
 describe('createConsistencyFinding', () => {
-  it('generates sequential IDs', () => {
+  it('generates unique IDs', () => {
     const f1 = createConsistencyFinding('high', 'DUPLICATION', 'dup', 'a.md', 'b.md', 'merge')
     const f2 = createConsistencyFinding('low', 'COVERAGE_GAP', 'gap', 'c.md', 'd.md', 'add')
-    expect(f1.id).toBe('CST-001')
-    expect(f2.id).toBe('CST-002')
+    expect(f1.id).toMatch(/^CST-/)
+    expect(f2.id).toMatch(/^CST-/)
+    expect(f1.id).not.toBe(f2.id)
   })
 
   it('preserves all fields', () => {
@@ -107,7 +108,7 @@ describe('formatConsistencyReport', () => {
     const f = createConsistencyFinding('high', 'DUPLICATION', 'dup desc', 'src.md', 'tgt.md', 'merge')
     const report = analyzeConsistency([f])
     const text = formatConsistencyReport(report)
-    expect(text).toContain('CST-001')
+    expect(text).toMatch(/CST-/)
     expect(text).toContain('DUPLICATION')
     expect(text).toContain('dup desc')
   })
