@@ -114,3 +114,87 @@ export type {
   WebhookPayload,
   NotificationConfig,
 } from './webhook-notifier.js'
+
+// ── Fase 0: Multi-Agent Orchestration ──────────────────────────────────────
+
+// Role Boundary (concept 16.1)
+export {
+  ORCHESTRATOR_BOUNDARY,
+  DEVELOPER_BOUNDARY,
+  REVIEWER_BOUNDARY,
+  BUILT_IN_BOUNDARIES,
+  matchesPattern,
+  checkRoleBoundary,
+  getBoundaryForRole,
+  createViolationRecord,
+} from './role-boundary.js'
+export type { AgentAction } from './role-boundary.js'
+
+// Handoff Protocol (concept 16.2)
+export {
+  createHandoffPacket,
+  validateHandoffPacket,
+  requireValidHandoff,
+  formatHandoffBriefing,
+  resetHandoffCounter,
+} from './handoff-protocol.js'
+export type { CreateHandoffOptions } from './handoff-protocol.js'
+
+// Stateless Orchestrator (concept 16.3)
+export {
+  readPipelineState,
+  writePipelineState,
+  parseStateContent,
+  formatStateContent,
+  orchestratorCycle,
+} from './stateless-orchestrator.js'
+export type { PipelineState, CycleOutcome } from './stateless-orchestrator.js'
+
+// Artifact Changelog (concept 16.5)
+export {
+  detectArtifactType,
+  isOfficialArtifact,
+  createChangeEntry,
+  validateChangeEntry,
+  appendToChangelog,
+  formatChangeEntry,
+  resetChangeCounter,
+} from './artifact-changelog.js'
+
+// Project Ledger (concept 16.6)
+export {
+  formatLedgerEntry,
+  appendToLedger,
+  parseLedgerEntries,
+  readLedger,
+  generateMapContent,
+  initializeLedger,
+  registerEvent,
+} from './project-ledger.js'
+
+// Orchestration Rules (Fase 0 constitution — programmatic enforcement)
+export {
+  checkR1RoleBoundary,
+  checkR2HandoffCompleteness,
+  checkR3GoalAncestry,
+  checkR4ArtifactAccountability,
+  checkR5ContextPollution,
+  checkR6NoSelfDispatch,
+  enforceOrchestrationRules,
+  formatRuleViolations,
+  MAX_STATE_LINES as RULE_MAX_STATE_LINES,
+  MAX_BRIEFING_BYTES as RULE_MAX_BRIEFING_BYTES,
+} from './orchestration-rules.js'
+export type {
+  OrchestrationRuleId,
+  RuleViolation,
+  RuleCheckResult,
+  DispatchRuleContext,
+} from './orchestration-rules.js'
+
+// Integrated Dispatch Pipeline (Fase 0 integration)
+export {
+  dispatchWithSafetyChecks,
+  recordArtifactChange,
+} from './dispatch-pipeline.js'
+export type { DispatchRequest, DispatchResult } from './dispatch-pipeline.js'

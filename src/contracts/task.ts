@@ -1,6 +1,22 @@
 // Task Dispatch Payload — FR-302
 // Contracts are stubs in Alpha — shapes stable from commit one
 
+// ---------------------------------------------------------------------------
+// Goal Ancestry — traces task objective back to project mission (Paperclip 14.1)
+// ---------------------------------------------------------------------------
+
+/** Full goal chain from mission to task — agents always know the "why" */
+export interface GoalAncestry {
+  /** Top-level project mission (e.g. "Build the #1 AI note-taking app") */
+  mission: string
+  /** Current project goal (e.g. "Ship MVP with core CRUD + search") */
+  projectGoal: string
+  /** Phase/wave goal (e.g. "Implement data model and API") */
+  phaseGoal: string
+  /** Specific task objective (e.g. "Create user entity with validation") */
+  taskObjective: string
+}
+
 /** Payload dispatched to isolated subagents via Task() */
 export interface TaskDispatchPayload {
   /** Unique task identifier within the session */
@@ -17,6 +33,8 @@ export interface TaskDispatchPayload {
   budgetUsd?: number
   /** Path to the project constitution file, if it exists (FR-202) */
   constitutionPath?: string
+  /** Goal ancestry — why this task matters in the bigger picture */
+  goalAncestry?: GoalAncestry | undefined
 }
 
 /** Result returned by a completed subagent task */
@@ -33,4 +51,186 @@ export interface TaskResult {
   error?: string
   /** Response content from the subagent */
   response?: string
+}
+
+// ---------------------------------------------------------------------------
+// Role Boundary — whitelist/blacklist per agent role (Original 16.1)
+// ---------------------------------------------------------------------------
+
+/** Pattern type for matching agent actions */
+export type ActionPatternType = 'tool_call' | 'output_pattern' | 'file_operation'
+
+/** A single action pattern for whitelist/blacklist matching */
+export interface ActionPattern {
+  /** What kind of action this pattern matches */
+  type: ActionPatternType
+  /** Regex pattern to match against (tool name, output content, or file path) */
+  pattern: string
+  /** Human-readable description of what this pattern covers */
+  description: string
+}
+
+/** Role boundary definition — what an agent CAN and CANNOT do */
+export interface RoleBoundary {
+  /** Role identifier (e.g. "orchestrator", "developer", "reviewer") */
+  agentRole: string
+  /** Actions this role is allowed to perform */
+  allowedActions: ActionPattern[]
+  /** Actions this role is blocked from performing */
+  blockedActions: ActionPattern[]
+}
+
+/** Recorded when a role boundary check fails */
+export interface RoleBoundaryViolation {
+  /** The agent role that attempted the action */
+  agentRole: string
+  /** The action that was attempted */
+  attemptedAction: string
+  /** The pattern that matched the blocked action */
+  matchedPattern: ActionPattern
+  /** ISO timestamp of the violation */
+  timestamp: string
+}
+
+// ---------------------------------------------------------------------------
+// Handoff Protocol — formal transition between agents (Original 16.2)
+// ---------------------------------------------------------------------------
+
+/** Formal handoff packet for agent-to-agent transitions */
+export interface HandoffPacket {
+  /** Unique handoff identifier (HOF-001) */
+  id: string
+  /** Agent sending the handoff */
+  fromAgent: string
+  /** Agent receiving the handoff */
+  toAgent: string
+  /** Task being handed off */
+  taskId: string
+  /** Condensed context briefing for the receiver */
+  briefing: string
+  /** Goal ancestry — why this task matters */
+  goalAncestry?: GoalAncestry | undefined
+  /** What the receiver is expected to produce */
+  expectedOutput: {
+    /** Type of output ("code", "spec", "review", "plan") */
+    type: string
+    /** Files that should be produced */
+    artifacts: string[]
+    /** How to know the work is done */
+    acceptanceCriteria: string[]
+  }
+  /** File paths the receiver needs to read */
+  contextFiles: string[]
+  /** Relevant decisions from the decisions log */
+  priorDecisions: string[]
+  /** Constraints (budget, time, scope) */
+  constraints: string[]
+  /** ISO timestamp */
+  timestamp: string
+}
+
+/** Result of validating a handoff packet */
+export interface HandoffValidation {
+  /** Whether the packet is valid for dispatch */
+  valid: boolean
+  /** Fields that are missing or invalid */
+  missingFields: string[]
+  /** Non-blocking warnings */
+  warnings: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Artifact Changelog — track changes to official project documents (Original 16.5)
+// ---------------------------------------------------------------------------
+
+/** Types of official project artifacts that are change-tracked */
+export type ArtifactType = 'prd' | 'spec' | 'plan' | 'architecture' | 'constitution' | 'epics' | 'stories'
+
+/** A recorded change to an official project artifact */
+export interface ArtifactChangeEntry {
+  /** Unique change identifier (ACH-001) */
+  id: string
+  /** Path to the changed artifact */
+  artifactPath: string
+  /** Type of artifact */
+  artifactType: ArtifactType
+  /** ISO timestamp */
+  timestamp: string
+  /** Kind of change */
+  changeType: 'added' | 'removed' | 'modified'
+  /** Short description of what changed */
+  summary: string
+  /** Why the change was made */
+  reason: string
+  /** Task or decision that caused this change */
+  causedBy: string
+  /** Compact diff (before → after) */
+  diff: string
+  /** Other artifacts impacted by this change */
+  impact: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Project Ledger — unified temporal index of all events (Original 16.6)
+// ---------------------------------------------------------------------------
+
+/** Categories of events tracked in the unified project ledger */
+export type LedgerCategory =
+  | 'DECISION'
+  | 'ARTIFACT_CHANGE'
+  | 'HANDOFF'
+  | 'APPROVAL'
+  | 'BUDGET'
+  | 'QUALITY'
+  | 'TASK_COMPLETE'
+  | 'TASK_FAILED'
+  | 'LESSON'
+  | 'GOTCHA'
+  | 'FORENSIC'
+  | 'READINESS'
+  | 'REASSESSMENT'
+  | 'CONSTITUTION'
+  | 'CHECKPOINT'
+  | 'VERIFICATION'
+
+/** A single entry in the unified project ledger */
+export interface LedgerEntry {
+  /** ISO timestamp */
+  timestamp: string
+  /** Event category */
+  category: LedgerCategory
+  /** Unique reference ID (e.g. DEC-005, ACH-012, HOF-003) */
+  id: string
+  /** One-line descriptive summary */
+  summary: string
+  /** Path to file with full details */
+  detailsPath: string
+}
+
+// ---------------------------------------------------------------------------
+// Constitution types — canonical definitions used by enforcer + orchestrator
+// ---------------------------------------------------------------------------
+
+/** A parsed constitution principle */
+export interface ConstitutionPrinciple {
+  /** The section this principle belongs to */
+  section: string
+  /** The principle name/text */
+  name: string
+}
+
+/** A detected constitution violation */
+export interface ConstitutionViolation {
+  /** The principle that was violated */
+  principle: string
+  /** The content that triggered the violation */
+  trigger: string
+}
+
+/** Result of enforcing constitution against output */
+export interface EnforcementResult {
+  /** List of violations found */
+  violations: ConstitutionViolation[]
+  /** Whether any violations were found */
+  hasViolations: boolean
 }

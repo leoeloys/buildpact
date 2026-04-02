@@ -5,6 +5,7 @@
  */
 
 import { mkdir, readFile, writeFile, copyFile, readdir, access } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ok, err } from '../contracts/errors.js'
@@ -50,7 +51,10 @@ function resolveTemplatesDir(): string {
   try {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = dirname(__filename)
-    return join(__dirname, '..', 'templates')
+    // tsdown may inline into dist/cli/index.mjs (2 levels up) or a flat dist/ chunk (1 level up)
+    const oneLevelUp = join(__dirname, '..', 'templates')
+    if (existsSync(oneLevelUp)) return oneLevelUp
+    return join(__dirname, '..', '..', 'templates')
   } catch {
     return join(process.cwd(), 'templates')
   }
@@ -360,13 +364,9 @@ export async function adopt(options: AdoptOptions): Promise<Result<AdoptResult>>
       created.push('.buildpact/profiles')
     }
 
-    // 5. IDE configs (skip already-configured IDEs)
-    const configuredIdes = new Set(scan.existingAiConfigs.map(c => c.ide))
+    // 5. IDE configs — always install BuildPact slash commands even if IDE is already configured,
+    //    because having .claude/commands doesn't mean .claude/commands/bp/ exists.
     for (const ide of ides) {
-      if (configuredIdes.has(ide)) {
-        skipped.push(`IDE: ${ide} (already configured)`)
-        continue
-      }
       await installIdeConfig(ide, projectDir, templatesDir)
       created.push(`IDE: ${ide}`)
     }

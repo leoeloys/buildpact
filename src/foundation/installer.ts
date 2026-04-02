@@ -1,4 +1,5 @@
 import { mkdir, copyFile, readFile, writeFile, readdir } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AuditLogger } from './audit.js'
@@ -8,12 +9,15 @@ import type { Result } from '../contracts/errors.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
 
 /** Resolve the root templates directory.
- *  Works in both compiled dist/ and Vitest direct-source contexts. */
+ *  Works in both compiled dist/ (flat chunks or nested cli/) and Vitest direct-source contexts. */
 function resolveTemplatesDir(): string {
   try {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = dirname(__filename)
-    return join(__dirname, '..', 'templates')
+    // tsdown may inline into dist/cli/index.mjs (2 levels up) or a flat dist/ chunk (1 level up)
+    const oneLevelUp = join(__dirname, '..', 'templates')
+    if (existsSync(oneLevelUp)) return oneLevelUp
+    return join(__dirname, '..', '..', 'templates')
   } catch {
     // Fallback for environments where import.meta.url is unavailable
     return join(process.cwd(), 'templates')
