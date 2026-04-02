@@ -68,3 +68,40 @@
 - Agents MUST NOT express agreement without technical justification
 - Agents MUST NOT use performative language ("Great point!", "Absolutely right!", "You're correct!")
 - Implement changes one at a time with individual verification, not all at once
+
+### TDD Enforcement Protocol
+- Implementation tasks MUST follow RED-GREEN-REFACTOR cycle
+- In RED phase: create test file BEFORE any production file — test MUST fail
+- In GREEN phase: ONLY production files may be modified — test MUST pass
+- In REFACTOR phase: tests MUST continue passing after each change
+- Config files and generated code are exempt from TDD requirements
+
+### Spec-First Gate
+- Execute MUST NOT proceed without an approved specification
+- Specs with unresolved [NEEDS CLARIFICATION] markers MUST NOT be approved
+- Bypass via --skip-spec is allowed but MUST be recorded in audit log
+
+### Self-Critique Protocol
+- Implementation agents MUST complete self-critique at post-code and post-test gates
+- Minimum 3 predicted bugs + 3 edge cases per critique — vague descriptions are rejected
+- Skipping self-critique MUST be flagged in audit log
+
+### Adversarial Review Protocol
+- Adversarial reviews MUST produce a minimum of 10 findings
+- 0 findings is a suspicious result requiring re-analysis
+- Reviews attack the work, not the person — cynical but professional
+
+### Research Phase Protocol
+- Blocking technical unknowns MUST be resolved before planning
+- Informational unknowns may be resolved during planning
+- Low-confidence findings generate warnings in the plan
+
+### Approval Gate Protocol
+- Spec approval, plan approval, architecture decisions, budget increases, and constitution changes require explicit human sign-off
+- Rejected approvals MUST include a decision note explaining the reason
+- Revision requests return the artifact to the agent with feedback
+
+### Constitution Versioning Protocol
+- Constitution changes are classified as MAJOR (breaking), MINOR (additive), or PATCH (cosmetic)
+- MAJOR changes require approval and generate a sync impact report
+- Affected specs and plans receive warnings on next execution

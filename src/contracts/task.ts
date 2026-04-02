@@ -496,6 +496,247 @@ export interface CompressionRule {
 }
 
 // ---------------------------------------------------------------------------
+// TDD Enforcer — RED-GREEN-REFACTOR cycle (Concept 3.3)
+// ---------------------------------------------------------------------------
+
+/** TDD cycle phases */
+export type TddPhase = 'RED' | 'GREEN' | 'REFACTOR'
+
+/** Result of running tests during a TDD cycle */
+export interface TestRunResult {
+  phase: TddPhase
+  exitCode: number
+  failureCount: number
+  timestamp: string
+}
+
+/** State of a TDD enforcement cycle for a task */
+export interface TddCycleState {
+  taskId: string
+  phase: TddPhase
+  testFilePath: string | null
+  testRunResults: TestRunResult[]
+  productionFilesModified: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Self-Critique — mandatory self-assessment gates (Concept 8.1)
+// ---------------------------------------------------------------------------
+
+/** A predicted issue from self-critique */
+export interface PredictedIssue {
+  description: string
+  severity: 'high' | 'medium' | 'low'
+  mitigated: boolean
+  mitigation: string | null
+}
+
+/** Self-critique report produced at post-code and post-test gates */
+export interface SelfCritiqueReport {
+  taskId: string
+  gate: 'post-code' | 'post-test'
+  predictedBugs: PredictedIssue[]
+  edgeCases: PredictedIssue[]
+  overallPass: boolean
+  skipped: boolean
+  timestamp: string
+}
+
+// ---------------------------------------------------------------------------
+// Adversarial Review — cynical posture, minimum findings (Concept 10.2)
+// ---------------------------------------------------------------------------
+
+/** Configuration for an adversarial review */
+export interface AdversarialReviewConfig {
+  content: string
+  contentType: 'spec' | 'plan' | 'code' | 'diff' | 'architecture'
+  minimumFindings: number
+}
+
+/** A single finding from adversarial review */
+export interface AdversarialFinding {
+  description: string
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  category: 'missing' | 'wrong' | 'vague' | 'inconsistent' | 'security' | 'performance'
+  evidence: string
+}
+
+/** Result of an adversarial review */
+export interface AdversarialReviewResult {
+  findings: AdversarialFinding[]
+  suspicious: boolean
+  reviewerPosture: string
+}
+
+// ---------------------------------------------------------------------------
+// Edge Case Hunter — exhaustive path enumeration (Concept 10.3)
+// ---------------------------------------------------------------------------
+
+/** A single edge case finding */
+export interface EdgeCaseFinding {
+  location: string
+  triggerCondition: string
+  guardSnippet: string
+  potentialConsequence: string
+  severity: 'high' | 'medium' | 'low'
+}
+
+/** Result of edge case hunting */
+export interface EdgeCaseHuntResult {
+  findings: EdgeCaseFinding[]
+}
+
+// ---------------------------------------------------------------------------
+// Session Forensics — crash recovery traces (Concept 12.2)
+// ---------------------------------------------------------------------------
+
+/** A traced tool call from the audit log */
+export interface TracedToolCall {
+  name: string
+  input: Record<string, unknown>
+  result?: string | undefined
+  isError: boolean
+}
+
+/** Complete execution trace reconstructed from a crashed session */
+export interface ExecutionTrace {
+  toolCalls: TracedToolCall[]
+  filesWritten: string[]
+  filesRead: string[]
+  commandsRun: string[]
+  errors: string[]
+  lastReasoning: string
+  toolCallCount: number
+}
+
+/** Recovery briefing injected into recovery session prompt */
+export interface RecoveryBriefing {
+  unitType: string
+  unitId: string
+  trace: ExecutionTrace
+  gitChanges: string | null
+  prompt: string
+}
+
+// ---------------------------------------------------------------------------
+// Approval Gates — formal human governance (Concept 14.3)
+// ---------------------------------------------------------------------------
+
+/** Types of approvals in the pipeline */
+export type ApprovalType =
+  | 'SPEC_APPROVAL'
+  | 'PLAN_APPROVAL'
+  | 'ARCHITECTURE_DECISION'
+  | 'BUDGET_INCREASE'
+  | 'CONSTITUTION_CHANGE'
+  | 'RISK_ACCEPTANCE'
+
+/** Status of an approval request */
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'revision_requested'
+
+/** A formal approval request */
+export interface ApprovalRequest {
+  id: string
+  type: ApprovalType
+  description: string
+  requestedAt: string
+  status: ApprovalStatus
+  decidedAt: string | null
+  decisionNote: string | null
+  artifacts: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Research Phase — resolve technical unknowns (Concept 6.4)
+// ---------------------------------------------------------------------------
+
+/** A technical unknown blocking or informing planning */
+export interface TechnicalUnknown {
+  id: string
+  description: string
+  source: string
+  priority: 'blocking' | 'informational'
+  status: 'unresolved' | 'resolved'
+}
+
+/** A research finding resolving an unknown */
+export interface ResearchFinding {
+  unknownId: string
+  finding: string
+  sources: string[]
+  recommendation: string
+  confidence: 'high' | 'medium' | 'low'
+}
+
+/** State of a research phase */
+export interface ResearchPhaseState {
+  unknowns: TechnicalUnknown[]
+  findings: ResearchFinding[]
+  status: 'pending' | 'complete'
+}
+
+// ---------------------------------------------------------------------------
+// Experiment Loop — autonomous metric optimization (Concept 4.1)
+// ---------------------------------------------------------------------------
+
+/** Result of a single experiment iteration */
+export interface ExperimentResult {
+  commitHash: string
+  metric: number
+  status: 'keep' | 'discard' | 'crash'
+  description: string
+  timestamp: string
+}
+
+/** State of an experiment loop */
+export interface ExperimentLoopState {
+  tag: string
+  branch: string
+  baseline: number | null
+  experiments: ExperimentResult[]
+  stopCondition: 'manual' | 'budget' | 'plateau'
+}
+
+// ---------------------------------------------------------------------------
+// Constitution Semantic Versioning (Concept 6.5)
+// ---------------------------------------------------------------------------
+
+/** Semantic version for constitution changes */
+export interface ConstitutionVersion {
+  major: number
+  minor: number
+  patch: number
+}
+
+/** Classification of a constitution change */
+export interface ConstitutionVersionChange {
+  type: 'added' | 'removed' | 'modified' | 'clarified'
+  principle: string
+  impact: 'breaking' | 'additive' | 'cosmetic'
+  affectedArtifacts: string[]
+}
+
+/** Impact report for constitution version change */
+export interface SyncImpactReport {
+  version: ConstitutionVersion
+  changes: ConstitutionVersionChange[]
+  affectedSpecs: string[]
+  affectedPlans: string[]
+  migrationRequired: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch Guard — prerequisite verification (Concept 12.5)
+// ---------------------------------------------------------------------------
+
+/** Result of a dispatch guard check */
+export interface DispatchGuardResult {
+  allowed: boolean
+  blockedBy: string[]
+  missingPrerequisites: string[]
+}
+
+// ---------------------------------------------------------------------------
 // Constitution types — canonical definitions used by enforcer + orchestrator
 // ---------------------------------------------------------------------------
 

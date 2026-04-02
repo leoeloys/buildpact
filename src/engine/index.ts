@@ -322,3 +322,117 @@ export {
   recordIncident,
   DEFAULT_WARN_PERCENT,
 } from './budget-policies.js'
+
+// ── Fase 2: Enforcement ───────────────────────────────────────────────────
+
+// TDD Enforcer (concept 3.3)
+export {
+  createTddCycle,
+  isExemptFromTdd,
+  isTestFile,
+  recordFileModification,
+  recordTestRun,
+  advanceTddPhase,
+  detectTddAntipatterns,
+} from './tdd-enforcer.js'
+
+// Spec-First Gate (concept 3.7)
+export {
+  requireApprovedSpec,
+  specExists,
+  hasApprovalMarker,
+  countClarificationMarkers,
+  createSpecBypass,
+} from './spec-first-gate.js'
+
+// Self-Critique (concept 8.1)
+export {
+  createSelfCritiqueReport,
+  createSkippedReport,
+  isVagueDescription,
+  validateSelfCritique,
+  requireSelfCritique,
+} from './self-critique.js'
+
+// Adversarial Review (concept 10.2)
+export {
+  createReviewConfig,
+  createFinding as createAdversarialFinding,
+  createReviewResult,
+  validateReviewResult,
+  summarizeFindings,
+  formatFindings as formatAdversarialFindings,
+} from './adversarial-review.js'
+
+// Edge Case Hunter (concept 10.3)
+export {
+  createFinding as createEdgeCaseFinding,
+  createHuntResult,
+  countBySeverity,
+  filterBySeverity,
+  formatFindings as formatEdgeCaseFindings,
+  EDGE_CASE_CATEGORIES,
+} from './edge-case-hunter.js'
+
+// Session Forensics (concept 12.2)
+export {
+  createEmptyTrace,
+  addToolCall,
+  reconstructTrace,
+  generateRecoveryBriefing,
+  buildRecoveryFromAudit,
+} from './session-forensics.js'
+
+// Experiment Loop (concept 4.1)
+export {
+  createExperimentLoop,
+  setBaseline,
+  requireBaseline,
+  recordExperiment,
+  shouldKeep,
+  bestExperiment,
+  experimentCount,
+  detectPlateau,
+} from './experiment-loop.js'
+
+// Research Phase (concept 6.4)
+export {
+  createResearchPhase,
+  addUnknown,
+  addFinding as addResearchFinding,
+  getBlockingUnresolved,
+  getUnresolvedCount as getResearchUnresolvedCount,
+  canProceedToPlan as researchCanProceedToPlan,
+  completeResearch,
+} from './research-phase.js'
+
+// Dispatch Guard (concept 12.5)
+export {
+  checkWavePrerequisites,
+  checkTaskPrerequisites,
+  formatGuardResult,
+} from './dispatch-guard.js'
+
+// Approval Gates (concept 14.3)
+export {
+  createApprovalRequest,
+  approveRequest,
+  rejectRequest,
+  requestRevision,
+  requireApproval,
+  saveApproval,
+  loadApproval,
+  getPendingCount,
+} from './approval-gates.js'
+
+// Constitution Semantic Versioning (concept 6.5)
+export {
+  createVersion,
+  formatVersion,
+  parseVersion,
+  classifyChange,
+  computeNextVersion,
+  generateImpactReport,
+  createVersionChange,
+  formatImpactReport,
+} from './constitution-semantic-versioning.js'
