@@ -26,8 +26,9 @@ export interface MapEntry {
 // Known file/directory descriptions
 // ---------------------------------------------------------------------------
 
-/** Well-known file descriptions within .buildpact/ */
+/** Well-known file descriptions within the project */
 const KNOWN_FILES: Record<string, string> = {
+  // .buildpact/ files
   'constitution.md': 'Project rules and principles — immutable contract for AI agents',
   'config.yaml': 'Project configuration (language, domain, IDE, experience level)',
   'project-context.md': 'High-level context for AI agents about this project',
@@ -36,10 +37,36 @@ const KNOWN_FILES: Record<string, string> = {
   'build-state.json': 'Current build state with checkpoints for resume capability',
   'metrics.json': 'Aggregated cost and token usage metrics',
   'squad-lock.yaml': 'Squad version pinning with content hash integrity',
+  // Project root files
+  'README.md': 'Project overview, installation, and usage guide',
+  'CLAUDE.md': 'Claude Code harness entry point — links to constitution',
+  'CHANGELOG.md': 'Release history and version changelog',
+  'CONTRIBUTING.md': 'Contributor guide — how to develop and submit changes',
+  'DECISIONS.md': 'Append-only log of significant project decisions',
+  'STATUS.md': 'Living document of current project state',
+  'LICENSE': 'MIT License',
+  'package.json': 'npm package manifest — dependencies, scripts, metadata',
+  'package-lock.json': 'Locked dependency tree for reproducible installs',
+  'tsconfig.json': 'TypeScript compiler configuration',
+  'tsdown.config.ts': 'Build tool configuration (tsdown bundler)',
+  'vitest.config.ts': 'Test runner configuration (Vitest)',
+  '.gitignore': 'Git ignore rules — excludes dist, node_modules, .DS_Store',
+  'action.yml': 'GitHub Action manifest for CI/CD pipeline integration',
+  // Scripts
+  'install.sh': 'One-liner installation script (curl | bash)',
+  'release-check.ts': 'Pre-release validation checks',
+  'release-publish.ts': 'Release publishing automation',
+  // Squad files
+  'squad.yaml': 'Squad definition — name, version, domain, agents, automation level',
+  // Config files
+  'balanced.yaml': 'Balanced cost/quality profile (default)',
+  'quality.yaml': 'Quality-first profile (higher cost, better results)',
+  'budget.yaml': 'Budget-first profile (lower cost, faster execution)',
 }
 
 /** Well-known directory descriptions */
 const KNOWN_DIRS: Record<string, string> = {
+  // .buildpact/ internals
   'audit': 'Append-only JSONL logs of every CLI operation',
   'specs': 'Structured specifications — one subdirectory per spec (slug-based)',
   'plans': 'Wave-based execution plans — one subdirectory per plan',
@@ -53,6 +80,42 @@ const KNOWN_DIRS: Record<string, string> = {
   'forensics': 'Crash recovery traces and session forensics',
   'checkpoints': 'Build checkpoint snapshots for recovery',
   'profiles': 'Model cost/quality profiles',
+  'reports': 'Generated reports (benchmarks, quality audits)',
+  'agents': 'Squad agent persona definitions (one .md per agent)',
+  'hooks': 'Squad lifecycle hooks',
+  'templates': 'IDE-specific prompt templates for squad agents',
+  // Project root directories
+  'src': 'TypeScript source code — CLI, engine, commands, contracts, foundation',
+  'test': 'Test suite — unit, integration, e2e, fixtures, snapshots',
+  'docs': 'Documentation site (VitePress) — English + Português',
+  'scripts': 'Build, release, and installation scripts',
+  'action': 'GitHub Action for CI/CD pipeline integration',
+  'locales': 'Internationalization message files (en, pt-br)',
+  'dist': 'Compiled build output (auto-generated, gitignored)',
+  // src/ subdirectories
+  'cli': 'CLI entry point and argument parsing',
+  'commands': 'Command handlers — one subdirectory per command',
+  'contracts': 'TypeScript interfaces and type definitions (no logic)',
+  'engine': 'Pipeline engine — orchestration, verification, budgets, agents',
+  'foundation': 'Core infrastructure — i18n, audit, config, scanning, updates',
+  'data': 'Static data files embedded in the CLI',
+  'benchmark': 'Performance benchmark harness',
+  'optimize': 'Code optimization and simplification engine',
+  // test/ subdirectories
+  'unit': 'Unit tests — mirrors src/ structure',
+  'integration': 'Integration tests — cross-module flows',
+  'e2e': 'End-to-end tests — full pipeline simulation',
+  'fixtures': 'Test fixture data and mock files',
+  'snapshots': 'Snapshot test baselines',
+  // docs/ subdirectories
+  'en': 'English documentation',
+  'pt-br': 'Portuguese (Brazil) documentation',
+  'guide': 'Getting started and usage guides',
+  'reference': 'API and command reference',
+  'concepts': 'Architecture and design concepts',
+  // common
+  'best-practices': 'Best practice guides for spec-driven development',
+  'software': 'Software development squad (default)',
 }
 
 // ---------------------------------------------------------------------------
@@ -97,12 +160,19 @@ async function inferFileDescription(filePath: string, name: string): Promise<str
   return 'Project file'
 }
 
-/** Infer a description for a directory. */
-function inferDirDescription(name: string): string {
+/** Infer a description for a directory based on name and parent context. */
+function inferDirDescription(name: string, parentPath?: string): string {
   if (KNOWN_DIRS[name]) return KNOWN_DIRS[name]
 
-  // Spec slug directories (e.g., "user-auth", "payment-flow")
-  if (name.match(/^[a-z0-9-]+$/)) return `Artifact directory: ${name}`
+  // Command handler directories (src/commands/*)
+  if (parentPath?.endsWith('/commands') || parentPath?.endsWith('\\commands')) {
+    return `\`buildpact ${name}\` command handler`
+  }
+
+  // Spec/plan slug directories
+  if (parentPath?.includes('specs') || parentPath?.includes('plans')) {
+    return `Pipeline artifact: ${name}`
+  }
 
   return 'Subdirectory'
 }
@@ -120,7 +190,7 @@ async function generateDirectoryMap(
   projectDir: string,
 ): Promise<string> {
   const relPath = relative(projectDir, dirPath)
-  const dirName = relPath || '.buildpact'
+  const dirName = relPath || '.' // root = "."
   const entries: MapEntry[] = []
 
   let dirEntries: import('node:fs').Dirent[]
@@ -130,9 +200,16 @@ async function generateDirectoryMap(
     return ''
   }
 
+  const SKIP_LISTING = new Set([
+    'node_modules', '.git', 'dist', 'coverage',
+    '.next', '.nuxt', '.cache', '__pycache__',
+    '.remember', '.vitepress', 'rascunhos',
+  ])
+
   for (const entry of dirEntries) {
     if (entry.name === 'MAP.md') continue // skip self
     if (entry.name.startsWith('.')) continue // skip hidden
+    if (entry.isDirectory() && SKIP_LISTING.has(entry.name)) continue // skip build/cache dirs
 
     const fullPath = join(dirPath, entry.name)
     const fileStat = await stat(fullPath).catch(() => null)
@@ -148,7 +225,7 @@ async function generateDirectoryMap(
         size: fileStat.size,
       })
     } else if (entry.isDirectory()) {
-      const description = inferDirDescription(entry.name)
+      const description = inferDirDescription(entry.name, dirPath)
       // Count children for context
       let childCount = 0
       try {
@@ -214,7 +291,12 @@ export async function generateMapsRecursive(
   rootDir: string,
   projectDir: string,
 ): Promise<string[]> {
-  const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage'])
+  const SKIP_DIRS = new Set([
+    'node_modules', '.git', 'dist', 'coverage',
+    '.next', '.nuxt', '.cache', '__pycache__',
+    '.remember', '.vitepress', 'rascunhos',
+    'templates', 'test', 'fixtures', // templates/test: MAP.md would interfere with readdir-based tests and squad file counts
+  ])
   // Slug-container directories: their children are slug-named dirs, not fixed structure.
   // MAP.md in these would conflict with readdir-based slug lookups.
   const SLUG_CONTAINERS = new Set(['specs', 'plans'])
@@ -258,4 +340,13 @@ export async function refreshBuildpactMaps(projectDir: string): Promise<string[]
     return [] // no .buildpact/ yet
   }
   return generateMapsRecursive(buildpactDir, projectDir)
+}
+
+/**
+ * Generate MAP.md files for the ENTIRE project tree.
+ * Covers root, src/, test/, docs/, templates/, scripts/, action/, .claude/, .buildpact/.
+ * Skips node_modules, dist, coverage, .git, and other build artifacts.
+ */
+export async function refreshAllProjectMaps(projectDir: string): Promise<string[]> {
+  return generateMapsRecursive(projectDir, projectDir)
 }

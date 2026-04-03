@@ -2,8 +2,9 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
-.DS_Store
+**/.DS_Store
 docs/.vitepress/dist/
 docs/.vitepress/cache/
 .claude/worktrees/
+.remember/
 rascunhos/

@@ -175,6 +175,7 @@ export {
 // Directory Map — per-directory MAP.md index (concept 16.6+)
 export {
   refreshBuildpactMaps,
+  refreshAllProjectMaps,
   generateMapsRecursive,
 } from './directory-map.js'
 
