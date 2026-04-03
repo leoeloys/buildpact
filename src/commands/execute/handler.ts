@@ -43,7 +43,7 @@ import {
   requiresWriteConfirmation,
 } from '../../engine/autonomy-manager.js'
 import { registerEvent } from '../../engine/project-ledger.js'
-import { refreshBuildpactMaps } from '../../engine/directory-map.js'
+import { refreshBuildpactMaps, refreshAllProjectMaps } from '../../engine/directory-map.js'
 import { isCiMode, ciLog } from '../../foundation/ci.js'
 
 // ---------------------------------------------------------------------------
@@ -400,6 +400,9 @@ export const handler: CommandHandler = {
       })
       waveResults.push(waveResult)
 
+      // Proactive MAP.md refresh after each wave (continuous audit)
+      await refreshAllProjectMaps(projectDir).catch(() => {})
+
       // Accumulate stub spend for this wave (FR-705)
       const waveSpend = waveTasks.length * STUB_COST_PER_TASK_USD
       sessionSpendUsd += waveSpend
@@ -524,9 +527,6 @@ export const handler: CommandHandler = {
       `Execution ${overallOutcome}: ${passedTasks}/${executedTotal} tasks passed across ${waveResults.length} wave(s)`,
       join(projectDir, '.buildpact', 'plans', planSlug, 'plan.md'),
     ).catch(() => {})
-
-    // Refresh per-directory MAP.md indexes
-    await refreshBuildpactMaps(projectDir).catch(() => {})
 
     if (waveExecutionFailed) {
       return err({
