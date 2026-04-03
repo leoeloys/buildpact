@@ -16,11 +16,8 @@ import { AuditLogger } from './audit.js'
 import { CURRENT_SCHEMA_VERSION } from './version-guard.js'
 import type { ScanResult } from './scanner.js'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const CLI_VERSION = '0.1.0-alpha.5'
+declare const __BP_VERSION__: string
+const CLI_VERSION = typeof __BP_VERSION__ !== 'undefined' ? __BP_VERSION__ : '0.0.0-dev'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -400,6 +397,20 @@ export async function adopt(options: AdoptOptions): Promise<Result<AdoptResult>>
         created.push(file)
       }
     }
+
+    // 8. Initialize LEDGER.md + per-directory MAP.md (continuous audit)
+    try {
+      const { initializeLedger, registerEvent } = await import('../engine/project-ledger.js')
+      const ledgerResult = await initializeLedger(projectDir)
+      if (ledgerResult.ok) {
+        created.push('.buildpact/LEDGER.md')
+      }
+      await registerEvent(
+        projectDir, 'ARTIFACT_CHANGE', `adopt-${Date.now().toString(36)}`,
+        `Project adopted: ${created.length} created, ${modified.length} modified, ${skipped.length} skipped`,
+        '.buildpact/config.yaml',
+      )
+    } catch { /* non-critical */ }
 
     await logger.log({
       action: 'adopt.complete',

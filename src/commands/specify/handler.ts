@@ -25,6 +25,9 @@ import { buildTaskPayload } from '../../engine/subagent.js'
 import { enforceConstitutionOnOutput } from '../../engine/orchestrator.js'
 import { guardConstitutionModification } from '../registry.js'
 import { isCiMode, ciLog } from '../../foundation/ci.js'
+import { createChangeEntry, appendToChangelog } from '../../engine/artifact-changelog.js'
+import { registerEvent } from '../../engine/project-ledger.js'
+import { refreshBuildpactMaps } from '../../engine/directory-map.js'
 
 // ---------------------------------------------------------------------------
 // Squad domain-aware question templates
@@ -1223,6 +1226,24 @@ export const handler: CommandHandler = {
       files: [`.buildpact/specs/${specInput.slug}/spec.md`],
       outcome: 'success',
     })
+
+    // Artifact changelog + project ledger (continuous audit)
+    const changeEntry = createChangeEntry(
+      `.buildpact/specs/${specInput.slug}/spec.md`,
+      'added',
+      `Specification created: ${specInput.slug}`,
+      'User-initiated specification via buildpact specify',
+      'specify-command',
+    )
+    await appendToChangelog(projectDir, changeEntry).catch(() => {})
+    await registerEvent(
+      projectDir, 'ARTIFACT_CHANGE', changeEntry.id,
+      `Spec created: ${specInput.slug}`,
+      `.buildpact/specs/${specInput.slug}/spec.md`,
+    ).catch(() => {})
+
+    // Refresh per-directory MAP.md indexes
+    await refreshBuildpactMaps(projectDir).catch(() => {})
 
     clack.outro(
       i18n.t('cli.specify.done', {

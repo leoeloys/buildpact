@@ -172,6 +172,12 @@ export {
   registerEvent,
 } from './project-ledger.js'
 
+// Directory Map — per-directory MAP.md index (concept 16.6+)
+export {
+  refreshBuildpactMaps,
+  generateMapsRecursive,
+} from './directory-map.js'
+
 // Orchestration Rules (Fase 0 constitution — programmatic enforcement)
 export {
   checkR1RoleBoundary,

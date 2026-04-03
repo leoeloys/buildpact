@@ -166,6 +166,9 @@ export async function checkSquadIntegrity(projectDir: string, i18n: I18nResolver
     }
   }
 
+  // Filter out non-directory files (e.g., MAP.md)
+  entries = entries.filter(e => !e.includes('.'))
+
   if (entries.length === 0) {
     return { status: 'warn', message: i18n.t('cli.doctor.squad_warn') }
   }

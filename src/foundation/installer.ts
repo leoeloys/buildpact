@@ -8,6 +8,8 @@ import { ok, err } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
 
+declare const __BP_VERSION__: string
+
 /** Resolve the root templates directory.
  *  Works in both compiled dist/ (flat chunks or nested cli/) and Vitest direct-source contexts. */
 function resolveTemplatesDir(): string {
@@ -98,21 +100,8 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
 
   const logger = new AuditLogger(auditLogPath)
 
-  // Read CLI version from package.json
-  let cliVersion = '2.0.0'
-  try {
-    const { readFileSync } = await import('node:fs')
-    const { resolve, dirname } = await import('node:path')
-    const { fileURLToPath } = await import('node:url')
-    let dir = dirname(fileURLToPath(import.meta.url))
-    for (let i = 0; i < 5; i++) {
-      try {
-        const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf-8'))
-        if (pkg.name === 'buildpact') { cliVersion = pkg.version; break }
-      } catch { /* keep walking */ }
-      dir = resolve(dir, '..')
-    }
-  } catch { /* fallback */ }
+  // CLI version injected at build time by tsdown
+  const cliVersion = typeof __BP_VERSION__ !== 'undefined' ? __BP_VERSION__ : '0.0.0-dev'
 
   const vars: Record<string, string> = {
     project_name: projectName,
@@ -192,6 +181,21 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
     await writeFile(statusPath, status, 'utf-8')
     installedResources.push('STATUS.md')
     await logger.log({ action: 'install.status', agent: 'installer', files: ['STATUS.md'], outcome: 'success' })
+
+    // 9. Initialize LEDGER.md + per-directory MAP.md (continuous audit)
+    try {
+      const { initializeLedger } = await import('../engine/project-ledger.js')
+      const ledgerResult = await initializeLedger(projectDir)
+      if (ledgerResult.ok) {
+        installedResources.push('.buildpact/LEDGER.md')
+        await logger.log({
+          action: 'install.ledger',
+          agent: 'installer',
+          files: ['.buildpact/LEDGER.md'],
+          outcome: 'success',
+        })
+      }
+    } catch { /* non-critical */ }
 
     await logger.log({
       action: 'install.complete',

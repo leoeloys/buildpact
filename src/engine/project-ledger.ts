@@ -11,6 +11,7 @@ import { join } from 'node:path'
 import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import type { LedgerEntry, LedgerCategory } from '../contracts/task.js'
+import { refreshBuildpactMaps } from './directory-map.js'
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -243,19 +244,12 @@ export function generateMapContent(): string {
 }
 
 /**
- * Initialize LEDGER.md and MAP.md if they don't exist.
+ * Initialize LEDGER.md and per-directory MAP.md files.
+ * LEDGER.md is created once; MAP.md files are regenerated on every call.
  */
 export async function initializeLedger(projectDir: string): Promise<Result<void>> {
   const buildpactDir = join(projectDir, '.buildpact')
   await mkdir(buildpactDir, { recursive: true })
-
-  // MAP.md — always overwrite (auto-generated)
-  const mPath = mapPath(projectDir)
-  try {
-    await writeFile(mPath, generateMapContent(), 'utf-8')
-  } catch {
-    return err({ code: ERROR_CODES.FILE_WRITE_FAILED, i18nKey: 'error.file.write_failed', params: { path: mPath } })
-  }
 
   // LEDGER.md — only create if missing
   const lPath = ledgerPath(projectDir)
@@ -265,7 +259,7 @@ export async function initializeLedger(projectDir: string): Promise<Result<void>
     const header = [
       '# Project Ledger',
       '',
-      '> Unified temporal index of all project events. Most recent first.',
+      '> Unified temporal index of all project events. Chronological order.',
       '> Each entry has a summary + pointer to details. Never edit manually.',
       '',
     ].join('\n')
@@ -274,6 +268,13 @@ export async function initializeLedger(projectDir: string): Promise<Result<void>
     } catch {
       return err({ code: ERROR_CODES.FILE_WRITE_FAILED, i18nKey: 'error.file.write_failed', params: { path: lPath } })
     }
+  }
+
+  // MAP.md — per-directory index, always regenerated
+  try {
+    await refreshBuildpactMaps(projectDir)
+  } catch {
+    // Non-critical — maps are convenience, not essential
   }
 
   return ok(undefined)

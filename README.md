@@ -57,29 +57,20 @@ Every step is auditable. Every AI output is checked against your project's **con
 ### One-line install
 
 ```bash
-npm install -g github:leoeloys/buildpact
+curl -fsSL https://raw.githubusercontent.com/leoeloys/buildpact/main/scripts/install.sh | bash
 ```
 
-This clones, builds, and links the `buildpact` command globally. Verify:
+That's it. Verify:
 
 ```bash
 buildpact --version
-# buildpact v2.0.0
 ```
 
-### If that fails
-
-Some systems have issues with `npm install -g` from GitHub. Use the manual method:
+### Alternative: npm from GitHub
 
 ```bash
-git clone https://github.com/leoeloys/buildpact.git ~/.buildpact-cli
-cd ~/.buildpact-cli
-npm install
-npm run build
-npm link
+npm install -g github:leoeloys/buildpact
 ```
-
-This creates a global symlink to `buildpact`. Verify with `buildpact --version`.
 
 ### Use it in your project
 
@@ -99,21 +90,13 @@ The `buildpact` command is global — use it from any project directory.
 ### Updating
 
 ```bash
-# If installed via npm install -g:
-npm install -g github:leoeloys/buildpact
-
-# If installed via git clone + npm link:
-cd ~/.buildpact-cli
-git pull
-npm install
-npm run build
-# npm link is persistent — no need to re-run
+buildpact upgrade
 ```
 
-Then update your project's IDE commands and schema:
+This auto-updates the CLI from GitHub and migrates your project schema. Or re-run the install script:
 
 ```bash
-cd /your/project
+curl -fsSL https://raw.githubusercontent.com/leoeloys/buildpact/main/scripts/install.sh | bash
 buildpact upgrade
 ```
 

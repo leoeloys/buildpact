@@ -42,6 +42,8 @@ import {
   getAgentLevel,
   requiresWriteConfirmation,
 } from '../../engine/autonomy-manager.js'
+import { registerEvent } from '../../engine/project-ledger.js'
+import { refreshBuildpactMaps } from '../../engine/directory-map.js'
 import { isCiMode, ciLog } from '../../foundation/ci.js'
 
 // ---------------------------------------------------------------------------
@@ -513,6 +515,18 @@ export const handler: CommandHandler = {
       files: [],
       outcome: overallOutcome,
     })
+
+    // Project ledger — execution event (continuous audit)
+    const executedTotal = waveResults.reduce((s, w) => s + w.tasks.length, 0)
+    const passedTasks = waveResults.reduce((s, w) => s + w.tasks.filter(t => t.success).length, 0)
+    await registerEvent(
+      projectDir, 'TASK_COMPLETE', `exec-${planSlug}`,
+      `Execution ${overallOutcome}: ${passedTasks}/${executedTotal} tasks passed across ${waveResults.length} wave(s)`,
+      join(projectDir, '.buildpact', 'plans', planSlug, 'plan.md'),
+    ).catch(() => {})
+
+    // Refresh per-directory MAP.md indexes
+    await refreshBuildpactMaps(projectDir).catch(() => {})
 
     if (waveExecutionFailed) {
       return err({

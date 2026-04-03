@@ -1,0 +1,48 @@
+# BuildPact Model Profile — quality
+# Uses most capable models at every phase with a full failover chain.
+name: quality
+phases:
+  research:
+    primary: "claude-opus-4-6"
+    failover:
+      models: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 1000
+      max_wait_ms: 30000
+    operations:
+      - operation: research
+        model: "claude-opus-4-6"
+      - operation: plan-writing
+        model: "claude-sonnet-4-6"
+      - operation: validation
+        model: "claude-opus-4-6"
+  plan:
+    primary: "claude-opus-4-6"
+    failover:
+      models: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 1000
+      max_wait_ms: 30000
+    operations:
+      - operation: research
+        model: "claude-opus-4-6"
+      - operation: plan-writing
+        model: "claude-opus-4-6"
+      - operation: validation
+        model: "claude-sonnet-4-6"
+  execute:
+    primary: "claude-opus-4-6"
+    failover:
+      models: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+      retry_delay_ms: 1000
+      max_wait_ms: 30000
+  verify:
+    primary: "claude-opus-4-6"
+    failover:
+      models: ["claude-opus-4-6", "claude-sonnet-4-6"]
+      retry_delay_ms: 1000
+      max_wait_ms: 30000
+  specify:
+    primary: "claude-opus-4-6"
+    failover:
+      models: ["claude-opus-4-6", "claude-sonnet-4-6"]
+      retry_delay_ms: 1000
+      max_wait_ms: 30000

@@ -1,0 +1,2 @@
+{"ts":"2026-04-03T18:33:47.846Z","action":"adopt.start","agent":"adopter","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:33:48.296Z","action":"adopt.complete","agent":"adopter","files":[".buildpact/constitution.md",".buildpact/config.yaml",".buildpact/project-context.md",".buildpact/profiles","IDE: claude-code",".buildpact/squads/software","DECISIONS.md","STATUS.md",".buildpact/LEDGER.md"],"outcome":"success"}

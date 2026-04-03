@@ -9,7 +9,15 @@
 ## Install BuildPact
 
 ```bash
-npm install -g buildpact
+curl -fsSL https://raw.githubusercontent.com/leoeloys/buildpact/main/scripts/install.sh | bash
+```
+
+That's it. Verify with `buildpact --version`.
+
+**Alternative via npm:**
+
+```bash
+npm install -g github:leoeloys/buildpact
 ```
 
 ## New Project (Greenfield)

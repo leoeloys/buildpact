@@ -17,6 +17,9 @@ import { AuditLogger } from '../../foundation/audit.js'
 import { buildFeedbackEntry, captureSessionFeedback, loadRecentFeedbacks } from '../../engine/session-feedback.js'
 import { captureDistilledLessons } from '../../engine/lessons-distiller.js'
 import { isCiMode, ciLog } from '../../foundation/ci.js'
+import { createChangeEntry, appendToChangelog } from '../../engine/artifact-changelog.js'
+import { registerEvent } from '../../engine/project-ledger.js'
+import { refreshBuildpactMaps } from '../../engine/directory-map.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -357,6 +360,24 @@ export const handler: CommandHandler = {
       files: [specPath, reportPath],
       outcome: allPassed ? 'success' : 'failure',
     })
+
+    // Artifact changelog + project ledger (continuous audit)
+    const verifyChangeEntry = createChangeEntry(
+      `.buildpact/specs/${slug}/verification-report.md`,
+      'added',
+      `UAT: ${passCount} pass, ${failCount} fail, ${skipCount} skip`,
+      'Guided acceptance test verification',
+      'verify-command',
+    )
+    await appendToChangelog(projectDir, verifyChangeEntry).catch(() => {})
+    await registerEvent(
+      projectDir, 'VERIFICATION', verifyChangeEntry.id,
+      `Verification ${allPassed ? 'PASSED' : 'FAILED'}: ${passCount}/${acResults.length} ACs for ${slug}`,
+      reportPath,
+    ).catch(() => {})
+
+    // Refresh per-directory MAP.md indexes
+    await refreshBuildpactMaps(projectDir).catch(() => {})
 
     // Generate fix plan for failed ACs
     let fixPlanPath: string | undefined

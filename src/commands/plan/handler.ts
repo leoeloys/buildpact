@@ -28,6 +28,9 @@ import {
   type PlanValidationReport,
 } from '../../engine/plan-validator.js'
 import { analyzeWaves, splitIntoPlanFiles } from '../../engine/wave-executor.js'
+import { createChangeEntry, appendToChangelog } from '../../engine/artifact-changelog.js'
+import { registerEvent } from '../../engine/project-ledger.js'
+import { refreshBuildpactMaps } from '../../engine/directory-map.js'
 import type { TaskNode } from '../../engine/types.js'
 import { spawnResearchAgents } from './researcher.js'
 import { loadProfile, resolveModelForOperation } from '../../foundation/profile.js'
@@ -1068,6 +1071,23 @@ export const handler: CommandHandler = {
       files: writtenFiles,
       outcome: 'success',
     })
+
+    // Artifact changelog + project ledger (continuous audit)
+    const planChangeEntry = createChangeEntry(
+      planPath, 'added',
+      `Plan generated with ${writtenFiles.length} file(s)`,
+      'Wave-based plan from parallel research consolidation',
+      'plan-command',
+    )
+    await appendToChangelog(projectDir, planChangeEntry).catch(() => {})
+    await registerEvent(
+      projectDir, 'ARTIFACT_CHANGE', planChangeEntry.id,
+      `Plan created: ${writtenFiles.length} file(s)`,
+      planPath,
+    ).catch(() => {})
+
+    // Refresh per-directory MAP.md indexes
+    await refreshBuildpactMaps(projectDir).catch(() => {})
 
     clack.outro(i18n.t('cli.plan.done', { path: planPath }))
     return ok(undefined)

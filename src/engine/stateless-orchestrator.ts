@@ -12,6 +12,7 @@ import { ok, err, ERROR_CODES } from '../contracts/errors.js'
 import type { Result } from '../contracts/errors.js'
 import type { HandoffPacket, TaskResult, GoalAncestry, LedgerCategory } from '../contracts/task.js'
 import { registerEvent } from './project-ledger.js'
+import { refreshBuildpactMaps } from './directory-map.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -227,6 +228,9 @@ export async function orchestratorCycle(
       `.buildpact/handoffs/${outcome.handoff.id}.json`,
     )
   }
+
+  // 5. Refresh per-directory MAP.md indexes (continuous audit)
+  await refreshBuildpactMaps(projectDir).catch(() => {})
 
   return ok(outcome)
 }

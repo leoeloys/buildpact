@@ -15,7 +15,8 @@ import { checkProjectVersion } from '../foundation/version-guard.js'
 import type { SupportedLanguage } from '../contracts/i18n.js'
 import type { IdeId } from '../foundation/installer.js'
 
-const VERSION = '2.0.0'
+declare const __BP_VERSION__: string
+const VERSION = typeof __BP_VERSION__ !== 'undefined' ? __BP_VERSION__ : '0.0.0-dev'
 
 /** Minimum Node.js major version required by BuildPact */
 const MIN_NODE_MAJOR = 20
