@@ -132,6 +132,14 @@ export function checkForUpdates(): void {
 }
 
 /**
+ * Clear the update cache — call after a successful upgrade so the
+ * "Update available" notice stops showing.
+ */
+export function clearUpdateCache(): void {
+  writeCache({ checkedAt: Date.now(), behind: 0, branch: '', remoteVersion: null })
+}
+
+/**
  * Get the update notice message, or null if no update available.
  * Call this after command execution to show the notice.
  */

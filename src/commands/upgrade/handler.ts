@@ -21,6 +21,7 @@ import {
   pullAndRebuild,
 } from '../../foundation/self-updater.js'
 import { reinstall } from '../../foundation/reinstaller.js'
+import { clearUpdateCache } from '../../foundation/update-notifier.js'
 import { AuditLogger } from '../../foundation/audit.js'
 import { ok, err } from '../../contracts/errors.js'
 import type { Result } from '../../contracts/errors.js'
@@ -63,6 +64,7 @@ export async function runUpgrade(args: string[]): Promise<Result<void>> {
         clack.log.warn(i18n.t('cli.upgrade.remote_offline'))
       } else if (remoteCheck.value.behind === 0) {
         spinner.stop(i18n.t('cli.upgrade.cli_up_to_date'))
+        clearUpdateCache()
       } else {
         spinner.stop(i18n.t('cli.upgrade.cli_update_available', {
           count: String(remoteCheck.value.behind),
@@ -86,6 +88,7 @@ export async function runUpgrade(args: string[]): Promise<Result<void>> {
                 from: updateResult.value.previousVersion,
                 to: updateResult.value.newVersion,
               }))
+              clearUpdateCache()
             } else {
               updateSpinner.stop(i18n.t('cli.upgrade.pull_failed'))
               clack.log.warn(updateResult.error.params?.reason ?? 'Pull failed')
