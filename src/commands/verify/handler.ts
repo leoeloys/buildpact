@@ -381,6 +381,19 @@ export const handler: CommandHandler = {
 
     // Generate fix plan for failed ACs
     let fixPlanPath: string | undefined
+
+    // Capture lessons from failed ACs
+    if (failCount > 0) {
+      try {
+        const lessonsPath = join(projectDir, '.buildpact', 'LESSONS.md')
+        const failedAcNames = acResults.filter(r => r.status === 'fail').map(r => r.ac)
+        const date = new Date().toISOString().slice(0, 10)
+        const lessonRow = `| ${date} | ${failCount} AC(s) failed in ${slug}: ${failedAcNames.slice(0, 3).join('; ')} | Spec may need clarification or implementation fix | verify ${slug} |`
+        const { appendFile } = await import('node:fs/promises')
+        await appendFile(lessonsPath, lessonRow + '\n', 'utf-8')
+      } catch { /* lessons file may not exist yet */ }
+    }
+
     if (failCount > 0) {
       const failedEntries = acResults.filter(r => r.status === 'fail')
       const fixPlanContent = buildVerifyFixPlan(failedEntries, slug)

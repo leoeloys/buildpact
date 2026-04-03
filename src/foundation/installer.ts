@@ -182,7 +182,14 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
     installedResources.push('STATUS.md')
     await logger.log({ action: 'install.status', agent: 'installer', files: ['STATUS.md'], outcome: 'success' })
 
-    // 9. Initialize LEDGER.md + per-directory MAP.md (continuous audit)
+    // 9. Write LESSONS.md to .buildpact/
+    const lessons = await readTemplate('LESSONS.md', vars, templatesDir)
+    const lessonsPath = join(buildpactDir, 'LESSONS.md')
+    await writeFile(lessonsPath, lessons, 'utf-8')
+    installedResources.push('.buildpact/LESSONS.md')
+    await logger.log({ action: 'install.lessons', agent: 'installer', files: ['.buildpact/LESSONS.md'], outcome: 'success' })
+
+    // 10. Initialize LEDGER.md + per-directory MAP.md (continuous audit)
     try {
       const { initializeLedger } = await import('../engine/project-ledger.js')
       const ledgerResult = await initializeLedger(projectDir)

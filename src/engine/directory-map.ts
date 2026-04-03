@@ -33,6 +33,7 @@ const KNOWN_FILES: Record<string, string> = {
   'config.yaml': 'Project configuration (language, domain, IDE, experience level)',
   'project-context.md': 'High-level context for AI agents about this project',
   'LEDGER.md': 'Unified temporal index of all project events (append-only)',
+  'LESSONS.md': 'Append-only log of insights and lessons learned during development',
   'MAP.md': 'This file — directory index (auto-generated)',
   'build-state.json': 'Current build state with checkpoints for resume capability',
   'metrics.json': 'Aggregated cost and token usage metrics',
@@ -271,16 +272,192 @@ async function generateDirectoryMap(
   return lines.join('\n')
 }
 
+// ---------------------------------------------------------------------------
+// Portal generation — enriched MAP.md for project root
+// ---------------------------------------------------------------------------
+
+/**
+ * Read project context to build the portal header.
+ * Extracts project name, constitution principles, available commands,
+ * and recent decisions/lessons for agent orientation.
+ */
+async function buildPortalHeader(projectDir: string): Promise<string> {
+  const sections: string[] = []
+
+  // ── Project identity ────────────────────────────────────────────
+  let projectName = basename(projectDir)
+  let language = 'en'
+  try {
+    const config = await readFile(join(projectDir, '.buildpact', 'config.yaml'), 'utf-8')
+    const nameMatch = config.match(/^project_name:\s*["']?(.+?)["']?\s*$/m)
+    if (nameMatch) projectName = nameMatch[1]!
+    const langMatch = config.match(/^language:\s*["']?([a-z-]+)["']?/m)
+    if (langMatch) language = langMatch[1]!
+  } catch { /* no config */ }
+
+  const isPtBr = language === 'pt-br'
+  sections.push(isPtBr ? `# 🧠 ${projectName} — Cérebro do Projeto` : `# 🧠 ${projectName} — Project Brain`)
+  sections.push('')
+  sections.push(isPtBr
+    ? '> Portal de navegação do projeto. Qualquer agente, qualquer momento, acessa o mesmo conteúdo.'
+    : '> Project navigation portal. Any agent, any time, accesses the same content.',
+  )
+  sections.push(`> Auto-generated. Updated: ${new Date().toISOString().slice(0, 19)}`)
+  sections.push('')
+
+  // ── Quick start ─────────────────────────────────────────────────
+  sections.push(isPtBr ? '## 🚀 Comece Aqui' : '## 🚀 Start Here')
+  sections.push('')
+  sections.push(isPtBr
+    ? '| O que fazer | Comando |'
+    : '| What to do | Command |',
+  )
+  sections.push('|------------|---------|')
+  sections.push(isPtBr
+    ? '| Criar uma especificação | `buildpact specify` ou `/bp:specify` |'
+    : '| Create a specification | `buildpact specify` or `/bp:specify` |',
+  )
+  sections.push(isPtBr
+    ? '| Planejar execução | `buildpact plan` ou `/bp:plan` |'
+    : '| Plan execution | `buildpact plan` or `/bp:plan` |',
+  )
+  sections.push(isPtBr
+    ? '| Executar plano | `buildpact execute` ou `/bp:execute` |'
+    : '| Execute plan | `buildpact execute` or `/bp:execute` |',
+  )
+  sections.push(isPtBr
+    ? '| Verificar resultado | `buildpact verify` ou `/bp:verify` |'
+    : '| Verify results | `buildpact verify` or `/bp:verify` |',
+  )
+  sections.push(isPtBr
+    ? '| Mapear diretórios | `buildpact map` |'
+    : '| Map directories | `buildpact map` |',
+  )
+  sections.push(isPtBr
+    ? '| Saúde do projeto | `buildpact doctor` |'
+    : '| Project health | `buildpact doctor` |',
+  )
+  sections.push('')
+
+  // ── Constitution principles ─────────────────────────────────────
+  try {
+    const constitution = await readFile(join(projectDir, '.buildpact', 'constitution.md'), 'utf-8')
+    const principles = constitution
+      .split('\n')
+      .filter(l => l.startsWith('- ') && !l.includes('None'))
+      .slice(0, 6)
+      .map(l => l.trim())
+
+    if (principles.length > 0) {
+      sections.push(isPtBr ? '## 📜 Princípios (Constitution)' : '## 📜 Principles (Constitution)')
+      sections.push('')
+      for (const p of principles) {
+        sections.push(p)
+      }
+      sections.push('')
+      sections.push(isPtBr
+        ? '> Arquivo completo: `.buildpact/constitution.md`'
+        : '> Full file: `.buildpact/constitution.md`',
+      )
+      sections.push('')
+    }
+  } catch { /* no constitution */ }
+
+  // ── Recent decisions ────────────────────────────────────────────
+  try {
+    const decisions = await readFile(join(projectDir, 'DECISIONS.md'), 'utf-8')
+    const rows = decisions.split('\n').filter(l => l.startsWith('|') && !l.includes('---') && !l.includes('Date'))
+    if (rows.length > 0) {
+      sections.push(isPtBr ? '## 📋 Decisões Recentes' : '## 📋 Recent Decisions')
+      sections.push('')
+      sections.push(isPtBr ? '| Data | Decisão |' : '| Date | Decision |')
+      sections.push('|------|---------|')
+      for (const row of rows.slice(-5)) {
+        const cols = row.split('|').filter(Boolean).map(c => c.trim())
+        if (cols.length >= 2) {
+          sections.push(`| ${cols[0]} | ${cols[1]} |`)
+        }
+      }
+      sections.push('')
+    }
+  } catch { /* no decisions */ }
+
+  // ── Lessons learned ─────────────────────────────────────────────
+  try {
+    const lessons = await readFile(join(projectDir, '.buildpact', 'LESSONS.md'), 'utf-8')
+    const items = lessons.split('\n').filter(l => l.startsWith('- '))
+    if (items.length > 0) {
+      sections.push(isPtBr ? '## 💡 Lições Aprendidas' : '## 💡 Lessons Learned')
+      sections.push('')
+      for (const item of items.slice(-5)) {
+        sections.push(item)
+      }
+      sections.push('')
+    }
+  } catch { /* no lessons yet */ }
+
+  // ── Key artifacts ───────────────────────────────────────────────
+  sections.push(isPtBr ? '## 🗂️ Artefatos-Chave' : '## 🗂️ Key Artifacts')
+  sections.push('')
+  sections.push(isPtBr
+    ? '| Artefato | Caminho | Descrição |'
+    : '| Artifact | Path | Description |',
+  )
+  sections.push('|----------|---------|-----------|')
+  sections.push(isPtBr
+    ? '| Constitution | `.buildpact/constitution.md` | Regras imutáveis do projeto |'
+    : '| Constitution | `.buildpact/constitution.md` | Immutable project rules |',
+  )
+  sections.push(isPtBr
+    ? '| Configuração | `.buildpact/config.yaml` | Idioma, domínio, IDE, perfil |'
+    : '| Configuration | `.buildpact/config.yaml` | Language, domain, IDE, profile |',
+  )
+  sections.push(isPtBr
+    ? '| Ledger | `.buildpact/LEDGER.md` | Linha do tempo de todos os eventos |'
+    : '| Ledger | `.buildpact/LEDGER.md` | Timeline of all project events |',
+  )
+  sections.push(isPtBr
+    ? '| Decisões | `DECISIONS.md` | Log append-only de decisões |'
+    : '| Decisions | `DECISIONS.md` | Append-only decision log |',
+  )
+  sections.push(isPtBr
+    ? '| Status | `STATUS.md` | Estado atual do projeto |'
+    : '| Status | `STATUS.md` | Current project state |',
+  )
+  sections.push('')
+
+  // ── Separator before file listing ───────────────────────────────
+  sections.push('---')
+  sections.push('')
+  sections.push(isPtBr ? '## 📂 Estrutura do Projeto' : '## 📂 Project Structure')
+  sections.push('')
+
+  return sections.join('\n')
+}
+
 /**
  * Write MAP.md for a single directory.
+ * If the directory is the project root, generates a portal with enriched context.
  */
 async function writeDirectoryMap(
   dirPath: string,
   projectDir: string,
 ): Promise<void> {
-  const content = await generateDirectoryMap(dirPath, projectDir)
-  if (!content) return
-  await writeFile(join(dirPath, 'MAP.md'), content, 'utf-8')
+  const isRoot = dirPath === projectDir
+  const tableContent = await generateDirectoryMap(dirPath, projectDir)
+  if (!tableContent) return
+
+  if (isRoot) {
+    // Portal mode: header + file table
+    const header = await buildPortalHeader(projectDir)
+    // Remove the generic header from tableContent (first 4 lines)
+    const tableLines = tableContent.split('\n')
+    const tableStartIdx = tableLines.findIndex(l => l.startsWith('| Name') || l.startsWith('| '))
+    const tableOnly = tableStartIdx >= 0 ? tableLines.slice(tableStartIdx).join('\n') : tableContent
+    await writeFile(join(dirPath, 'MAP.md'), header + tableOnly, 'utf-8')
+  } else {
+    await writeFile(join(dirPath, 'MAP.md'), tableContent, 'utf-8')
+  }
 }
 
 /**

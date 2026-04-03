@@ -398,7 +398,19 @@ export async function adopt(options: AdoptOptions): Promise<Result<AdoptResult>>
       }
     }
 
-    // 8. Initialize LEDGER.md + per-directory MAP.md (continuous audit)
+    // 8. Write LESSONS.md to .buildpact/ (if not exists)
+    const lessonsPath = join(buildpactDir, 'LESSONS.md')
+    if (!await fileExists(lessonsPath)) {
+      const vars: Record<string, string> = {
+        project_name: projectName,
+        created_at: new Date().toISOString().slice(0, 10),
+      }
+      const lessonsTemplate = await readFile(join(templatesDir, 'LESSONS.md'), 'utf-8')
+      await writeFile(lessonsPath, interpolate(lessonsTemplate, vars), 'utf-8')
+      created.push('.buildpact/LESSONS.md')
+    }
+
+    // 9. Initialize LEDGER.md + per-directory MAP.md (continuous audit)
     try {
       const { initializeLedger, registerEvent } = await import('../engine/project-ledger.js')
       const ledgerResult = await initializeLedger(projectDir)
