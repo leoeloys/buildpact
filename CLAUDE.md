@@ -79,4 +79,6 @@ Available as `/bp:<command>`:
 | `memory` | Manage project memory |
 | `upgrade` | Upgrade BuildPact version |
 | `quality` | Run quality gates |
+| `map` | Generate per-directory MAP.md overviews |
+| `orchestrate` | Multi-command orchestration |
 | `help` | Show available commands |
