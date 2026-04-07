@@ -9,7 +9,7 @@
 
 ### Coding Standards
 - Primary language(s): TypeScript
-- No linter detected — consider adding one
+- Type-checking via `tsc --noEmit` (`npm run lint`)
 - Spec before code — no implementation begins without a reviewed specification
 - Atomic commits — one commit per completed task
 
