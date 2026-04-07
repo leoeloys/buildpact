@@ -141,7 +141,7 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
 
     // 5. Generate IDE configs
     for (const ide of ides) {
-      await installIdeConfig(ide, projectDir, templatesDir, installedResources, logger)
+      await installIdeConfig(ide, projectDir, templatesDir, installedResources, logger, projectName)
     }
 
     // 6. Install Squad (bundled fallback)
@@ -233,12 +233,41 @@ export async function install(options: InstallOptions): Promise<Result<InstallRe
 }
 
 /** Generate IDE-specific configuration files */
+/** Scaffold a CLAUDE.md template for projects that don't have one yet */
+function scaffoldClaudeMd(projectName: string, bpBlock: string): string {
+  return `# ${projectName}
+
+<!-- TODO: Add a one-line project description -->
+
+${bpBlock}
+
+## Quick Reference
+
+\`\`\`bash
+# TODO: Add your build/test/lint commands here
+\`\`\`
+
+## Tech Stack
+
+<!-- TODO: List your language, runtime, framework, bundler, test runner -->
+
+## Architecture
+
+<!-- TODO: Describe your project structure and key modules -->
+
+## Conventions
+
+<!-- TODO: Document coding standards, naming patterns, import style -->
+`
+}
+
 async function installIdeConfig(
   ide: IdeId,
   projectDir: string,
   tplDir: string,
   installedResources: string[],
   logger: AuditLogger,
+  projectName: string,
 ): Promise<void> {
   switch (ide) {
     case 'claude-code': {
@@ -264,11 +293,8 @@ async function installIdeConfig(
           await writeFile(claudeMd, existing.trimEnd() + '\n\n' + bpBlock + '\n', 'utf-8')
         }
       } catch {
-        await writeFile(
-          claudeMd,
-          `# CLAUDE.md — BuildPact Project\n\n${bpBlock}\n`,
-          'utf-8',
-        )
+        // No CLAUDE.md — scaffold a template for the team to fill in
+        await writeFile(claudeMd, scaffoldClaudeMd(projectName, bpBlock), 'utf-8')
       }
       installedResources.push('CLAUDE.md')
       await logger.log({
