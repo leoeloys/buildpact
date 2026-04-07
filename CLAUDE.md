@@ -2,7 +2,11 @@
 
 Spec-Driven Development framework — bilingual CLI (EN/PT-BR) for developers and domain experts.
 
+<!-- buildpact:start -->
 See `.buildpact/constitution.md` for immutable project rules.
+
+BuildPact v2.0.0 slash commands: /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor, /bp:help, /bp:docs, /bp:investigate, /bp:orchestrate, /bp:export-web, /bp:memory, /bp:quality, /bp:upgrade, /bp:map.
+<!-- buildpact:end -->
 
 ## Quick Reference
 

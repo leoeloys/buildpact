@@ -160,13 +160,27 @@ export const MIGRATIONS: Migration[] = [
           warnings.push('Could not find templates dir — slash commands not updated')
         }
 
-        // Update CLAUDE.md
+        // Update CLAUDE.md — only replace the BuildPact-managed block, preserve user content
         const claudeMdPath = join(projectDir, 'CLAUDE.md')
-        await writeFile(
-          claudeMdPath,
-          `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v2.0 slash commands: /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor, /bp:help, /bp:docs, /bp:investigate, /bp:orchestrate, /bp:export-web, /bp:memory, /bp:quality.\n`,
-          'utf-8',
-        )
+        const bpBlock = `<!-- buildpact:start -->\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v2.0 slash commands: /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor, /bp:help, /bp:docs, /bp:investigate, /bp:orchestrate, /bp:export-web, /bp:memory, /bp:quality.\n<!-- buildpact:end -->`
+        try {
+          const existing = await readFile(claudeMdPath, 'utf-8')
+          if (existing.includes('<!-- buildpact:start -->')) {
+            const updated = existing.replace(
+              /<!-- buildpact:start -->[\s\S]*?<!-- buildpact:end -->/,
+              bpBlock,
+            )
+            await writeFile(claudeMdPath, updated, 'utf-8')
+          } else {
+            await writeFile(claudeMdPath, existing.trimEnd() + '\n\n' + bpBlock + '\n', 'utf-8')
+          }
+        } catch {
+          await writeFile(
+            claudeMdPath,
+            `# CLAUDE.md — BuildPact Project\n\n${bpBlock}\n`,
+            'utf-8',
+          )
+        }
         filesModified.push('CLAUDE.md')
       } catch {
         // No Claude Code integration — skip

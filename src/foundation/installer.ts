@@ -249,13 +249,27 @@ async function installIdeConfig(
       await copyDir(join(tplDir, 'commands'), commandsDir)
       installedResources.push('.claude/commands/bp')
 
-      // CLAUDE.md in project root
+      // CLAUDE.md in project root — preserve user content, only manage BuildPact block
       const claudeMd = join(projectDir, 'CLAUDE.md')
-      await writeFile(
-        claudeMd,
-        `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact slash commands are available as /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor.\n`,
-        'utf-8',
-      )
+      const bpBlock = `<!-- buildpact:start -->\nSee .buildpact/constitution.md for project rules.\n\nBuildPact slash commands are available as /bp:specify, /bp:plan, /bp:execute, /bp:verify, /bp:quick, /bp:constitution, /bp:squad, /bp:optimize, /bp:doctor.\n<!-- buildpact:end -->`
+      try {
+        const existing = await readFile(claudeMd, 'utf-8')
+        if (existing.includes('<!-- buildpact:start -->')) {
+          const updated = existing.replace(
+            /<!-- buildpact:start -->[\s\S]*?<!-- buildpact:end -->/,
+            bpBlock,
+          )
+          await writeFile(claudeMd, updated, 'utf-8')
+        } else {
+          await writeFile(claudeMd, existing.trimEnd() + '\n\n' + bpBlock + '\n', 'utf-8')
+        }
+      } catch {
+        await writeFile(
+          claudeMd,
+          `# CLAUDE.md — BuildPact Project\n\n${bpBlock}\n`,
+          'utf-8',
+        )
+      }
       installedResources.push('CLAUDE.md')
       await logger.log({
         action: 'install.ide_config',

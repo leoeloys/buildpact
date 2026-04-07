@@ -157,11 +157,29 @@ export async function reinstall(projectDir: string): Promise<Result<ReinstallRes
       }
       filesModified.push('.claude/commands/bp/')
 
-      await writeFile(
-        join(projectDir, 'CLAUDE.md'),
-        `# CLAUDE.md — BuildPact Project\n\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v${cliVersion} slash commands: ${bpCommands}.\n`,
-        'utf-8',
-      )
+      // Update CLAUDE.md: only replace the BuildPact-managed block, preserve user content
+      const claudeMdPath = join(projectDir, 'CLAUDE.md')
+      const bpBlock = `<!-- buildpact:start -->\nSee .buildpact/constitution.md for project rules.\n\nBuildPact v${cliVersion} slash commands: ${bpCommands}.\n<!-- buildpact:end -->`
+      try {
+        const existing = await readFile(claudeMdPath, 'utf-8')
+        if (existing.includes('<!-- buildpact:start -->')) {
+          const updated = existing.replace(
+            /<!-- buildpact:start -->[\s\S]*?<!-- buildpact:end -->/,
+            bpBlock,
+          )
+          await writeFile(claudeMdPath, updated, 'utf-8')
+        } else {
+          // Legacy CLAUDE.md without markers — append managed block
+          await writeFile(claudeMdPath, existing.trimEnd() + '\n\n' + bpBlock + '\n', 'utf-8')
+        }
+      } catch {
+        // No CLAUDE.md yet — create with default content
+        await writeFile(
+          claudeMdPath,
+          `# CLAUDE.md — BuildPact Project\n\n${bpBlock}\n`,
+          'utf-8',
+        )
+      }
       filesModified.push('CLAUDE.md')
     } catch { /* no Claude Code integration */ }
 
