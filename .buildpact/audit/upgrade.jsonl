@@ -1,0 +1,6 @@
+{"ts":"2026-04-07T15:40:33.037Z","action":"upgrade.reinstall","agent":"reinstaller","files":[".buildpact/config.yaml",".claude/commands/bp/","CLAUDE.md",".buildpact/squads/software/"],"outcome":"success"}
+{"ts":"2026-04-07T15:40:33.039Z","action":"upgrade.flow_complete","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-08T00:27:26.126Z","action":"upgrade.reinstall","agent":"reinstaller","files":[".buildpact/config.yaml",".claude/commands/bp/","CLAUDE.md",".buildpact/squads/software/"],"outcome":"success"}
+{"ts":"2026-04-08T00:27:26.148Z","action":"upgrade.flow_complete","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-08T00:46:10.730Z","action":"upgrade.reinstall","agent":"reinstaller","files":[".buildpact/config.yaml",".claude/commands/bp/","CLAUDE.md",".buildpact/squads/software/"],"outcome":"success"}
+{"ts":"2026-04-08T00:46:10.744Z","action":"upgrade.flow_complete","agent":"cli","files":[],"outcome":"success"}

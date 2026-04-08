@@ -190,3 +190,209 @@
 {"ts":"2026-03-24T09:40:28.494Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
 {"ts":"2026-03-24T09:40:28.812Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: adopt"}
 {"ts":"2026-03-24T14:21:30.529Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T02:55:51.182Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T02:55:51.214Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T02:55:51.327Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T02:55:51.372Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T02:55:51.529Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T02:55:51.535Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T02:55:51.731Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T02:55:51.735Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T02:55:51.960Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T02:55:51.965Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:14:34.690Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:14:34.791Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:14:34.876Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:14:34.880Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:14:35.002Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:14:35.019Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:14:35.161Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:14:35.165Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:14:35.276Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:14:35.279Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:23:08.279Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:23:08.417Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:23:08.515Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:23:08.520Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:23:08.640Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:23:08.644Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:23:08.787Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:23:08.791Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:23:08.948Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:23:08.952Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:29:23.295Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:29:23.387Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:29:23.480Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:29:23.484Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:29:23.657Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:29:23.663Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:29:23.798Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:29:23.801Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-02T03:29:23.945Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-02T03:29:23.950Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T13:50:45.896Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T13:50:45.920Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T13:50:46.023Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T13:50:46.027Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T13:50:46.156Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T13:50:46.159Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T13:50:46.298Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T13:50:46.303Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T13:50:46.481Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T13:50:46.494Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:03.044Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:03.066Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:03.223Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:03.227Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:03.422Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:03.434Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:03.551Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:03.555Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:03.657Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:03.661Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:28.968Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:29.000Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:29.274Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:29.282Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:29.463Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:29.474Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:29.593Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:29.598Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:22:29.762Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:22:29.783Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:23:55.799Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:23:55.804Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:23:55.973Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:23:55.980Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:23:56.191Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:23:56.206Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:23:56.332Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:23:56.336Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:23:56.459Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:23:56.463Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:24:48.799Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:24:48.851Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:24:48.994Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:24:48.998Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:24:49.127Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:24:49.131Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:24:49.241Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:24:49.245Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T17:24:49.393Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T17:24:49.403Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:03:52.946Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:03:52.950Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:03:53.094Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:03:53.099Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:03:53.243Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:03:53.247Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:03:53.392Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:03:53.396Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:03:53.540Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:03:53.546Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:08:19.853Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:08:19.875Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:08:19.986Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:08:19.989Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:08:20.102Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:08:20.105Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:08:20.245Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:08:20.278Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:08:20.451Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:08:20.516Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:32:23.214Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:33:01.848Z","action":"cli.install.flow_start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:34:14.505Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:34:14.600Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:34:14.653Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"failure","error":"1 check(s) failed"}
+{"ts":"2026-04-03T18:34:14.654Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"failure","error":"DOCTOR_CHECK_FAILED"}
+{"ts":"2026-04-03T18:34:46.377Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:34:46.408Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:34:46.454Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:34:46.455Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:25.529Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:25.598Z","action":"doctor.start","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:25.645Z","action":"doctor.complete","agent":"doctor","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:25.646Z","action":"cli.command.doctor","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:36.837Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:36.981Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:35:37.082Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:37.113Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:35:37.252Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:37.258Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:35:37.403Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:37.407Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T18:35:37.511Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T18:35:37.515Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:17:13.117Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:17:13.246Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:17:13.361Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:17:13.369Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:17:13.518Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:17:13.523Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:17:13.648Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:17:13.652Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:17:13.783Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:17:13.788Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:38:59.266Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:38:59.377Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:38:59.468Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:38:59.472Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:38:59.646Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:38:59.650Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:38:59.777Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:38:59.781Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:38:59.905Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:38:59.909Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:39:30.833Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:39:30.966Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:39:31.071Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:39:31.076Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:39:31.249Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:39:31.254Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:39:31.444Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:39:31.451Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:39:31.593Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:39:31.605Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:40:53.430Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:40:53.552Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:40:53.643Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:40:53.649Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:40:53.768Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:40:53.772Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:40:53.906Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:40:53.910Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T22:40:54.031Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T22:40:54.035Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:05:47.885Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:05:48.031Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:05:48.140Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:05:48.146Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:05:48.327Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:05:48.332Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:05:48.492Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:05:48.497Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:05:48.639Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:05:48.644Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:06:18.449Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:06:19.136Z","action":"map.generate","agent":"map","files":["MAP.md","action/MAP.md","action/examples/MAP.md","docs/MAP.md","docs/decisions/MAP.md","docs/en/MAP.md","docs/en/architecture/MAP.md","docs/en/cli/MAP.md","docs/en/guide/MAP.md","docs/en/guide/migration/MAP.md","docs/pt-br/MAP.md","docs/pt-br/architecture/MAP.md","docs/pt-br/cli/MAP.md","docs/pt-br/guide/MAP.md","docs/pt-br/guide/migration/MAP.md","locales/MAP.md","scripts/MAP.md","src/MAP.md","src/benchmark/MAP.md","src/cli/MAP.md","src/commands/MAP.md","src/commands/adopt/MAP.md","src/commands/agent/MAP.md","src/commands/audit/MAP.md","src/commands/completion/MAP.md","src/commands/constitution/MAP.md","src/commands/diagnose/MAP.md","src/commands/diff/MAP.md","src/commands/distill/MAP.md","src/commands/docs/MAP.md","src/commands/doctor/MAP.md","src/commands/execute/MAP.md","src/commands/export-web/MAP.md","src/commands/help/MAP.md","src/commands/hub/MAP.md","src/commands/investigate/MAP.md","src/commands/learn/MAP.md","src/commands/map/MAP.md","src/commands/memory/MAP.md","src/commands/migrate-to-agent/MAP.md","src/commands/optimize/MAP.md","src/commands/orchestrate/MAP.md","src/commands/plan/MAP.md","src/commands/quality/MAP.md","src/commands/quick/MAP.md","src/commands/specify/MAP.md","src/commands/squad/MAP.md","src/commands/status/MAP.md","src/commands/upgrade/MAP.md","src/commands/verify/MAP.md","src/contracts/MAP.md","src/data/MAP.md","src/engine/MAP.md","src/engine/providers/MAP.md","src/foundation/MAP.md","src/optimize/MAP.md","src/squads/MAP.md"],"outcome":"success"}
+{"ts":"2026-04-03T23:06:19.155Z","action":"cli.command.map","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:12.520Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:12.619Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:13:12.710Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:12.717Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:13:12.847Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:12.851Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:13:12.987Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:12.993Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:13:13.098Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:13.105Z","action":"cli.command.resolve","agent":"cli","files":[],"outcome":"failure","error":"Unknown command: --help"}
+{"ts":"2026-04-03T23:13:49.385Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-03T23:13:50.167Z","action":"map.generate","agent":"map","files":["MAP.md","action/MAP.md","action/examples/MAP.md","docs/MAP.md","docs/decisions/MAP.md","docs/en/MAP.md","docs/en/architecture/MAP.md","docs/en/cli/MAP.md","docs/en/guide/MAP.md","docs/en/guide/migration/MAP.md","docs/pt-br/MAP.md","docs/pt-br/architecture/MAP.md","docs/pt-br/cli/MAP.md","docs/pt-br/guide/MAP.md","docs/pt-br/guide/migration/MAP.md","locales/MAP.md","scripts/MAP.md","src/MAP.md","src/benchmark/MAP.md","src/cli/MAP.md","src/commands/MAP.md","src/commands/adopt/MAP.md","src/commands/agent/MAP.md","src/commands/audit/MAP.md","src/commands/completion/MAP.md","src/commands/constitution/MAP.md","src/commands/diagnose/MAP.md","src/commands/diff/MAP.md","src/commands/distill/MAP.md","src/commands/docs/MAP.md","src/commands/doctor/MAP.md","src/commands/execute/MAP.md","src/commands/export-web/MAP.md","src/commands/help/MAP.md","src/commands/hub/MAP.md","src/commands/investigate/MAP.md","src/commands/learn/MAP.md","src/commands/map/MAP.md","src/commands/memory/MAP.md","src/commands/migrate-to-agent/MAP.md","src/commands/optimize/MAP.md","src/commands/orchestrate/MAP.md","src/commands/plan/MAP.md","src/commands/quality/MAP.md","src/commands/quick/MAP.md","src/commands/specify/MAP.md","src/commands/squad/MAP.md","src/commands/status/MAP.md","src/commands/upgrade/MAP.md","src/commands/verify/MAP.md","src/contracts/MAP.md","src/data/MAP.md","src/engine/MAP.md","src/engine/providers/MAP.md","src/foundation/MAP.md","src/optimize/MAP.md","src/squads/MAP.md"],"outcome":"success"}
+{"ts":"2026-04-03T23:13:50.170Z","action":"cli.command.map","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-07T15:40:30.908Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-07T15:40:33.040Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-08T00:27:25.092Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-08T00:27:26.158Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-08T00:46:08.725Z","action":"cli.command.start","agent":"cli","files":[],"outcome":"success"}
+{"ts":"2026-04-08T00:46:10.746Z","action":"cli.command.upgrade","agent":"cli","files":[],"outcome":"success"}

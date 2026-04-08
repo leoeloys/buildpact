@@ -3,7 +3,7 @@
 
 buildpact_schema: 2
 created_by_cli: "0.0.0-dev"
-last_upgraded_by_cli: "0.0.0-dev"
+last_upgraded_by_cli: "2.0.0"
 
 project_name: "buildpact"
 language: "pt-br"
@@ -11,3 +11,10 @@ experience_level: "expert"
 active_squad: "software"
 active_model_profile: "balanced"
 created_at: "2026-04-03"
+
+# v2.0 — Agent Mode (disabled by default)
+agent_mode: false
+
+# v2.0 — Cross-project learning (opt-in)
+cross_project:
+  enabled: false
